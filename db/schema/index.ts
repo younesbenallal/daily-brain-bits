@@ -1,38 +1,36 @@
-import { relations } from "drizzle-orm";
-import { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { pgTable, text, integer, varchar, serial, json, date, pgEnum, boolean } from "drizzle-orm/pg-core";
 
-export const posts = pgTable("posts", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	authorId: uuid("authorId").notNull(),
-	title: varchar("title", { length: 256 }).notNull(),
-	content: varchar("content", { length: 256 }).notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
+export const emailFrequency = pgEnum("email_frequency_enum", ["daily", "weekly"]);
+
+export const user = pgTable("users", {
+	id: serial("id").primaryKey(),
+	email: varchar("email", { length: 255 }).notNull(),
+	numberNotesPerEmail: integer("number_notes_per_email").default(5),
+	emailFrequency: emailFrequency("email_frequency").default("daily"),
+	openAIToken: text("open_ai_token"),
+	timeZone: varchar("time_zone", { length: 255 }),
+	learningMode: boolean("learning_mode").default(false),
 });
 
-export const postsRelations = relations(posts, ({ one }) => ({
-	author: one(users, {
-		fields: [posts.authorId],
-		references: [users.id],
-	}),
-}));
+export const note = pgTable("notes", {
+	id: serial("id").primaryKey(),
+	title: text("title").notNull(),
+	content: text("content").notNull(),
+	properties: json("properties").notNull(),
+	createdAt: date("created_at").notNull().defaultNow(),
+	updatedAt: date("updated_at").notNull().defaultNow(),
+	suggestionLikelihood: integer("suggestion_likelihood").default(1),
+	lastSent: date("last_sent"),
 
-export const insertPostSchema = createInsertSchema(posts);
+	userId: integer("user_id").references(() => user.id),
 
-export type Post = InferSelectModel<typeof posts>;
-export type NewPost = InferInsertModel<typeof posts>;
-
-export const users = pgTable("users", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	name: varchar("name", { length: 256 }).notNull(),
+	//linkedNotes: array("related_notes", "Note[]"), // Assuming 'Note[]' is a supported array type
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
-	posts: many(posts),
-}));
+export const providerName = pgEnum("provider_name_type", ["notion", "obsidian"]);
 
-export const insertUserSchema = createInsertSchema(users);
-
-export type User = InferSelectModel<typeof users>;
-export type NewUser = InferInsertModel<typeof users>;
+export const integration = pgTable("integrations", {
+	id: serial("id").primaryKey(),
+	providerName: providerName("provider_name").notNull(),
+	tokens: json("tokens").notNull(),
+});

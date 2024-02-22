@@ -9,7 +9,7 @@
 		"lint": "next lint",
 		"introspect": "drizzle-kit introspect:pg --config=drizzle.config.ts",
 		"generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
-		"migrate": "tsx -r dotenv/config src/db/migrate.ts",
+		"migrate": "tsx -r dotenv/config ./db/migrate.ts",
 		"studio": "drizzle-kit studio"
 	},
 	"dependencies": {
@@ -27,11 +27,13 @@
 		"@types/react": "^18",
 		"@types/react-dom": "^18",
 		"autoprefixer": "^10.0.1",
+		"dotenv": "^16.4.5",
 		"drizzle-kit": "^0.20.14",
 		"eslint": "^8",
 		"eslint-config-next": "14.1.0",
 		"postcss": "^8",
 		"tailwindcss": "^3.3.0",
+		"tsx": "^4.7.1",
 		"typescript": "^5"
 	}
 }
