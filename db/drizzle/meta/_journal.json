@@ -8,6 +8,20 @@
       "when": 1708641587180,
       "tag": "0000_giant_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1708643153814,
+      "tag": "0001_ancient_silver_centurion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1708643694386,
+      "tag": "0002_illegal_crystal",
+      "breakpoints": true
     }
   ]
 }

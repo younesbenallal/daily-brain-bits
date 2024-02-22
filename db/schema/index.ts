@@ -2,7 +2,7 @@ import { pgTable, text, integer, varchar, serial, json, date, pgEnum, boolean } 
 
 export const emailFrequency = pgEnum("email_frequency_enum", ["daily", "weekly"]);
 
-export const user = pgTable("users", {
+export const users = pgTable("users", {
 	id: serial("id").primaryKey(),
 	email: varchar("email", { length: 255 }).notNull(),
 	numberNotesPerEmail: integer("number_notes_per_email").default(5),
@@ -12,25 +12,27 @@ export const user = pgTable("users", {
 	learningMode: boolean("learning_mode").default(false),
 });
 
-export const note = pgTable("notes", {
+export const notes = pgTable("notes", {
 	id: serial("id").primaryKey(),
 	title: text("title").notNull(),
 	content: text("content").notNull(),
-	properties: json("properties").notNull(),
+	properties: json("properties"),
 	createdAt: date("created_at").notNull().defaultNow(),
 	updatedAt: date("updated_at").notNull().defaultNow(),
 	suggestionLikelihood: integer("suggestion_likelihood").default(1),
 	lastSent: date("last_sent"),
 
-	userId: integer("user_id").references(() => user.id),
+	userId: integer("user_id").references(() => users.id),
 
 	//linkedNotes: array("related_notes", "Note[]"), // Assuming 'Note[]' is a supported array type
 });
 
 export const providerName = pgEnum("provider_name_type", ["notion", "obsidian"]);
 
-export const integration = pgTable("integrations", {
+export const integrations = pgTable("integrations", {
 	id: serial("id").primaryKey(),
 	providerName: providerName("provider_name").notNull(),
 	tokens: json("tokens").notNull(),
+
+	userId: integer("user_id").references(() => users.id),
 });

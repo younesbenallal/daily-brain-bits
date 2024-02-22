@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { db } from "@/db";
+import { notes } from "@/db/schema";
+
+import { ArrayOfNotes } from "@/types/zod-db";
+
 export async function POST(req: NextRequest, res: NextResponse) {
 	const body = await req.json();
-	console.log(body);
-	console.log(process.env.NODE_ENV);
-	console.log(process.env.DB_USER);
+
+	const validNotes = ArrayOfNotes.parse(body.notes);
+
+	await db.insert(notes).values(validNotes);
 
 	return NextResponse.json({ message: "ok" });
 }
