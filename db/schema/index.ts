@@ -12,6 +12,8 @@ export const users = pgTable("users", {
 	learningMode: boolean("learning_mode").default(false),
 });
 
+export type User = typeof users.$inferSelect;
+
 export const notes = pgTable("notes", {
 	id: serial("id").primaryKey(),
 	title: text("title").notNull(),
@@ -26,6 +28,8 @@ export const notes = pgTable("notes", {
 
 	//linkedNotes: array("related_notes", "Note[]"), // Assuming 'Note[]' is a supported array type
 });
+
+export type Note = typeof notes.$inferSelect;
 
 export const providerName = pgEnum("provider_name_type", ["notion", "obsidian"]);
 
