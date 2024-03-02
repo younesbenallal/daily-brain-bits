@@ -14,7 +14,10 @@
 		--popover-foreground: 20 14.3% 4.1%;
 
 		--primary: 46 97% 65%;
+		--primary-100: 48 50% 92%;
+		--primary-500: 46 97% 65%;
 		--primary-600: 41 96% 40%;
+		--primary-700: 41 86% 32%;
 		--primary-foreground: 0 0% 25%;
 
 		--secondary: 0 0% 100%;
@@ -29,7 +32,7 @@
 		--destructive: 0 84.2% 60.2%;
 		--destructive-foreground: 0 0% 25%;
 
-		--border: 20 5.9% 90%;
+		--border: 0 0% 83%;
 		--input: 20 5.9% 90%;
 		--ring: 20 14.3% 4.1%;
 

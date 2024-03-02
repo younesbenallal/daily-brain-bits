@@ -19,7 +19,14 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={mona.className + " antialiased bg-background"}>{children}</body>
+			<body className={mona.className + " antialiased bg-background"}>
+				<main className="flex min-h-screen flex-col items-center snap-y snap-mandatory ">
+					<div className="absolute top-[10%]">
+						<img src="logo.svg" className="h-24 " />
+					</div>
+					{children}
+				</main>
+			</body>
 		</html>
 	);
 }

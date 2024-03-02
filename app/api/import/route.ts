@@ -8,9 +8,15 @@ import { ArrayOfNotes } from "@/types/zod-db";
 export async function POST(req: NextRequest, res: NextResponse) {
 	const body = await req.json();
 
-	const validNotes = ArrayOfNotes.parse(body.notes);
+	try {
+		const validNotes = ArrayOfNotes.parse(body.notes);
 
-	await db.insert(notes).values(validNotes);
+		await db.delete(notes);
+
+		await db.insert(notes).values(validNotes);
+	} catch (error) {
+		console.log(JSON.stringify(error, null, 4));
+	}
 
 	return NextResponse.json({ message: "ok" });
 }

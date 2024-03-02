@@ -4,18 +4,12 @@ import { notes } from "@/db/schema";
 import Note from "@/components/Note";
 
 export default async function Home() {
-	const notesOfTheDay = (await db.select().from(notes)).slice(0, 5);
-	console.log(notesOfTheDay);
+	const notesOfTheDay = await db.select().from(notes);
 
-	return (
-		<main className="flex min-h-screen flex-col items-center">
-			<div className="absolute top-[10%]">
-				<img src="logo.svg" className="h-24 " />
-			</div>
-
-			{notesOfTheDay.map((note) => (
-				<Note key={note.title} note={note} />
-			))}
-		</main>
-	);
+	return new Array(5).fill(null).map((i) => {
+		const note = notesOfTheDay[getRandomInt(notesOfTheDay.length)];
+		return <Note key={note.title} note={note} />;
+	});
 }
+
+const getRandomInt = (max: number) => Math.floor(Math.random() * max);
