@@ -77,4 +77,11 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+	h2 {
+		@apply font-display font-semibold text-primary-600 text-3xl;
+	}
+}
+
+.slide-transition {
+	transition: transform 0.5s ease-in-out;
 }

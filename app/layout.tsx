@@ -4,8 +4,8 @@ import localFont from "next/font/local";
 
 import "./globals.css";
 
-export const crimson = Crimson_Pro({ subsets: ["latin"] });
-export const mona = localFont({ src: "../assets/Mona-Sans.woff2" });
+export const crimson = Crimson_Pro({ subsets: ["latin"], variable: "--font-crimson" });
+export const mona = localFont({ src: "../assets/Mona-Sans.woff2", variable: "--font-mona" });
 
 export const metadata: Metadata = {
 	title: "Daily Brain Bits",
@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={mona.className + " antialiased bg-background"}>
+			<body className={`${crimson.variable} ${mona.variable} font-	`}>
 				<main className="flex min-h-screen flex-col items-center snap-y snap-mandatory ">
 					<div className="absolute top-[10%]">
 						<img src="logo.svg" className="h-24 " />

@@ -5,12 +5,16 @@ const config = {
 	content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
 	prefix: "",
 	theme: {
+		fontFamily: {
+			display: "var(--font-crimson)",
+			body: "var(--font-mona)",
+		},
 		container: {
 			center: true,
 			padding: "2rem",
-			screens: {
+			/* screens: {
 				"2xl": "1400px",
-			},
+			}, */
 		},
 		extend: {
 			colors: {
