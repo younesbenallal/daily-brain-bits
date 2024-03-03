@@ -16,8 +16,8 @@ export function Menu({ ...props }: MenuProps) {
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-56">
 				<DropdownMenuItem>
-					<LogoutLink className="w-full flex flex-row items-center">
-						<ArrowRightStartOnRectangleIcon className="mr-2 h-4 w-4" />
+					<LogoutLink className="flex flex-row items-center w-full">
+						<ArrowRightStartOnRectangleIcon className="w-4 h-4 mr-2" />
 						<span>Log out</span>
 					</LogoutLink>
 				</DropdownMenuItem>

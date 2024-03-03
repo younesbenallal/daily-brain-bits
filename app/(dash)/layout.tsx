@@ -4,7 +4,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 	return (
 		<>
 			<Header isMenuVisible />
-			<main className="flex flex-col items-center snap-y snap-mandatory top-0">{children}</main>
+			<main className="top-0 flex flex-col items-center snap-y snap-mandatory">{children}</main>
 		</>
 	);
 }

@@ -21,15 +21,15 @@ export default function LoginPage() {
 	return (
 		<>
 			<Header />
-			<main className="flex flex-col items-center snap-y snap-mandatory top-0">
+			<main className="top-0 flex flex-col items-center snap-y snap-mandatory">
 				<DefaultWrapper>
-					<div className="grid gap-7 max-w-96 m-auto text-center p-6">
+					<div className="p-6 m-auto text-center grid gap-7 max-w-96">
 						<div>
 							<h2 className="mb-2">Login</h2>
 							<p className="text-muted-foreground">Mollit laborum deserunt in amet.</p>
 						</div>
 						<div className="grid gap-2">
-							<div className="grid gap-4 text-left">
+							<div className="text-left grid gap-4">
 								<Label className="sr-only" htmlFor="email">
 									Email
 								</Label>
