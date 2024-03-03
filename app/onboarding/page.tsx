@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 
-import { DefaultWrapper } from "@/components/Note";
-import { Carousel, CarouselApi, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselApi, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { Button } from "@/components/ui/button";
+import { DefaultWrapper } from "@/components/default-wrapper";
 
 import { AuthStep } from "./auth-step";
 import { PreferencesStep } from "./preference-step";
 import { AddIntegrationsStep } from "./add-integrations-step";
 import { ConfigureIntegrationsStep } from "./configure-integrations-step";
-import { Button } from "@/components/ui/button";
 
 export default function OnboardingPage() {
 	const [api, setApi] = React.useState<CarouselApi>();
@@ -42,9 +42,7 @@ export default function OnboardingPage() {
 							</CarouselItem>
 						))}
 					</CarouselContent>
-					<CarouselNext />
 				</Carousel>
-				{current} {count}
 			</div>
 			<Button onClick={() => api?.scrollNext()}>Next</Button>
 		</DefaultWrapper>

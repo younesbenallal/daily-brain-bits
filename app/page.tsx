@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { notes } from "@/db/schema";
 
-import Note from "@/components/Note";
+import Note from "@/components/note";
 
 export default async function Home() {
 	const notesOfTheDay = await db.select().from(notes);
