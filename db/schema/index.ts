@@ -3,13 +3,14 @@ import { pgTable, text, integer, varchar, serial, json, date, pgEnum, boolean } 
 export const emailFrequency = pgEnum("email_frequency_enum", ["daily", "weekly"]);
 
 export const users = pgTable("users", {
-	id: serial("id").primaryKey(),
+	id: varchar("id").primaryKey(),
 	email: varchar("email", { length: 255 }).notNull(),
 	numberNotesPerEmail: integer("number_notes_per_email").default(5),
 	emailFrequency: emailFrequency("email_frequency").default("daily"),
 	openAIToken: text("open_ai_token"),
 	timeZone: varchar("time_zone", { length: 255 }),
 	learningMode: boolean("learning_mode").default(false),
+	isOnboarded: boolean("is_onboarded").default(false),
 });
 
 export type User = typeof users.$inferSelect;
@@ -24,7 +25,7 @@ export const notes = pgTable("notes", {
 	suggestionLikelihood: integer("suggestion_likelihood").default(1),
 	lastSent: date("last_sent"),
 
-	userId: integer("user_id").references(() => users.id),
+	userId: varchar("user_id").references(() => users.id),
 
 	//linkedNotes: array("related_notes", "Note[]"), // Assuming 'Note[]' is a supported array type
 });
@@ -38,5 +39,5 @@ export const integrations = pgTable("integrations", {
 	providerName: providerName("provider_name").notNull(),
 	tokens: json("tokens").notNull(),
 
-	userId: integer("user_id").references(() => users.id),
+	userId: varchar("user_id").references(() => users.id),
 });
