@@ -1,16 +1,17 @@
 "use client";
 
+import { useRef, useState } from "react";
+
 import { DefaultWrapper } from "@/components/default-wrapper";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/ui/icons";
-
-import { useKindeBrowserClient, useKindeAuth, LoginLink } from "@kinde-oss/kinde-auth-nextjs";
+import { Label } from "@/components/ui/label";
+import { LoginLink } from "@kinde-oss/kinde-auth-nextjs";
 
 export default function LoginPage() {
-	const a = useKindeBrowserClient();
-	const b = useKindeAuth();
+	const [email, setEmail] = useState("");
+	const buttonRef = useRef<HTMLButtonElement>(null);
 
 	return (
 		<DefaultWrapper>
@@ -20,18 +21,30 @@ export default function LoginPage() {
 					<p className="text-muted-foreground">Mollit laborum deserunt in amet.</p>
 				</div>
 				<div className="grid gap-2">
-					<div className="grid gap-1">
+					<div className="grid gap-4 text-left">
 						<Label className="sr-only" htmlFor="email">
 							Email
 						</Label>
-						<Input id="email" placeholder="name@example.com" type="email" autoCapitalize="none" autoComplete="email" autoCorrect="off" />
+						<Input
+							id="email"
+							placeholder="joe-the-reader@email.com"
+							type="email"
+							autoCapitalize="none"
+							autoComplete="email"
+							autoCorrect="off"
+							onKeyDown={() => buttonRef.current?.click()}
+							onChange={(e) => setEmail(e.target.value)}
+						/>
 					</div>
 					<LoginLink
 						authUrlParams={{
 							connection_id: "conn_f73e9d748fb9419e98948d60a2807f9b",
+							login_hint: email,
 						}}
 					>
-						<Button size="full">Sign in with email</Button>
+						<Button size="full" type="submit" ref={buttonRef}>
+							Sign in with email
+						</Button>
 					</LoginLink>
 				</div>
 				<div className="grid gap-4">

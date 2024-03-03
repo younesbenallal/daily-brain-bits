@@ -16,13 +16,11 @@
 		"@heroicons/react": "^2.1.1",
 		"@hookform/resolvers": "^3.3.4",
 		"@kinde-oss/kinde-auth-nextjs": "^2.1.15",
-		"@kinde-oss/kinde-typescript-sdk": "^2.6.2",
 		"@mdx-js/loader": "^3.0.1",
 		"@mdx-js/react": "^3.0.1",
 		"@next/mdx": "^14.1.0",
 		"@radix-ui/react-label": "^2.0.2",
 		"@radix-ui/react-slot": "^1.0.2",
-		"@types/mdx": "^2.0.11",
 		"add": "^2.0.6",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.0",
@@ -43,6 +41,7 @@
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
+		"@types/mdx": "^2.0.11",
 		"@types/node": "^20",
 		"@types/pg": "^8.11.0",
 		"@types/react": "^18",

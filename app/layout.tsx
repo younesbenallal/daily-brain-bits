@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={`${crimson.variable} ${mona.variable} font-	`}>
+			<body className={`${crimson.variable} ${mona.variable} bg-primary-100 text-foreground font-body`}>
 				<main className="flex min-h-screen flex-col items-center snap-y snap-mandatory ">
 					<div className="absolute top-[10%]">
 						<img src="logo.svg" className="h-24 " />

@@ -4,8 +4,10 @@
 
 @layer base {
 	:root {
-		--background: 48 50% 92%;
-		--foreground: 0 0% 100%;
+		--background: 0 0% 100%;
+		--foreground: 20 14.3% 4.1%;
+		/* --background: 48 50% 92%;
+		--foreground: 0 0% 100%; */
 
 		--card: 0 0% 100%;
 		--card-foreground: 0 0% 25%;
@@ -34,7 +36,7 @@
 
 		--border: 0 0% 83%;
 		--input: 20 5.9% 90%;
-		--ring: 20 14.3% 4.1%;
+		--ring: var(--primary-500);
 
 		--radius: 0.75rem;
 	}
@@ -73,9 +75,6 @@
 @layer base {
 	* {
 		@apply border-border;
-	}
-	body {
-		@apply bg-background text-foreground;
 	}
 	h2 {
 		@apply font-display font-semibold text-primary-600 text-3xl;

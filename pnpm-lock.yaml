@@ -14,9 +14,6 @@ dependencies:
   '@kinde-oss/kinde-auth-nextjs':
     specifier: ^2.1.15
     version: 2.1.15(@babel/core@7.24.0)(next@14.1.0)(react-dom@18.2.0)(react@18.2.0)
-  '@kinde-oss/kinde-typescript-sdk':
-    specifier: ^2.6.2
-    version: 2.6.2
   '@mdx-js/loader':
     specifier: ^3.0.1
     version: 3.0.1(webpack@5.90.3)
@@ -32,9 +29,6 @@ dependencies:
   '@radix-ui/react-slot':
     specifier: ^1.0.2
     version: 1.0.2(@types/react@18.2.52)(react@18.2.0)
-  '@types/mdx':
-    specifier: ^2.0.11
-    version: 2.0.11
   add:
     specifier: ^2.0.6
     version: 2.0.6
@@ -91,6 +85,9 @@ dependencies:
     version: 3.22.4
 
 devDependencies:
+  '@types/mdx':
+    specifier: ^2.0.11
+    version: 2.0.11
   '@types/node':
     specifier: ^20
     version: 20.11.16
@@ -2254,7 +2251,6 @@ packages:
 
   /@types/mdx@2.0.11:
     resolution: {integrity: sha512-HM5bwOaIQJIQbAYfax35HCKxx7a3KrK3nBtIqJgSOitivTD1y3oW9P3rxY9RkXYPUk7y/AjAohfHKmFpGE79zw==}
-    dev: false
 
   /@types/ms@0.7.34:
     resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
