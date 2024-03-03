@@ -3,6 +3,7 @@ import { Crimson_Pro } from "next/font/google";
 import localFont from "next/font/local";
 
 import "./globals.css";
+import { Menu } from "@/components/menu";
 
 export const crimson = Crimson_Pro({ subsets: ["latin"], variable: "--font-crimson" });
 export const mona = localFont({ src: "../assets/Mona-Sans.woff2", variable: "--font-mona" });
@@ -19,14 +20,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={`${crimson.variable} ${mona.variable} bg-primary-100 text-foreground font-body`}>
-				<main className="flex min-h-screen flex-col items-center snap-y snap-mandatory ">
-					<div className="absolute top-[10%]">
-						<img src="logo.svg" className="h-24 " />
-					</div>
-					{children}
-				</main>
-			</body>
+			<body className={`${crimson.variable} ${mona.variable} bg-primary-100 text-foreground font-body min-h-screen`}>{children}</body>
 		</html>
 	);
 }
