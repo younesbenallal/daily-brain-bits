@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import { Carousel, CarouselApi, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { DefaultWrapper } from "@/components/default-wrapper";
 
-import { AuthStep } from "./auth-step";
 import { PreferencesStep } from "./preference-step";
-import { AddIntegrationsStep } from "./add-integrations-step";
-import { ConfigureIntegrationsStep } from "./configure-integrations-step";
+import { AddSourcesStep } from "./add-sources-step";
+import { ConfigureIntegrationsStep } from "./configure-sources-step";
+import { ArrowRightIcon } from "@heroicons/react/20/solid";
 
 export default function OnboardingPage() {
 	const [api, setApi] = React.useState<CarouselApi>();
@@ -29,7 +29,7 @@ export default function OnboardingPage() {
 		});
 	}, [api]);
 
-	const steps = [AuthStep, PreferencesStep, AddIntegrationsStep, ConfigureIntegrationsStep];
+	const steps = [PreferencesStep, AddSourcesStep, ConfigureIntegrationsStep];
 
 	return (
 		<DefaultWrapper>
@@ -44,7 +44,11 @@ export default function OnboardingPage() {
 					</CarouselContent>
 				</Carousel>
 			</div>
-			<Button onClick={() => api?.scrollNext()}>Next</Button>
+			<div className="flex justify-end items-end py-6">
+				<Button size="lg" onClick={() => api?.scrollNext()}>
+					Next <ArrowRightIcon className="ml-2 w-4 h-4" />
+				</Button>
+			</div>
 		</DefaultWrapper>
 	);
 }

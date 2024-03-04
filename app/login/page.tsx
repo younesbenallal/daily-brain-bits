@@ -23,13 +23,13 @@ export default function LoginPage() {
 			<Header />
 			<main className="top-0 flex flex-col items-center snap-y snap-mandatory">
 				<DefaultWrapper>
-					<div className="p-6 m-auto text-center grid gap-7 max-w-96">
+					<div className="grid gap-10 p-6 m-auto text-center max-w-96">
 						<div>
 							<h2 className="mb-2">Login</h2>
 							<p className="text-muted-foreground">Mollit laborum deserunt in amet.</p>
 						</div>
 						<div className="grid gap-2">
-							<div className="text-left grid gap-4">
+							<div className="grid gap-4 text-left">
 								<Label className="sr-only" htmlFor="email">
 									Email
 								</Label>
@@ -55,11 +55,8 @@ export default function LoginPage() {
 								</Button>
 							</LoginLink>
 						</div>
+						<div className="flex justify-center px-2 text-xs text-muted-background">Or </div>
 						<div className="grid gap-4">
-							<div className="relative flex justify-center text-xs ">
-								<span className="px-2 text-muted-background">Or </span>
-							</div>
-
 							<LoginLink
 								authUrlParams={{
 									connection_id: "conn_7a43fb24d3bd4e758d915f64966e4701",

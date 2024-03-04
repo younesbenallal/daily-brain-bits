@@ -6,13 +6,18 @@ import Note from "@/components/note";
 import { redirect } from "next/navigation";
 
 import type { KindeUser } from "@kinde-oss/kinde-auth-nextjs/dist/types";
+import { eq } from "drizzle-orm";
 
 export default async function Home() {
 	const { isAuthenticated, getUser } = getKindeServerSession();
 
 	if (!isAuthenticated) return redirect("/login");
 	const kindeUser = (await getUser()) as KindeUser;
-	const user = (await db.insert(users).values({ id: kindeUser.id, email: kindeUser.email! }).onConflictDoNothing().returning())[0];
+
+	const user = (await db.select().from(users).where(eq(users.id, kindeUser.id)))[0];
+	if (!user) await db.insert(users).values({ id: kindeUser.id, email: kindeUser.email! });
+
+	console.log("🚀 ~ Home ~ user:", user, kindeUser);
 
 	if (!user.isOnboarded) return redirect("/onboarding");
 
