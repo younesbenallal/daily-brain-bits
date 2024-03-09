@@ -9,6 +9,7 @@ export const users = pgTable("users", {
 	emailFrequency: emailFrequency("email_frequency").default("daily"),
 	openAIToken: text("open_ai_token"),
 	timeZone: varchar("time_zone", { length: 255 }),
+	apiKey: varchar("api_key", { length: 255 }).notNull(),
 	learningMode: boolean("learning_mode").default(false),
 	isOnboarded: boolean("is_onboarded").default(false),
 });
@@ -26,7 +27,6 @@ export const notes = pgTable("notes", {
 	lastSent: date("last_sent"),
 
 	userId: varchar("user_id").references(() => users.id),
-
 	//linkedNotes: array("related_notes", "Note[]"), // Assuming 'Note[]' is a supported array type
 });
 
@@ -34,7 +34,7 @@ export type Note = typeof notes.$inferSelect;
 
 export const providerName = pgEnum("provider_name_type", ["notion", "obsidian"]);
 
-export const integrations = pgTable("integrations", {
+export const sources = pgTable("sources", {
 	id: serial("id").primaryKey(),
 	providerName: providerName("provider_name").notNull(),
 	tokens: json("tokens").notNull(),

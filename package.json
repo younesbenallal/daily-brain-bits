@@ -26,6 +26,8 @@
 		"@radix-ui/react-select": "^2.0.0",
 		"@radix-ui/react-slot": "^1.0.2",
 		"add": "^2.0.6",
+		"bcrypt": "^5.1.1",
+		"bcryptjs": "^2.4.3",
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.0",
 		"cmdk": "^0.2.1",
@@ -45,6 +47,7 @@
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
+		"@types/bcrypt": "^5.0.2",
 		"@types/mdx": "^2.0.11",
 		"@types/node": "^20",
 		"@types/pg": "^8.11.0",

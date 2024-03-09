@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 	"email_frequency" "email_frequency_enum" DEFAULT 'daily',
 	"open_ai_token" text,
 	"time_zone" varchar(255),
+	"api_key" varchar(255) NOT NULL,
 	"learning_mode" boolean DEFAULT false,
 	"is_onboarded" boolean DEFAULT false
 );

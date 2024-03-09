@@ -1,7 +1,8 @@
 import { MultiSelect } from "@/components/ui/multi-select";
+import type { User } from "@/db/schema";
 
-interface ConfigureIntegrationsStepProps extends React.ComponentPropsWithoutRef<"div"> {}
-export function ConfigureIntegrationsStep({ ...props }: ConfigureIntegrationsStepProps) {
+interface ConfigureSourcesStepProps extends React.ComponentPropsWithoutRef<"div"> {}
+export function ConfigureSourcesStep({ ...props }: ConfigureSourcesStepProps) {
 	return (
 		<div className="h-full">
 			<div>
