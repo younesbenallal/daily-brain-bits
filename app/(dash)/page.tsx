@@ -1,28 +1,14 @@
 import { db } from "@/db";
-import { notes, users } from "@/db/schema";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { notes } from "@/db/schema";
 
 import Note from "@/components/note";
 import { redirect } from "next/navigation";
 
-import { eq } from "drizzle-orm";
-
-import bcrypt from "bcrypt";
+import { getOrCreateUser } from "../actions/users";
 
 export default async function Home() {
-	const { isAuthenticated, getUser } = getKindeServerSession();
-
-	if (!isAuthenticated) return redirect("/login");
-	const kindeUser = (await getUser())!;
-
-	const user = (await db.select().from(users).where(eq(users.id, kindeUser.id)))[0];
-	if (!user) {
-		const apiKey = await generateApiKey();
-		await db.insert(users).values({ id: kindeUser.id, email: kindeUser.email!, apiKey });
-	}
-
-	console.log("🚀 ~ Home ~ user:", user, kindeUser);
-
+	const user = await getOrCreateUser();
+	if (!user) return redirect("/login");
 	if (!user.isOnboarded) return redirect("/onboarding");
 
 	const notesOfTheDay = await db.select().from(notes);
@@ -34,9 +20,3 @@ export default async function Home() {
 }
 
 const getRandomInt = (max: number) => Math.floor(Math.random() * max);
-
-const generateApiKey = async () => {
-	const saltRounds = 10;
-	const token = crypto.randomUUID();
-	return await bcrypt.hash(token, saltRounds);
-};

@@ -5,17 +5,10 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- CREATE TYPE "provider_name_type" AS ENUM('notion', 'obsidian');
+ CREATE TYPE "source_name_type" AS ENUM('notion', 'obsidian');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "integrations" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"provider_name" "provider_name_type" NOT NULL,
-	"tokens" json NOT NULL,
-	"user_id" varchar
-);
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "notes" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -26,6 +19,13 @@ CREATE TABLE IF NOT EXISTS "notes" (
 	"updated_at" date DEFAULT now() NOT NULL,
 	"suggestion_likelihood" integer DEFAULT 1,
 	"last_sent" date,
+	"user_id" varchar
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "sources" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"source_name" "source_name_type" NOT NULL,
+	"tokens" json,
 	"user_id" varchar
 );
 --> statement-breakpoint
@@ -42,13 +42,13 @@ CREATE TABLE IF NOT EXISTS "users" (
 );
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "integrations" ADD CONSTRAINT "integrations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "notes" ADD CONSTRAINT "notes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "notes" ADD CONSTRAINT "notes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "sources" ADD CONSTRAINT "sources_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

@@ -1,57 +1,9 @@
 {
-  "id": "e4f8f6cb-92ae-44f0-ac8e-b694eb241100",
+  "id": "5dde1d3f-1a83-42c8-ae0c-fb518af07a65",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
   "tables": {
-    "integrations": {
-      "name": "integrations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "provider_name": {
-          "name": "provider_name",
-          "type": "provider_name_type",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tokens": {
-          "name": "tokens",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "integrations_user_id_users_id_fk": {
-          "name": "integrations_user_id_users_id_fk",
-          "tableFrom": "integrations",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
     "notes": {
       "name": "notes",
       "schema": "",
@@ -119,6 +71,54 @@
         "notes_user_id_users_id_fk": {
           "name": "notes_user_id_users_id_fk",
           "tableFrom": "notes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "sources": {
+      "name": "sources",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "source_name": {
+          "name": "source_name",
+          "type": "source_name_type",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tokens": {
+          "name": "tokens",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sources_user_id_users_id_fk": {
+          "name": "sources_user_id_users_id_fk",
+          "tableFrom": "sources",
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
@@ -210,8 +210,8 @@
         "weekly": "weekly"
       }
     },
-    "provider_name_type": {
-      "name": "provider_name_type",
+    "source_name_type": {
+      "name": "source_name_type",
       "values": {
         "notion": "notion",
         "obsidian": "obsidian"

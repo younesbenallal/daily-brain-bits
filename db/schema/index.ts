@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { pgTable, text, integer, varchar, serial, json, date, pgEnum, boolean } from "drizzle-orm/pg-core";
 
 export const emailFrequency = pgEnum("email_frequency_enum", ["daily", "weekly"]);
@@ -13,6 +14,11 @@ export const users = pgTable("users", {
 	learningMode: boolean("learning_mode").default(false),
 	isOnboarded: boolean("is_onboarded").default(false),
 });
+
+export const usersRelations = relations(users, ({ many }) => ({
+	notes: many(notes),
+	sources: many(sources),
+}));
 
 export type User = typeof users.$inferSelect;
 
@@ -30,14 +36,28 @@ export const notes = pgTable("notes", {
 	//linkedNotes: array("related_notes", "Note[]"), // Assuming 'Note[]' is a supported array type
 });
 
+export const notesRelations = relations(notes, ({ one }) => ({
+	user: one(users, {
+		fields: [notes.userId],
+		references: [users.id],
+	}),
+}));
+
 export type Note = typeof notes.$inferSelect;
 
-export const providerName = pgEnum("provider_name_type", ["notion", "obsidian"]);
+export const sourceName = pgEnum("source_name_type", ["notion", "obsidian"]);
 
 export const sources = pgTable("sources", {
 	id: serial("id").primaryKey(),
-	providerName: providerName("provider_name").notNull(),
-	tokens: json("tokens").notNull(),
+	name: sourceName("name").notNull(),
+	tokens: json("tokens"),
 
 	userId: varchar("user_id").references(() => users.id),
 });
+
+export const sourcesRelations = relations(sources, ({ one }) => ({
+	user: one(users, {
+		fields: [sources.userId],
+		references: [users.id],
+	}),
+}));
