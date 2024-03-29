@@ -1,17 +1,20 @@
-import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
-import { NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
+import { updateSession } from "@/utils/supabase/middleware";
 
-export default function middleware(req: NextRequest) {
-	return withAuth(req, { loginPage: "/login" });
+export async function middleware(request: NextRequest) {
+	// update user's auth session
+	return await updateSession(request);
 }
+
 export const config = {
 	matcher: [
-		{
-			source: "/((?!login|_next|favicon.ico|public|logo.svg|api/auth).*)",
-			missing: [
-				{ type: "header", key: "next-router-prefetch" },
-				{ type: "header", key: "purpose", value: "prefetch" },
-			],
-		},
+		/*
+		 * Match all request paths except for the ones starting with:
+		 * - _next/static (static files)
+		 * - _next/image (image optimization files)
+		 * - favicon.ico (favicon file)
+		 * Feel free to modify this pattern to include more paths.
+		 */
+		"/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
 	],
 };

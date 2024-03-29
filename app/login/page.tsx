@@ -1,22 +1,64 @@
-"use client";
-
-import { useRef, useState } from "react";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
 import { DefaultWrapper } from "@/components/default-wrapper";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Icons } from "@/components/ui/icons";
 import { Label } from "@/components/ui/label";
-import { LoginLink, useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { redirect } from "next/navigation";
 import { Header } from "@/components/header";
+import { SubmitButton } from "../../components/submit-button";
+import { OAauthButtons } from "./oauth-buttons";
 
-export default function LoginPage() {
-	const [email, setEmail] = useState("");
-	const buttonRef = useRef<HTMLButtonElement>(null);
-	const { isAuthenticated } = useKindeBrowserClient();
+export default async function LoginPage() {
+	const supabase = createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
 
-	if (isAuthenticated === true) redirect("/");
+	if (user) {
+		return redirect("/");
+	}
+	const signIn = async (formData: FormData) => {
+		"use server";
+
+		const email = formData.get("email") as string;
+		const password = formData.get("password") as string;
+		const supabase = createClient();
+
+		const { error } = await supabase.auth.signInWithPassword({
+			email,
+			password,
+		});
+
+		if (error) {
+			return redirect("/login?message=Could not authenticate user");
+		}
+
+		return redirect("/protected");
+	};
+
+	const signUp = async (formData: FormData) => {
+		"use server";
+
+		const email = formData.get("email") as string;
+		const password = formData.get("password") as string;
+		const supabase = createClient();
+
+		const { error } = await supabase.auth.signUp({
+			email,
+			password,
+			options: {
+				emailRedirectTo: `http://localhost:4000/auth/callback`,
+			},
+		});
+
+		if (error) {
+			return redirect("/login?message=Could not authenticate user");
+		}
+
+		return redirect("/login?message=Check email to continue sign in process");
+	};
+
+	// if (isAuthenticated === true) redirect("/");
 
 	return (
 		<>
@@ -33,49 +75,17 @@ export default function LoginPage() {
 								<Label className="sr-only" htmlFor="email">
 									Email
 								</Label>
-								<Input
-									id="email"
-									placeholder="joe-the-reader@email.com"
-									type="email"
-									autoCapitalize="none"
-									autoComplete="email"
-									autoCorrect="off"
-									onKeyDown={(e) => e.key === "Enter" && buttonRef.current?.click()}
-									onChange={(e) => setEmail(e.target.value)}
-								/>
+								<Input id="email" placeholder="joe-the-reader@email.com" type="email" autoCapitalize="none" autoComplete="email" autoCorrect="off" />
 							</div>
-							<LoginLink
-								authUrlParams={{
-									connection_id: "conn_f73e9d748fb9419e98948d60a2807f9b",
-									login_hint: email,
-								}}
+							<SubmitButton
+								formAction={signUp}
+								className="border border-foreground/20 rounded-md px-4 py-2 text-foreground mb-2"
+								pendingText="Signing Up..."
 							>
-								<Button size="full" type="submit" ref={buttonRef}>
-									Sign in with email
-								</Button>
-							</LoginLink>
+								Sign In
+							</SubmitButton>
 						</div>
-						<div className="flex justify-center px-2 text-xs text-muted-background">Or </div>
-						<div className="grid gap-4">
-							<LoginLink
-								authUrlParams={{
-									connection_id: "conn_7a43fb24d3bd4e758d915f64966e4701",
-								}}
-							>
-								<Button size="full" variant="secondary">
-									<Icons.google className="w-4 h-4 mr-2" /> Login with Google
-								</Button>
-							</LoginLink>
-							<LoginLink
-								authUrlParams={{
-									connection_id: "conn_c2e442976b8b4cbca1c2eec045f95f28",
-								}}
-							>
-								<Button size="full" variant="secondary">
-									<Icons.apple className="w-4 h-4 mr-2" /> Login with Apple
-								</Button>
-							</LoginLink>
-						</div>
+						<OAauthButtons />
 					</div>
 				</DefaultWrapper>
 			</main>

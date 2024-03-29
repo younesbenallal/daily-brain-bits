@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 
-import type { User } from "@/db/schema";
 import { DocumentDuplicateIcon } from "@heroicons/react/24/outline";
 import { Label } from "@/components/ui/label";
+import { User } from "@supabase/supabase-js";
 
 interface AddSourcesStepProps extends React.ComponentPropsWithoutRef<"div"> {
 	user: User;
@@ -27,7 +27,7 @@ export function AddSourcesStep({ user, ...props }: AddSourcesStepProps) {
 			});
 			if (result.ok) {
 				const user = await result.json();
-				setObsidianInfo(user.sources.filter((source) => source.name === "obsidian"));
+				//setObsidianInfo(user.sources.filter((source) => source.name === "obsidian"));
 			}
 		}, 500);
 	};
@@ -50,12 +50,12 @@ export function AddSourcesStep({ user, ...props }: AddSourcesStepProps) {
 					<div className="mt-3">
 						<Label>API Token</Label>
 						<div className="relative w-full ">
-							<Input className="hover:cursor-not-allowed" readOnly value={user.apiKey} />
+							<Input className="hover:cursor-not-allowed" readOnly value={user.id} />
 							<Button
 								variant="secondary"
 								size="icon"
 								className="absolute right-0 inset-y-0 h-4 w-4 m-3 bg-white"
-								onClick={() => navigator.clipboard.writeText(user.apiKey)}
+								onClick={() => navigator.clipboard.writeText(user.id)}
 							>
 								<DocumentDuplicateIcon className="text-muted-foreground" />
 							</Button>

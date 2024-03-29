@@ -2,10 +2,10 @@ import React from "react";
 
 import { MDXRemote } from "next-mdx-remote/rsc";
 
-import type { Note } from "@/db/schema/index";
 import { DefaultWrapper } from "./default-wrapper";
+import { Todo } from "@/types/lib";
 
-export default function Note({ note }: { note: Note }) {
+export default function Note({ note }: { note: Todo }) {
 	return (
 		<DefaultWrapper>
 			<h2>{note.title || ""}</h2>

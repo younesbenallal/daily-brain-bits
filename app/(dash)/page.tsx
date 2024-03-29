@@ -1,13 +1,17 @@
-import { db } from "@/db";
-import { notes } from "@/db/schema";
-
 import Note from "@/components/note";
+import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
-import { getOrCreateUser } from "../actions/users";
-
 export default async function Home() {
-	const user = await getOrCreateUser();
+	const supabase = createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		return redirect("/login");
+	}
+	/* const user = await getOrCreateUser();
 	if (!user) return redirect("/login");
 	if (!user.isOnboarded) return redirect("/onboarding");
 
@@ -16,7 +20,12 @@ export default async function Home() {
 	return new Array(5).fill(null).map((i) => {
 		const note = notesOfTheDay[getRandomInt(notesOfTheDay.length)];
 		return <Note key={note.title} note={note} />;
-	});
+	}); */
+	return (
+		<>
+			<Note note={{ title: "Test", content: "This is a test" }}></Note>
+		</>
+	);
 }
 
 const getRandomInt = (max: number) => Math.floor(Math.random() * max);
