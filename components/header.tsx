@@ -1,19 +1,13 @@
+import Image from "next/image";
 import { Menu } from "./menu";
 
-interface HeaderProps extends React.ComponentPropsWithoutRef<"div"> {
-	isMenuVisible?: boolean;
-}
-export function Header({ isMenuVisible, ...props }: HeaderProps) {
+import logo from "/public/logo_black.png";
+
+export function Header() {
 	return (
-		<div className="absolute w-full grid grid-cols-3">
-			<div className="col-start-2 justify-self-center pt-[10vh]">
-				<img src="logo.svg" className="h-24" />
-			</div>
-			{isMenuVisible === true && (
-				<div className="mt-6 mr-6 justify-self-end">
-					<Menu />
-				</div>
-			)}
+		<div className="absolute w-full flex justify-between p-12">
+			<Image src={logo} alt="Daily Brain Bits logo" className="w-12 h-12" />
+			<Menu />
 		</div>
 	);
 }

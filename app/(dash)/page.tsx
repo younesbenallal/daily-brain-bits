@@ -8,6 +8,8 @@ export default async function Home() {
 		data: { user },
 	} = await supabase.auth.getUser();
 
+	console.log("user dash", user);
+
 	if (!user) {
 		return redirect("/login");
 	}

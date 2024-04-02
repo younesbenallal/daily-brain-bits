@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={`${crimson.variable} ${mona.variable} bg-primary-100 text-foreground font-body antialiased min-h-screen`}>{children}</body>
+			<body className={`${crimson.variable} ${mona.variable} bg-background text-foreground font-body antialiased min-h-screen`}>{children}</body>
 		</html>
 	);
 }

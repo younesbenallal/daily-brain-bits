@@ -2,8 +2,10 @@ interface DefaultWrapperProps extends React.ComponentPropsWithoutRef<"div"> {}
 
 export function DefaultWrapper({ children, ...props }: DefaultWrapperProps) {
 	return (
-		<div className="flex items-center justify-center h-screen xl:w-1/4 ">
-			<div className="bg-card text-card-foreground max-h-[80vh] rounded-md p-8 space-y-5 snap-center w-full overflow-y-hidden ">{children}</div>
+		<div className="flex items-center justify-center h-screen  ">
+			<div className="mesh-background bg-no-repeat text-card-foreground max-h-[80vh] rounded-md border border-border p-8 space-y-5 snap-center w-full overflow-y-hidden ">
+				{children}
+			</div>
 		</div>
 	);
 }
