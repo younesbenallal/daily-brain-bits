@@ -20,7 +20,7 @@ export function Menu({ ...props }: MenuProps) {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-primary-100">
+				<Button variant="ghost" size="icon" className="">
 					<Cog8ToothIcon className="w-6 h-6" />
 				</Button>
 			</DropdownMenuTrigger>

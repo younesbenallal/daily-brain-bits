@@ -1,3 +1,4 @@
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 interface PreferencesStepProps extends React.ComponentPropsWithoutRef<"div"> {}
 export function PreferencesStep({ ...props }: PreferencesStepProps) {
@@ -5,11 +6,10 @@ export function PreferencesStep({ ...props }: PreferencesStepProps) {
 		<div className="space-y-8">
 			<div>
 				<h2>Gimme your preferences</h2>
-				<p className="text-muted">Help us craft your experience to your wishes.</p>
+				<p className="">Help us craft your experience to your wishes.</p>
 			</div>
 			<div className="space-y-2">
-				<h3 className="text-primary-700 font-semibold tracking-wide text-lg">Timezone</h3>
-				<p className="text-muted-foreground">We tried to guess the timezone of your area.</p>
+				<Label>Timezone</Label>
 				<Select>
 					<SelectTrigger className="">
 						<SelectValue placeholder="Select a timezone" />
@@ -61,10 +61,7 @@ export function PreferencesStep({ ...props }: PreferencesStepProps) {
 				</Select>
 			</div>
 			<div className="space-y-2">
-				<h3 className="text-primary-700 font-semibold tracking-wide text-lg">Email frequency</h3>
-				<p className="text-muted-foreground">
-					What is the frequency you wish to receive your notes reminders by email? We advise daily to maximise learnings
-				</p>
+				<Label>Email frequency</Label>
 				<Select>
 					<SelectTrigger className="">
 						<SelectValue defaultValue="daily" placeholder="Frequency" />

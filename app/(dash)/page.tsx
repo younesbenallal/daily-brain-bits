@@ -8,11 +8,13 @@ export default async function Home() {
 		data: { user },
 	} = await supabase.auth.getUser();
 
-	console.log("user dash", user);
-
 	if (!user) {
 		return redirect("/login");
 	}
+	const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+
+	if (!profile?.is_onboarded) return redirect("/onboarding");
+
 	/* const user = await getOrCreateUser();
 	if (!user) return redirect("/login");
 	if (!user.isOnboarded) return redirect("/onboarding");

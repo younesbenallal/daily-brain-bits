@@ -16,14 +16,14 @@ export function OAauthButtons() {
 				<Button
 					size="full"
 					variant="outline"
-					onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: "http://localhost:4000/auth/callback" } })}
+					onClick={() => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: "http://localhost:4000/api/auth/callback" } })}
 				>
 					<Icons.google className="w-4 h-4 mr-2" /> Login with Google
 				</Button>
 				<Button
 					size="full"
 					variant="outline"
-					onClick={() => supabase.auth.signInWithOAuth({ provider: "apple", options: { redirectTo: "http://localhost:4000/auth/callback" } })}
+					onClick={() => supabase.auth.signInWithOAuth({ provider: "apple", options: { redirectTo: "http://localhost:4000/api/auth/callback" } })}
 				>
 					<Icons.apple className="w-4 h-4 mr-2" /> Login with Apple
 				</Button>

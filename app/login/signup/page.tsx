@@ -40,12 +40,13 @@ export default async function Page({ children }: { children: React.ReactNode }) 
 				password: parseResult.data.password,
 				options: {
 					data: {
-						name,
+						full_name: parseResult.data.name,
 					},
-					emailRedirectTo: `http://localhost:4000/auth/callback`,
+					emailRedirectTo: `http://localhost:4000/api/auth/callback`,
 				},
 			});
 			if (error) {
+				console.error(error);
 				return redirect("/login/signup?message=Could not authenticate user");
 			}
 		}
