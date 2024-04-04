@@ -1,5 +1,9 @@
+"use client";
+
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { updateUserProfile } from "@/lib/user";
+import { Enums } from "@/types/db";
 interface PreferencesStepProps extends React.ComponentPropsWithoutRef<"div"> {}
 export function PreferencesStep({ ...props }: PreferencesStepProps) {
 	return (
@@ -10,7 +14,7 @@ export function PreferencesStep({ ...props }: PreferencesStepProps) {
 			</div>
 			<div className="space-y-2">
 				<Label>Timezone</Label>
-				<Select>
+				<Select onValueChange={(value) => updateUserProfile({ timezone: value })}>
 					<SelectTrigger className="">
 						<SelectValue placeholder="Select a timezone" />
 					</SelectTrigger>
@@ -62,7 +66,7 @@ export function PreferencesStep({ ...props }: PreferencesStepProps) {
 			</div>
 			<div className="space-y-2">
 				<Label>Email frequency</Label>
-				<Select>
+				<Select onValueChange={(value) => updateUserProfile({ email_frequency: value as Enums<"profile_email_frequency"> })}>
 					<SelectTrigger className="">
 						<SelectValue defaultValue="daily" placeholder="Frequency" />
 					</SelectTrigger>

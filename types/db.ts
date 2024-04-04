@@ -42,6 +42,7 @@ export type Database = {
           id: number
           last_sync: string | null
           metadata: Json | null
+          pull_from: string[] | null
           refresh_token: string | null
           status: Database["public"]["Enums"]["integration_status"] | null
           tool_name: string
@@ -55,6 +56,7 @@ export type Database = {
           id?: number
           last_sync?: string | null
           metadata?: Json | null
+          pull_from?: string[] | null
           refresh_token?: string | null
           status?: Database["public"]["Enums"]["integration_status"] | null
           tool_name: string
@@ -68,6 +70,7 @@ export type Database = {
           id?: number
           last_sync?: string | null
           metadata?: Json | null
+          pull_from?: string[] | null
           refresh_token?: string | null
           status?: Database["public"]["Enums"]["integration_status"] | null
           tool_name?: string

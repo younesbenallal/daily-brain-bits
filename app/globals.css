@@ -47,7 +47,7 @@
 		@apply border-border;
 	}
 	h2 {
-		@apply font-display font-semibold text-primary text-3xl;
+		@apply font-display font-semibold text-primary text-3xl mb-1;
 	}
 	a {
 		@apply underline text-primary;

@@ -17,7 +17,6 @@ interface AddIntegrationsStepProps extends React.ComponentPropsWithoutRef<"div">
 
 export function AddIntegrationsStep({ user, ...props }: AddIntegrationsStepProps) {
 	const [showToken, setShowToken] = React.useState(false);
-	const [obsidianInfo, setObsidianInfo] = React.useState("");
 
 	const openObsidianPlugin = () => {
 		setShowToken(true);
@@ -42,7 +41,7 @@ export function AddIntegrationsStep({ user, ...props }: AddIntegrationsStepProps
 				<h2>Gimme your preferences</h2>
 				<p className="">Help us craft your experience to your wishes.</p>
 			</div>
-			<div className="flex flex-col w-fit mx-auto gap-3 p-24 items-stretch">
+			<div className="flex flex-col w-fit mx-auto gap-3 p-12 items-stretch">
 				{notionIntegration ? (
 					<>
 						<Button size="xl" variant="secondary" disabled>

@@ -1,12 +1,7 @@
-"use client";
-
-import { useState } from "react";
-
 import { MultiSelect } from "@/components/ui/multi-select";
 
 interface ConfigureNotionStepProps extends React.ComponentPropsWithoutRef<"div"> {}
 export async function ConfigureNotionStep({ ...props }: ConfigureNotionStepProps) {
-	const [options, setoptions] = useState([])
 	return (
 		<div className="h-full">
 			<div>
@@ -16,12 +11,7 @@ export async function ConfigureNotionStep({ ...props }: ConfigureNotionStepProps
 			<div className="flex flex-col justify-center w-full h-full gap-2">
 				<h3 className="font-medium text-lg">Databases to pull</h3>
 				<p className="text-muted-foreground">We tried to guess the timezone of your area.</p>
-				<MultiSelect
-					options={[
-						{ value: "notes", label: "💼 Notes" },
-						{ value: "books", label: "📚 Books" },
-					]}
-				/>
+				<MultiSelect />
 			</div>
 		</div>
 	);

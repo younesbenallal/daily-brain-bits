@@ -8,6 +8,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { XMarkIcon } from "@heroicons/react/20/solid";
 import { searchNotionDatabase } from "@/lib/integrations/notion";
 import type { DatabaseObjectResponse, SearchResponse } from "@notionhq/client/build/src/api-endpoints";
+import { updateUserIntegration } from "@/lib/user";
 
 type Option = Record<"value" | "label", string>;
 
@@ -23,17 +24,22 @@ export function MultiSelect({ defaultOptions }: { defaultOptions?: Option[] }) {
 	}, []);
 
 	React.useEffect(() => {
-		searchNotionDatabase(inputValue).then((data: SearchResponse | null) => {
-			setOptions(
-				data
-					? data.results.map((result) => ({
-							value: result.id,
-							label: (result as DatabaseObjectResponse)?.title?.[0].plain_text,
-					  }))
-					: []
-			);
-		});
+		inputValue &&
+			searchNotionDatabase(inputValue).then((data: SearchResponse | null) => {
+				setOptions(
+					data
+						? data.results.map((result) => ({
+								value: result.id,
+								label: (result as DatabaseObjectResponse)?.title?.[0].plain_text,
+						  }))
+						: []
+				);
+			});
 	}, [inputValue]);
+
+	React.useEffect(() => {
+		updateUserIntegration("notion", { pull_from: selected.map((s) => s.value) });
+	}, [selected]);
 
 	const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
 		const input = inputRef.current;
