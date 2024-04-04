@@ -1,7 +1,12 @@
+"use client";
+
+import { useState } from "react";
+
 import { MultiSelect } from "@/components/ui/multi-select";
 
-interface ConfigureIntegrationsStepProps extends React.ComponentPropsWithoutRef<"div"> {}
-export function ConfigureIntegrationsStep({ ...props }: ConfigureIntegrationsStepProps) {
+interface ConfigureNotionStepProps extends React.ComponentPropsWithoutRef<"div"> {}
+export async function ConfigureNotionStep({ ...props }: ConfigureNotionStepProps) {
+	const [options, setoptions] = useState([])
 	return (
 		<div className="h-full">
 			<div>

@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect, useSearchParams } from "next/navigation";
 
 import { Input } from "@/components/ui/input";

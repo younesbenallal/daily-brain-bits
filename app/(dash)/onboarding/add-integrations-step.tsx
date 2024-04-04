@@ -71,7 +71,7 @@ export function AddIntegrationsStep({ user, ...props }: AddIntegrationsStepProps
 							<Button
 								variant="secondary"
 								size="icon"
-								className="absolute right-0 inset-y-0 h-4 w-4 m-3 bg-white"
+								className="absolute right-0 inset-y-0 h-4 w-4 m-3 bg-secondary hover:bg-secondary/80"
 								onClick={() => navigator.clipboard.writeText(user.id)}
 							>
 								<DocumentDuplicateIcon className="text-muted-foreground" />

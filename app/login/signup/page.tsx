@@ -1,6 +1,6 @@
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";

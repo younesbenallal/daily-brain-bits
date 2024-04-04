@@ -1,5 +1,5 @@
 import Note from "@/components/note";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export default async function Home() {

@@ -6,18 +6,34 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Command as CommandPrimitive } from "cmdk";
 import { XMarkIcon } from "@heroicons/react/20/solid";
+import { searchNotionDatabase } from "@/lib/integrations/notion";
+import type { DatabaseObjectResponse, SearchResponse } from "@notionhq/client/build/src/api-endpoints";
 
 type Option = Record<"value" | "label", string>;
 
-export function MultiSelect({ options }: { options: Option[] }) {
+export function MultiSelect({ defaultOptions }: { defaultOptions?: Option[] }) {
 	const inputRef = React.useRef<HTMLInputElement>(null);
 	const [open, setOpen] = React.useState(false);
 	const [selected, setSelected] = React.useState<Option[]>([]);
 	const [inputValue, setInputValue] = React.useState("");
+	const [options, setOptions] = React.useState<Option[]>(defaultOptions || []);
 
 	const handleUnselect = React.useCallback((option: Option) => {
 		setSelected((prev) => prev.filter((s) => s.value !== option.value));
 	}, []);
+
+	React.useEffect(() => {
+		searchNotionDatabase(inputValue).then((data: SearchResponse | null) => {
+			setOptions(
+				data
+					? data.results.map((result) => ({
+							value: result.id,
+							label: (result as DatabaseObjectResponse)?.title?.[0].plain_text,
+					  }))
+					: []
+			);
+		});
+	}, [inputValue]);
 
 	const handleKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
 		const input = inputRef.current;
