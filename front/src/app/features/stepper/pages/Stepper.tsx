@@ -24,7 +24,7 @@ const STEPS = [
 const Stepper: React.FC = () => {
   const { currentStep, nextStep, resetStepper } = useStepper(0, STEPS.length);
   const { logout, isAuthenticated, user } = useAuth();
-  const CurrentComponent = STEPS[currentStep].Component;
+  const CurrentComponent = STEPS[currentStep]?.Component;
   const handleLogout = () => {
     logout();
     resetStepper();

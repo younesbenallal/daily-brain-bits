@@ -31,9 +31,6 @@ const ConfigureNotion: React.FC<ConfigureNotionProps> = ({ onNext }) => {
     databases,
     isLoadingDatabases,
     fetchDatabases,
-    integrations,
-    activeIntegrations,
-    notionIntegration,
     savedNotionDatabases,
   } = useNotion();
   const { mutate: saveNotionDatabase } = useSaveNotionDatabase();

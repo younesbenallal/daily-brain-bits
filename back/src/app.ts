@@ -8,6 +8,7 @@ import { authController } from "./modules/auth/auth.controller";
 import { notionDatabaseController } from "./modules/notion-database/notion-database.controller";
 import { integrationController } from "./modules/integrations/integration.controller";
 import { NotionPageController } from "./modules/notion-page/notion-page.controller";
+import { dailyEmailCronController } from "./modules/daily-email-cron/daily-email-cron.controller";
 import { auth } from "../auth";
 
 export function createApp() {
@@ -81,6 +82,7 @@ export function createApp() {
         notionPage: {
           fetchAllNotes: "POST /notion-page/all-notes",
           getSavedNotes: "GET /notion-page/saved-notes",
+          sendRandomPageByEmail: "GET /notion-page/send-notes",
         },
       },
     });
@@ -225,6 +227,10 @@ export function createApp() {
     "/notion-page/saved-notes",
     notionPageController.getSavedNotes.bind(notionPageController)
   );
+  app.get(
+    "/notion-page/send-notes",
+    notionPageController.sendRandomPageByEmail.bind(notionPageController)
+  );
 
   // Route pour renvoyer un email de vérification
   app.post("/api/auth/send-verification-email", async (c) => {
@@ -246,6 +252,58 @@ export function createApp() {
       return c.json({ error: "Failed to send verification email" }, 500);
     }
   });
+
+  // ==================== DAILY EMAIL CRON ROUTES ====================
+
+  // Démarrer le service de cron quotidien
+  app.post(
+    "/cron/daily-email/start",
+    dailyEmailCronController.startCronService.bind(dailyEmailCronController)
+  );
+
+  // Arrêter le service de cron quotidien
+  app.post(
+    "/cron/daily-email/stop",
+    dailyEmailCronController.stopCronService.bind(dailyEmailCronController)
+  );
+
+  // Obtenir le statut du service de cron
+  app.get(
+    "/cron/daily-email/status",
+    dailyEmailCronController.getCronStatus.bind(dailyEmailCronController)
+  );
+
+  // Déclencher manuellement l'envoi d'emails (pour les tests)
+  app.post(
+    "/cron/daily-email/send-now",
+    dailyEmailCronController.sendEmailsNow.bind(dailyEmailCronController)
+  );
+
+  // Changer vers le planning de production (une fois par jour)
+  app.post(
+    "/cron/daily-email/switch-to-production",
+    dailyEmailCronController.switchToProduction.bind(dailyEmailCronController)
+  );
+
+  // Obtenir les logs du service
+  app.get(
+    "/cron/daily-email/logs",
+    dailyEmailCronController.getLogs.bind(dailyEmailCronController)
+  );
+
+  // Debug: Vérifier les utilisateurs avec intégrations Notion
+  app.get(
+    "/cron/daily-email/debug-users",
+    dailyEmailCronController.debugUsers.bind(dailyEmailCronController)
+  );
+
+  // faire la mise a jour des pages et database notion
+  app.post(
+    "/cron/daily-email/update-notion",
+    dailyEmailCronController.updateNotion.bind(dailyEmailCronController)
+  );
+
+  // dailyEmailCronService.start();
 
   return app;
 }

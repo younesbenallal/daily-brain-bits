@@ -4,24 +4,33 @@ import { notionPageService } from "./notion-page.service";
 export class NotionPageController {
   async fetchAllNotes(c: Context) {
     try {
-      console.log("🔍 Fetching all notes");
-      const body = await c.req.json();
-      const { integrationId, databaseIds } = body;
+      const integrationId = c.req.query("integrationId");
+      const databaseIdsParam = c.req.query("databaseIds");
 
       if (!integrationId) {
         return c.json({ error: "integrationId is required" }, 400);
       }
 
-      if (!databaseIds) {
+      if (!databaseIdsParam) {
         return c.json({ error: "databaseIds is required" }, 400);
       }
 
-      // Vérifier que databaseIds est un array
+      // Parser les databaseIds (peut être une chaîne séparée par des virgules ou un array JSON)
+      let databaseIds: string[];
+      try {
+        // Essayer de parser comme JSON d'abord
+        databaseIds = JSON.parse(databaseIdsParam);
+      } catch {
+        // Si ce n'est pas du JSON, traiter comme une chaîne séparée par des virgules
+        databaseIds = databaseIdsParam
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id);
+      }
+
       if (!Array.isArray(databaseIds) || databaseIds.length === 0) {
         return c.json({ error: "databaseIds must be a non-empty array" }, 400);
       }
-
-      console.log("🔍 Fetching notes for:", { integrationId, databaseIds });
 
       const notes = await notionPageService.fetchAllNotes(
         integrationId,
@@ -66,11 +75,6 @@ export class NotionPageController {
         }
       }
 
-      console.log("🔍 Getting saved notes for:", {
-        integrationId,
-        databaseIds,
-      });
-
       const notes = await notionPageService.getSavedPages(
         integrationId,
         databaseIds
@@ -86,6 +90,55 @@ export class NotionPageController {
       return c.json(
         {
           error: "Failed to get saved notes",
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
+    }
+  }
+
+  async sendRandomPageByEmail(c: Context) {
+    try {
+      const integrationId = c.req.query("integrationId");
+      const databaseIdsParam = c.req.query("databaseIds");
+      const userEmail = c.req.query("userEmail");
+
+      if (!integrationId) {
+        return c.json({ error: "integrationId is required" }, 400);
+      }
+
+      if (!userEmail) {
+        return c.json({ error: "userEmail is required" }, 400);
+      }
+
+      let databaseIds: string[] | undefined;
+      if (databaseIdsParam) {
+        try {
+          databaseIds = JSON.parse(databaseIdsParam);
+        } catch {
+          databaseIds = databaseIdsParam
+            .split(",")
+            .map((id) => id.trim())
+            .filter((id) => id);
+        }
+      }
+
+      const result = await notionPageService.sendRandomPageByEmail(
+        integrationId,
+        userEmail,
+        databaseIds
+      );
+
+      return c.json({
+        success: true,
+        message: "Email sent successfully",
+        data: result,
+      });
+    } catch (error) {
+      console.error("❌ Error in sendRandomPageByEmail controller:", error);
+      return c.json(
+        {
+          error: "Failed to send email",
           message: error instanceof Error ? error.message : "Unknown error",
         },
         500

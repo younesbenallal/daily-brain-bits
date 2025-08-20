@@ -168,8 +168,6 @@ export class TestService {
         }
       }
 
-      // Si aucune page sauvegardée, récupérer depuis Notion
-      console.log("No saved pages found, fetching from Notion...");
       response = await fetch(`${TestService.BASE_URL}/notion-page/all-notes`, {
         method: "POST",
         headers: {
@@ -374,6 +372,36 @@ export class TestService {
     } catch (error) {
       console.error("Error in simulation:", error);
       throw error;
+    }
+  }
+
+  async sendNotesByMail(
+    integration: Integration,
+    databases: Database[],
+    userEmail: string
+  ) {
+    const params = new URLSearchParams({
+      integrationId: integration.id,
+      databaseIds: JSON.stringify(databases.map((db) => db.databaseId)),
+      userEmail: userEmail,
+    });
+
+    let response = await fetch(
+      `${TestService.BASE_URL}/notion-page/send-notes?${params}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      return result;
+    } else {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to send email");
     }
   }
 }

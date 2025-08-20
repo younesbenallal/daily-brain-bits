@@ -47,7 +47,6 @@ async function testDailyEmailSystem() {
 
     console.log("");
 
-    // Test 2: Planification hebdomadaire
     console.log("📅 TEST 2: Planification de la semaine");
     console.log("-".repeat(30));
 

@@ -10,6 +10,7 @@ import Login from "./features/login/pages/Login";
 import Stepper from "./features/stepper/pages/Stepper";
 import Quizz from "./features/quizz/Quizz";
 import Test from "./features/test/pages/Test";
+import Mail from "./features/test/pages/Mail";
 
 // Définition des routes
 const routes: Route[] = [
@@ -18,6 +19,7 @@ const routes: Route[] = [
   { path: "/stepper", component: Stepper, name: "Configuration" },
   { path: "/quizz", component: Quizz, name: "Quiz" },
   { path: "/test", component: Test, name: "Test Simulation" },
+  { path: "/mail", component: Mail, name: "Mail" },
 ];
 
 export default function Providers({ children }: { children: React.ReactNode }) {
