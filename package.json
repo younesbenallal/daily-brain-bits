@@ -1,0 +1,24 @@
+{
+  "name": "daily-brain-bits",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.6.0"
+  },
+  "packageManager": "bun@1.1.0",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
