@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@daily-brain-bits/types": "workspace:*",
+    "@orpc/client": "^1.13.1",
+    "@orpc/react-query": "^1.13.1",
     "@tanstack/react-query": "^5.60.5",
     "@tanstack/react-router": "^1.114.3",
     "@tanstack/router-devtools": "^1.114.3",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@daily-brain-bits/back": "workspace:*",
+    "@orpc/server": "^1.13.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/router-plugin": "^1.114.3",
     "@types/react": "^19.2.7",

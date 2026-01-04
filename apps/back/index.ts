@@ -3,7 +3,6 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { obsidianRouter } from "../routes/obsidian";
 import { router } from "./router";
 
 const app = new Hono();
@@ -32,7 +31,7 @@ app.use("/rpc/*", async (c, next) => {
   const { matched, response } = await rpcHandler.handle(c.req.raw, {
     prefix: "/rpc",
     context: {
-      // Add context here (e.g., user from auth middleware)
+      requestUrl: c.req.url,
     },
   });
 
@@ -41,13 +40,6 @@ app.use("/rpc/*", async (c, next) => {
   }
 
   await next();
-});
-
-app.route("/", obsidianRouter);
-
-// Health check
-app.get("/health", (c) => {
-  return c.json({ status: "ok" });
 });
 
 const port = Number(process.env.PORT) || 3001;

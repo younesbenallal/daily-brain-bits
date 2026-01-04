@@ -8,10 +8,10 @@ function escapeRegex(value: string): string {
 
 export function globToRegExp(pattern: string): RegExp {
   const normalized = normalizeVaultPath(pattern);
-  let regex = "^";
+  let regex: string = "^";
 
   for (let i = 0; i < normalized.length; i += 1) {
-    const char = normalized[i];
+    const char = normalized.charAt(i);
     if (char === "*") {
       if (normalized[i + 1] === "*") {
         regex += ".*";
@@ -40,10 +40,7 @@ export function matchesGlob(path: string, pattern: string): boolean {
   return globToRegExp(pattern).test(normalizeVaultPath(path));
 }
 
-export function createPathFilter(options: {
-  include?: string[];
-  exclude?: string[];
-}): (path: string) => boolean {
+export function createPathFilter(options: { include?: string[]; exclude?: string[] }): (path: string) => boolean {
   const includePatterns = (options.include || []).filter(Boolean);
   const excludePatterns = (options.exclude || []).filter(Boolean);
   const includeRegs = includePatterns.map((pattern) => globToRegExp(pattern));

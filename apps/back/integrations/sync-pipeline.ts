@@ -1,8 +1,9 @@
 import type { SyncCursor } from "@daily-brain-bits/core";
 import type { IntegrationKind } from "@daily-brain-bits/db";
-import { and, db, eq, integrationScopeItems } from "@daily-brain-bits/db";
+import { db, integrationScopeItems } from "@daily-brain-bits/db";
 import { createPathFilter } from "@daily-brain-bits/integrations-obsidian";
 import { ingestSyncItems, type IngestResult } from "./ingest";
+import { and, eq } from "drizzle-orm";
 
 type ScopeFilterResult = {
   filteredItems: unknown[];
@@ -51,13 +52,11 @@ async function filterObsidianItems(
   let rejected = 0;
 
   for (const item of items) {
-    const itemRecord =
-      typeof item === "object" && item ? (item as Record<string, unknown>) : null;
+    const itemRecord = typeof item === "object" && item ? (item as Record<string, unknown>) : null;
     const path =
       itemRecord &&
       "metadata" in itemRecord &&
-      typeof (itemRecord as { metadata?: { path?: unknown } }).metadata?.path ===
-        "string"
+      typeof (itemRecord as { metadata?: { path?: unknown } }).metadata?.path === "string"
         ? (itemRecord as { metadata: { path: string } }).metadata.path
         : null;
 
@@ -65,9 +64,7 @@ async function filterObsidianItems(
       rejected += 1;
       itemResults.push({
         externalId:
-          itemRecord &&
-          "externalId" in itemRecord &&
-          typeof (itemRecord as { externalId?: unknown }).externalId === "string"
+          itemRecord && "externalId" in itemRecord && typeof (itemRecord as { externalId?: unknown }).externalId === "string"
             ? (itemRecord as { externalId: string }).externalId
             : "unknown",
         status: "rejected",
@@ -80,9 +77,7 @@ async function filterObsidianItems(
       rejected += 1;
       itemResults.push({
         externalId:
-          itemRecord &&
-          "externalId" in itemRecord &&
-          typeof (itemRecord as { externalId?: unknown }).externalId === "string"
+          itemRecord && "externalId" in itemRecord && typeof (itemRecord as { externalId?: unknown }).externalId === "string"
             ? (itemRecord as { externalId: string }).externalId
             : "unknown",
         status: "rejected",
@@ -94,14 +89,9 @@ async function filterObsidianItems(
     if (itemRecord && "op" in itemRecord && itemRecord.op === "upsert") {
       filteredItems.push({
         ...itemRecord,
-        title:
-          typeof itemRecord.title === "string"
-            ? (itemRecord.title as string)
-            : fallbackTitle(path),
+        title: typeof itemRecord.title === "string" ? (itemRecord.title as string) : fallbackTitle(path),
         metadata: {
-          ...((itemRecord.metadata &&
-            typeof itemRecord.metadata === "object" &&
-            !Array.isArray(itemRecord.metadata)
+          ...((itemRecord.metadata && typeof itemRecord.metadata === "object" && !Array.isArray(itemRecord.metadata)
             ? itemRecord.metadata
             : {}) as Record<string, unknown>),
           path,
@@ -114,13 +104,9 @@ async function filterObsidianItems(
     filteredItems.push({
       ...safeRecord,
       deletedAtSource:
-        typeof safeRecord.deletedAtSource === "string"
-          ? (safeRecord.deletedAtSource as string)
-          : defaultDeletedAtSource,
+        typeof safeRecord.deletedAtSource === "string" ? (safeRecord.deletedAtSource as string) : defaultDeletedAtSource,
       metadata: {
-        ...((itemRecord?.metadata &&
-          typeof itemRecord.metadata === "object" &&
-          !Array.isArray(itemRecord.metadata)
+        ...((itemRecord?.metadata && typeof itemRecord.metadata === "object" && !Array.isArray(itemRecord.metadata)
           ? itemRecord.metadata
           : {}) as Record<string, unknown>),
         path,
@@ -132,27 +118,17 @@ async function filterObsidianItems(
 }
 
 async function applyScopeFilter(
-  params: Pick<
-    SyncPipelineParams,
-    "connectionId" | "items" | "sourceKind" | "defaultDeletedAtSource" | "receivedAt"
-  >
+  params: Pick<SyncPipelineParams, "connectionId" | "items" | "sourceKind" | "defaultDeletedAtSource" | "receivedAt">
 ): Promise<ScopeFilterResult> {
   if (params.sourceKind !== "obsidian") {
     return { filteredItems: params.items, rejected: 0, itemResults: [] };
   }
 
-  const fallbackDeletedAtSource =
-    params.defaultDeletedAtSource ?? params.receivedAt.toISOString();
-  return filterObsidianItems(
-    params.connectionId,
-    params.items,
-    fallbackDeletedAtSource
-  );
+  const fallbackDeletedAtSource = params.defaultDeletedAtSource ?? params.receivedAt.toISOString();
+  return filterObsidianItems(params.connectionId, params.items, fallbackDeletedAtSource);
 }
 
-export async function runSyncPipeline(
-  params: SyncPipelineParams
-): Promise<IngestResult> {
+export async function runSyncPipeline(params: SyncPipelineParams): Promise<IngestResult> {
   const { filteredItems, rejected, itemResults } = await applyScopeFilter({
     connectionId: params.connectionId,
     items: params.items,
