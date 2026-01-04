@@ -9,7 +9,7 @@ import {
 import {
   buildExternalId,
   createPathFilter,
-  normalizeVaultPath,
+  obsidianScopeResponseSchema,
   type SyncBatchResponse,
   type SyncItem,
 } from "@daily-brain-bits/integrations-obsidian";
@@ -18,6 +18,7 @@ import type { DBBSettings } from "./settings";
 import type { LocalIndex, PendingQueueItem, SyncStatus } from "./types";
 
 const maxBackoffMs = 60_000;
+const scopeRefreshMs = 5 * 60 * 1000;
 
 function buildApiUrl(baseUrl: string, path: string): string {
   const trimmed = baseUrl.replace(/\/$/, "");
@@ -43,18 +44,21 @@ function toQueueKey(item: PendingQueueItem): string {
   return `${item.op}:${item.externalId}:${item.path}`;
 }
 
-function normalizeFolderGlob(folder: string): string {
-  const normalized = normalizeVaultPath(folder).replace(/\/$/, "");
-  return `${normalized}/**`;
+function normalizePatterns(patterns: string[]): string[] {
+  return patterns.map((pattern) => pattern.trim()).filter(Boolean);
 }
 
-function buildPathFilter(settings: DBBSettings): (path: string) => boolean {
-  const include = settings.includeFolders.map(normalizeFolderGlob);
-  const exclude = [
-    ...settings.excludeFolders.map(normalizeFolderGlob),
-    ...settings.excludePatterns,
-  ];
-  return createPathFilter({ include, exclude });
+function buildScopeFilter(
+  patterns: string[],
+  scopeReady: boolean
+): (path: string) => boolean {
+  if (!scopeReady) {
+    return () => false;
+  }
+  if (patterns.length === 0) {
+    return () => true;
+  }
+  return createPathFilter({ include: patterns });
 }
 
 function pickFrontmatter(frontmatter?: Record<string, unknown>) {
@@ -107,19 +111,12 @@ function extractAliases(frontmatter?: Record<string, unknown>): string[] {
 
 function shouldSyncFile(
   file: TFile,
-  settings: DBBSettings,
   filter: (path: string) => boolean
 ): boolean {
   if (!filter(file.path)) {
     return false;
   }
-  if (settings.includeOnlyMarkdown) {
-    return file.extension === "md";
-  }
-  if (!settings.includeAttachments) {
-    return file.extension === "md";
-  }
-  return true;
+  return file.extension === "md";
 }
 
 export class Syncer {
@@ -132,6 +129,9 @@ export class Syncer {
   private backoffMs = 1_000;
   private pathFilter: (path: string) => boolean;
   private flushDebounced: () => void;
+  private scopePatterns: string[] = [];
+  private scopeReady = false;
+  private scopeUpdatedAt: string | null = null;
 
   constructor(
     app: App,
@@ -148,7 +148,7 @@ export class Syncer {
       lastError: null,
       lastResult: null,
     };
-    this.pathFilter = buildPathFilter(settings);
+    this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
     this.flushDebounced = debounce(
       () => void this.flushQueue(),
       settings.debounceMs,
@@ -158,7 +158,7 @@ export class Syncer {
 
   updateSettings(settings: DBBSettings) {
     this.settings = settings;
-    this.pathFilter = buildPathFilter(settings);
+    this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
     this.flushDebounced = debounce(
       () => void this.flushQueue(),
       settings.debounceMs,
@@ -170,8 +170,29 @@ export class Syncer {
     return this.status;
   }
 
+  getScopeStatus() {
+    return {
+      ready: this.scopeReady,
+      patterns: [...this.scopePatterns],
+      updatedAt: this.scopeUpdatedAt,
+    };
+  }
+
+  async refreshScope(): Promise<boolean> {
+    const patterns = await this.fetchScopePatterns();
+    if (!patterns) {
+      return false;
+    }
+    const normalized = normalizePatterns(patterns);
+    const changed = this.applyScope(normalized);
+    if (changed) {
+      void this.fullSync();
+    }
+    return true;
+  }
+
   enqueueUpsert(file: TFile) {
-    if (!shouldSyncFile(file, this.settings, this.pathFilter)) {
+    if (!shouldSyncFile(file, this.pathFilter)) {
       return;
     }
     const externalId = buildExternalId(this.settings.vaultId, file.path);
@@ -210,11 +231,17 @@ export class Syncer {
   }
 
   async fullSync() {
+    if (!this.scopeReady) {
+      const refreshed = await this.refreshScope();
+      if (!refreshed) {
+        return;
+      }
+    }
     const files = this.app.vault.getMarkdownFiles();
     const now = new Date().toISOString();
 
     for (const file of files) {
-      if (!shouldSyncFile(file, this.settings, this.pathFilter)) {
+      if (!shouldSyncFile(file, this.pathFilter)) {
         continue;
       }
       const externalId = buildExternalId(this.settings.vaultId, file.path);
@@ -288,6 +315,41 @@ export class Syncer {
     this.flushDebounced();
   }
 
+  private applyScope(patterns: string[]): boolean {
+    const previous = this.scopePatterns.join("\n");
+    const next = patterns.join("\n");
+    const changed = previous !== next;
+
+    this.scopePatterns = patterns;
+    this.scopeReady = true;
+    this.scopeUpdatedAt = new Date().toISOString();
+    this.pathFilter = buildScopeFilter(patterns, true);
+
+    if (changed) {
+      for (const entry of Object.values(this.index.files)) {
+        if (!this.pathFilter(entry.path)) {
+          this.enqueueDelete(entry.path);
+        }
+      }
+    }
+
+    return changed;
+  }
+
+  private async fetchScopePatterns(): Promise<string[] | null> {
+    if (!this.settings.apiBaseUrl || !this.settings.vaultId) {
+      this.status.lastError = \"Missing API base URL or Vault ID.\";
+      return null;
+    }
+
+    try {
+      const response = await requestUrl({
+        url: buildApiUrl(
+          this.settings.apiBaseUrl,
+          `/v1/integrations/obsidian/scope?vaultId=${encodeURIComponent(\n            this.settings.vaultId\n          )}`\n        ),
+        method: \"GET\",
+        headers: {\n          ...(this.settings.pluginToken\n            ? { Authorization: `Bearer ${this.settings.pluginToken}` }\n            : {}),\n        },\n      });\n\n      if (response.status === 401) {\n        this.status.lastError = \"Unauthorized - check plugin token.\";\n        new Notice(\"Daily Brain Bits: token invalid. Reconnect.\");\n        return null;\n      }\n\n      if (response.status === 404) {\n        this.status.lastError = \"Vault not registered with backend.\";\n        return null;\n      }\n\n      if (response.status < 200 || response.status >= 300) {\n        this.status.lastError = `Scope fetch failed (${response.status}).`;\n        return null;\n      }\n\n      const data =\n        typeof response.json === \"object\" && response.json !== null\n          ? response.json\n          : JSON.parse(response.text);\n      const parsed = obsidianScopeResponseSchema.safeParse(data);\n      if (!parsed.success) {\n        this.status.lastError = \"Invalid scope response.\";\n        return null;\n      }\n\n      return parsed.data.patterns;\n    } catch (error) {\n      console.error(\"DBB scope fetch failed\", error);\n      this.status.lastError = \"Failed to refresh scope.\";\n      return null;\n    }\n  }\n*** End Patch}
+
   private async buildBatch(): Promise<{
     items: SyncItem[];
     queueItems: PendingQueueItem[];
@@ -349,7 +411,7 @@ export class Syncer {
       };
     }
 
-    if (!shouldSyncFile(file, this.settings, this.pathFilter)) {
+    if (!shouldSyncFile(file, this.pathFilter)) {
       return null;
     }
 

@@ -1,25 +1,23 @@
 import { z } from "zod";
+import {
+  syncItemDeleteSchema as coreDeleteSchema,
+  syncItemUpsertSchema as coreUpsertSchema,
+} from "@daily-brain-bits/core";
 
 const nonEmptyString = z.string().min(1);
 
-export const syncItemUpsertSchema = z.object({
-  op: z.literal("upsert"),
-  externalId: nonEmptyString,
-  path: nonEmptyString,
-  title: z.string().optional(),
-  contentMarkdown: nonEmptyString,
-  updatedAtSource: z.string().datetime().optional(),
-  contentHash: nonEmptyString,
-  metadata: z.record(z.unknown()).optional(),
+const obsidianMetadataSchema = z
+  .object({
+    path: nonEmptyString,
+  })
+  .passthrough();
+
+export const syncItemUpsertSchema = coreUpsertSchema.extend({
+  metadata: obsidianMetadataSchema,
 });
 
-export const syncItemDeleteSchema = z.object({
-  op: z.literal("delete"),
-  externalId: nonEmptyString,
-  path: nonEmptyString,
-  title: z.string().optional(),
-  updatedAtSource: z.string().datetime().optional(),
-  metadata: z.record(z.unknown()).optional(),
+export const syncItemDeleteSchema = coreDeleteSchema.extend({
+  metadata: obsidianMetadataSchema,
 });
 
 export const syncItemSchema = z.discriminatedUnion("op", [
@@ -53,6 +51,12 @@ export const obsidianRegisterResponseSchema = z.object({
   connectionId: z.number().int().optional(),
 });
 
+export const obsidianScopeResponseSchema = z.object({
+  vaultId: nonEmptyString,
+  patterns: z.array(nonEmptyString),
+  updatedAt: z.string().datetime().optional(),
+});
+
 export type SyncItemUpsert = z.infer<typeof syncItemUpsertSchema>;
 export type SyncItemDelete = z.infer<typeof syncItemDeleteSchema>;
 export type SyncItem = z.infer<typeof syncItemSchema>;
@@ -61,3 +65,4 @@ export type SyncBatchResponse = z.infer<typeof syncBatchResponseSchema>;
 export type ObsidianRegisterResponse = z.infer<
   typeof obsidianRegisterResponseSchema
 >;
+export type ObsidianScopeResponse = z.infer<typeof obsidianScopeResponseSchema>;

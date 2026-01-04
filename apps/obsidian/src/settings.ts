@@ -5,11 +5,6 @@ export type DBBSettings = {
   pluginToken: string;
   vaultId: string;
   deviceId: string;
-  includeFolders: string[];
-  excludeFolders: string[];
-  excludePatterns: string[];
-  includeOnlyMarkdown: boolean;
-  includeAttachments: boolean;
   batchSize: number;
   debounceMs: number;
   maxBytesPerBatch: number;
@@ -20,28 +15,10 @@ export const DEFAULT_SETTINGS: DBBSettings = {
   pluginToken: "",
   vaultId: "",
   deviceId: "",
-  includeFolders: [],
-  excludeFolders: [],
-  excludePatterns: [],
-  includeOnlyMarkdown: true,
-  includeAttachments: false,
   batchSize: 50,
   debounceMs: 2000,
   maxBytesPerBatch: 2_000_000,
 };
-
-const listSeparator = /[\n,]/;
-
-export function parseList(value: string): string[] {
-  return value
-    .split(listSeparator)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
-export function formatList(list: string[]): string {
-  return list.join("\n");
-}
 
 function clampNumber(value: number, fallback: number, min: number): number {
   if (!Number.isFinite(value)) {
@@ -57,29 +34,27 @@ export function normalizeSettings(
     ...DEFAULT_SETTINGS,
     ...overrides,
   };
-
-  merged.includeFolders = Array.isArray(merged.includeFolders)
-    ? merged.includeFolders.filter(Boolean)
-    : [];
-  merged.excludeFolders = Array.isArray(merged.excludeFolders)
-    ? merged.excludeFolders.filter(Boolean)
-    : [];
-  merged.excludePatterns = Array.isArray(merged.excludePatterns)
-    ? merged.excludePatterns.filter(Boolean)
-    : [];
-  merged.batchSize = clampNumber(merged.batchSize, DEFAULT_SETTINGS.batchSize, 1);
-  merged.debounceMs = clampNumber(
+  const batchSize = clampNumber(merged.batchSize, DEFAULT_SETTINGS.batchSize, 1);
+  const debounceMs = clampNumber(
     merged.debounceMs,
     DEFAULT_SETTINGS.debounceMs,
     250
   );
-  merged.maxBytesPerBatch = clampNumber(
+  const maxBytesPerBatch = clampNumber(
     merged.maxBytesPerBatch,
     DEFAULT_SETTINGS.maxBytesPerBatch,
     50_000
   );
 
-  return merged;
+  return {
+    apiBaseUrl: merged.apiBaseUrl,
+    pluginToken: merged.pluginToken,
+    vaultId: merged.vaultId,
+    deviceId: merged.deviceId,
+    batchSize,
+    debounceMs,
+    maxBytesPerBatch,
+  };
 }
 
 export type SettingsOwner = {
@@ -148,68 +123,6 @@ export class DBBSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.deviceId)
           .onChange(async (value) => {
             this.plugin.settings.deviceId = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl).setName("Scope").setHeading();
-
-    new Setting(containerEl)
-      .setName("Include folders")
-      .setDesc("Only sync notes under these folders (one per line).")
-      .addTextArea((text) =>
-        text
-          .setValue(formatList(this.plugin.settings.includeFolders))
-          .onChange(async (value) => {
-            this.plugin.settings.includeFolders = parseList(value);
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Exclude folders")
-      .setDesc("Skip notes under these folders (one per line).")
-      .addTextArea((text) =>
-        text
-          .setValue(formatList(this.plugin.settings.excludeFolders))
-          .onChange(async (value) => {
-            this.plugin.settings.excludeFolders = parseList(value);
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Exclude patterns")
-      .setDesc("Glob patterns to exclude from sync (one per line).")
-      .addTextArea((text) =>
-        text
-          .setValue(formatList(this.plugin.settings.excludePatterns))
-          .onChange(async (value) => {
-            this.plugin.settings.excludePatterns = parseList(value);
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Include only Markdown")
-      .setDesc("Ignore non-markdown files.")
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.includeOnlyMarkdown)
-          .onChange(async (value) => {
-            this.plugin.settings.includeOnlyMarkdown = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName("Include attachments")
-      .setDesc("Reserved for future support. Attachments are ignored for now.")
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.includeAttachments)
-          .onChange(async (value) => {
-            this.plugin.settings.includeAttachments = value;
             await this.plugin.saveSettings();
           })
       );

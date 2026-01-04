@@ -2,17 +2,32 @@ import { z } from "zod";
 
 const nonEmptyString = z.string().min(1);
 const dateTimeNullable = z.string().datetime().nullable().optional();
+const dateTimeRequired = z.string().datetime();
 
-export const syncItemSchema = z.object({
-  op: z.enum(["upsert", "delete"]),
+export const syncItemUpsertSchema = z.object({
+  op: z.literal("upsert"),
   externalId: nonEmptyString,
   title: z.string().optional(),
-  contentMarkdown: z.string().optional(),
-  contentHash: z.string().optional(),
+  contentMarkdown: z.string().min(1),
+  contentHash: nonEmptyString,
   updatedAtSource: dateTimeNullable,
   deletedAtSource: dateTimeNullable,
   metadata: z.record(z.unknown()).nullable().optional(),
 });
+
+export const syncItemDeleteSchema = z.object({
+  op: z.literal("delete"),
+  externalId: nonEmptyString,
+  title: z.string().optional(),
+  updatedAtSource: dateTimeNullable,
+  deletedAtSource: dateTimeRequired,
+  metadata: z.record(z.unknown()).nullable().optional(),
+});
+
+export const syncItemSchema = z.discriminatedUnion("op", [
+  syncItemUpsertSchema,
+  syncItemDeleteSchema,
+]);
 
 export const syncCursorSchema = z.object({
   since: z.string().datetime(),

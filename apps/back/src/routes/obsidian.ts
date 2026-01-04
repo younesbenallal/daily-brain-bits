@@ -8,11 +8,12 @@ import {
 } from "@daily-brain-bits/integrations-obsidian";
 import {
   db,
-  documents,
   integrationConnections,
+  integrationScopeItems,
   obsidianVaults,
-  syncState,
 } from "@daily-brain-bits/db";
+import { createPathFilter } from "@daily-brain-bits/integrations-obsidian";
+import { ingestSyncItems } from "../integrations/ingest";
 
 const registerRequestSchema = z.object({
   userId: z.string().min(1),
@@ -31,16 +32,6 @@ function bytesToHex(bytes: Uint8Array): string {
     hex += byte.toString(16).padStart(2, "0");
   }
   return hex;
-}
-
-function encodeContent(contentMarkdown: string) {
-  return {
-    contentCiphertext: Buffer.from(contentMarkdown, "utf8").toString("base64"),
-    contentIv: "none",
-    contentAlg: "none",
-    contentKeyVersion: 0,
-    contentSizeBytes: Buffer.byteLength(contentMarkdown, "utf8"),
-  };
 }
 
 function fallbackTitle(path: string): string {
@@ -83,17 +74,52 @@ obsidianRouter.post("/v1/integrations/obsidian/register", async (c) => {
     settingsJson: {},
   });
 
-  if (connection?.id) {
-    await db.insert(syncState).values({
-      connectionId: connection.id,
-    });
-  }
-
   return c.json({
     pluginToken,
     vaultId,
     apiBaseUrl,
     connectionId: connection?.id,
+  });
+});
+
+obsidianRouter.get("/v1/integrations/obsidian/scope", async (c) => {
+  const vaultId = c.req.query("vaultId");
+  if (!vaultId) {
+    return c.json({ error: "vaultId is required" }, 400);
+  }
+
+  const connection = await db
+    .select({
+      id: integrationConnections.id,
+    })
+    .from(integrationConnections)
+    .where(
+      and(
+        eq(integrationConnections.kind, "obsidian"),
+        eq(integrationConnections.accountExternalId, vaultId)
+      )
+    )
+    .limit(1);
+
+  if (connection.length === 0) {
+    return c.json({ error: "unknown_vault" }, 404);
+  }
+
+  const scopeItems = await db
+    .select({ value: integrationScopeItems.scopeValue })
+    .from(integrationScopeItems)
+    .where(
+      and(
+        eq(integrationScopeItems.connectionId, connection[0].id),
+        eq(integrationScopeItems.scopeType, "obsidian_glob"),
+        eq(integrationScopeItems.enabled, true)
+      )
+    );
+
+  return c.json({
+    vaultId,
+    patterns: scopeItems.map((item) => item.value),
+    updatedAt: new Date().toISOString(),
   });
 });
 
@@ -129,94 +155,83 @@ obsidianRouter.post("/v1/integrations/obsidian/sync/batch", async (c) => {
   const userId = connection[0].userId;
   const now = new Date();
 
-  let accepted = 0;
-  let rejected = 0;
+  const scopeItems = await db
+    .select({ value: integrationScopeItems.scopeValue })
+    .from(integrationScopeItems)
+    .where(
+      and(
+        eq(integrationScopeItems.connectionId, connectionId),
+        eq(integrationScopeItems.scopeType, "obsidian_glob"),
+        eq(integrationScopeItems.enabled, true)
+      )
+    );
+
+  const scopePatterns = scopeItems.map((item) => item.value).filter(Boolean);
+  const allowAll = scopePatterns.length === 0;
+  const pathFilter = createPathFilter({ include: scopePatterns });
+
+  const filteredItems: unknown[] = [];
   const itemResults: SyncBatchResponse["itemResults"] = [];
+  let rejected = 0;
 
   for (const item of payload.items) {
-    try {
-      if (item.op === "upsert") {
-        const contentFields = encodeContent(item.contentMarkdown);
-        const metadataJson = {
-          path: item.path,
-          ...item.metadata,
-        };
-
-        await db
-          .insert(documents)
-          .values({
-            userId,
-            connectionId,
-            externalId: item.externalId,
-            title: item.title ?? fallbackTitle(item.path),
-            contentHash: item.contentHash,
-            createdAtSource: null,
-            updatedAtSource: item.updatedAtSource
-              ? new Date(item.updatedAtSource)
-              : null,
-            deletedAtSource: null,
-            lastSyncedAt: now,
-            metadataJson,
-            ...contentFields,
-          })
-          .onConflictDoUpdate({
-            target: [
-              documents.userId,
-              documents.connectionId,
-              documents.externalId,
-            ],
-            set: {
-              title: item.title ?? fallbackTitle(item.path),
-              contentHash: item.contentHash,
-              updatedAtSource: item.updatedAtSource
-                ? new Date(item.updatedAtSource)
-                : null,
-              deletedAtSource: null,
-              lastSyncedAt: now,
-              metadataJson,
-              ...contentFields,
-            },
-          });
-
-        accepted += 1;
-        itemResults.push({
-          externalId: item.externalId,
-          status: "accepted",
-        });
-        continue;
-      }
-
-      await db
-        .update(documents)
-        .set({
-          deletedAtSource: item.updatedAtSource
-            ? new Date(item.updatedAtSource)
-            : now,
-          lastSyncedAt: now,
-        })
-        .where(
-          and(
-            eq(documents.userId, userId),
-            eq(documents.connectionId, connectionId),
-            eq(documents.externalId, item.externalId)
-          )
-        );
-
-      accepted += 1;
-      itemResults.push({
-        externalId: item.externalId,
-        status: "accepted",
-      });
-    } catch (error) {
-      console.error("Obsidian sync item failed", error);
+    const path =
+      item.metadata && typeof item.metadata.path === "string"
+        ? item.metadata.path
+        : null;
+    if (!path) {
       rejected += 1;
       itemResults.push({
         externalId: item.externalId,
         status: "rejected",
-        reason: "server_error",
+        reason: "missing_path",
       });
+      continue;
     }
+
+    if (!allowAll && !pathFilter(path)) {
+      rejected += 1;
+      itemResults.push({
+        externalId: item.externalId,
+        status: "rejected",
+        reason: "out_of_scope",
+      });
+      continue;
+    }
+
+    if (item.op === "upsert") {
+      filteredItems.push({
+        ...item,
+        title: item.title ?? fallbackTitle(path),
+        metadata: {
+          ...item.metadata,
+          path,
+        },
+      });
+      continue;
+    }
+
+    filteredItems.push({
+      ...item,
+      deletedAtSource: item.deletedAtSource ?? payload.sentAt,
+      metadata: {
+        ...item.metadata,
+        path,
+      },
+    });
   }
+
+  const ingestResult = await ingestSyncItems({
+    connectionId,
+    userId,
+    items: filteredItems,
+    receivedAt: now,
+    nextCursor: { since: payload.sentAt },
+  });
+
+  const accepted = ingestResult.accepted;
+  rejected += ingestResult.rejected;
+  itemResults.push(...ingestResult.itemResults);
 
   await db
     .update(integrationConnections)
@@ -225,6 +240,30 @@ obsidianRouter.post("/v1/integrations/obsidian/sync/batch", async (c) => {
     })
     .where(eq(integrationConnections.id, connectionId));
 
+  const vaultRows = await db
+    .select({
+      deviceIdsJson: obsidianVaults.deviceIdsJson,
+    })
+    .from(obsidianVaults)
+    .where(eq(obsidianVaults.vaultId, payload.vaultId))
+    .limit(1);
+
+  if (payload.deviceId && vaultRows.length > 0) {
+    const existing = Array.isArray(vaultRows[0].deviceIdsJson)
+      ? vaultRows[0].deviceIdsJson
+      : [];
+    const nextDeviceIds = Array.from(
+      new Set([...existing, payload.deviceId])
+    );
+
+    await db
+      .update(obsidianVaults)
+      .set({
+        deviceIdsJson: nextDeviceIds,
+      })
+      .where(eq(obsidianVaults.vaultId, payload.vaultId));
+  }
+
   await db
     .update(obsidianVaults)
     .set({
@@ -232,20 +271,6 @@ obsidianRouter.post("/v1/integrations/obsidian/sync/batch", async (c) => {
       updatedAt: now,
     })
     .where(eq(obsidianVaults.vaultId, payload.vaultId));
-
-  await db
-    .insert(syncState)
-    .values({
-      connectionId,
-      lastIncrementalSyncAt: now,
-    })
-    .onConflictDoUpdate({
-      target: [syncState.connectionId],
-      set: {
-        lastIncrementalSyncAt: now,
-        updatedAt: now,
-      },
-    });
 
   return c.json({
     accepted,
