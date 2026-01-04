@@ -95,6 +95,6 @@ The plugin retries on transient failures:
 - Run backend:
   - `bun --cwd apps/back dev`
 - Manual smoke test:
-  - Install/copy plugin output into a dev vault at `.obsidian/plugins/daily-brain-bits/` (with `manifest.json` + `main.js`).
+- Install/copy plugin output into a dev vault at `.obsidian/plugins/daily-brain-bits/` (with `manifest.json` + `dist/main.js`).
   - Configure settings (API base URL, vault/device IDs).
   - Run `DBB: Sync now` from the command palette and verify backend receives `/v1/integrations/obsidian/sync/batch`.

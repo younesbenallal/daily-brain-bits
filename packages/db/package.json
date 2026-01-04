@@ -7,13 +7,13 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
+    "db:push": "bun --env-file ../../apps/back/.env drizzle-kit push",
+    "db:push:prod": "bun --env-file ../../apps/back/.env.prod drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
-    "postgres": "^3.4.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

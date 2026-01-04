@@ -19,7 +19,7 @@ bun run build
 
 Build output:
 
-- `apps/obsidian-plugin/main.js` (plugin bundle)
+- `apps/obsidian-plugin/dist/main.js` (plugin bundle)
 - `apps/obsidian-plugin/manifest.json` (plugin manifest)
 
 ## Local install (dev vault)
@@ -32,7 +32,7 @@ PLUGIN_DIR="$VAULT_PATH/.obsidian/plugins/daily-brain-bits"
 
 mkdir -p "$PLUGIN_DIR"
 cp apps/obsidian-plugin/manifest.json "$PLUGIN_DIR/"
-cp apps/obsidian-plugin/main.js "$PLUGIN_DIR/"
+cp apps/obsidian-plugin/dist/main.js "$PLUGIN_DIR/"
 ```
 
 Then open Obsidian, enable the plugin, and configure its settings.
@@ -46,18 +46,20 @@ Then open Obsidian, enable the plugin, and configure its settings.
    - `cd apps/obsidian-plugin && bun run build`
 3. Prepare the release artifacts:
    - `manifest.json`
-   - `main.js`
-4. Create a Git tag for the release (e.g. `v0.1.0`).
-5. Create a GitHub release and upload the artifacts:
-   - `daily-brain-bits.zip` (containing `manifest.json` + `main.js`)
+   - `dist/main.js`
+4. Or run the packaging command to build and copy into your dev vault:
+   - `cd apps/obsidian-plugin && bun run package`
+5. Create a Git tag for the release (e.g. `v0.1.0`).
+6. Create a GitHub release and upload the artifacts:
+   - `daily-brain-bits.zip` (containing `manifest.json` + `dist/main.js`)
    - `manifest.json`
-   - `main.js`
+   - `dist/main.js`
 
 Example zip:
 
 ```bash
 cd apps/obsidian-plugin
-zip -r daily-brain-bits.zip manifest.json main.js
+zip -r daily-brain-bits.zip manifest.json dist/main.js
 ```
 
 ## Upload (Obsidian Community Plugins)

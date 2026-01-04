@@ -1,4 +1,4 @@
-import { CryptoHasher } from "bun";
+import { createHash } from "node:crypto";
 import { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -21,17 +21,7 @@ const registerRequestSchema = z.object({
 });
 
 function hashToken(token: string): string {
-  const hasher = new CryptoHasher("sha256");
-  hasher.update(token);
-  return bytesToHex(hasher.digest());
-}
-
-function bytesToHex(bytes: Uint8Array): string {
-  let hex = "";
-  for (const byte of bytes) {
-    hex += byte.toString(16).padStart(2, "0");
-  }
-  return hex;
+  return createHash("sha256").update(token).digest("hex");
 }
 
 export const obsidianRouter = new Hono();

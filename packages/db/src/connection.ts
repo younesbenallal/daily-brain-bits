@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/bun-sql";
+import { SQL } from "bun";
 import * as schema from "./schema";
 
 if (!process.env.DATABASE_URL) {
@@ -7,6 +7,6 @@ if (!process.env.DATABASE_URL) {
 }
 
 const connectionString = process.env.DATABASE_URL;
-const client = postgres(connectionString);
+const client = new SQL(connectionString);
 
-export const db = drizzle(client, { schema });
+export const db = drizzle({ client, schema });

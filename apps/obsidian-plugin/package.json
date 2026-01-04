@@ -2,12 +2,13 @@
   "name": "@daily-brain-bits/obsidian",
   "version": "0.0.0",
   "private": true,
-  "main": "main.js",
+  "main": "dist/main.js",
   "scripts": {
     "dev": "bun run --watch src/main.ts",
-    "build": "bun build src/main.ts --outdir . --target node --external obsidian",
+    "build": "bun build src/main.ts --outdir dist --target node --format cjs --external obsidian",
     "type-check": "tsc --noEmit --incremental",
-    "clean": "rm -f main.js"
+    "clean": "rm -rf dist",
+    "package": "bun run build && mkdir -p \"$HOME/Desktop/projects/daily-brain-bits/test dbb/.obsidian/plugins/daily-brain-bits\" && cp manifest.json dist/main.js \"$HOME/Desktop/projects/daily-brain-bits/test dbb/.obsidian/plugins/daily-brain-bits/\""
   },
   "dependencies": {
     "@daily-brain-bits/core": "workspace:*",
