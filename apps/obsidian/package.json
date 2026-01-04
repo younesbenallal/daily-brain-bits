@@ -1,13 +1,17 @@
 {
-  "name": "@daily-brain-bits/obsidian-plugin",
+  "name": "@daily-brain-bits/obsidian",
   "version": "0.0.0",
   "private": true,
   "main": "main.js",
   "scripts": {
     "dev": "bun run --watch src/main.ts",
     "build": "bun build src/main.ts --outdir . --target node",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit --incremental",
     "clean": "rm -f main.js"
+  },
+  "dependencies": {
+    "@daily-brain-bits/core": "workspace:*",
+    "@daily-brain-bits/integrations-obsidian": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

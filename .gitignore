@@ -11,6 +11,7 @@ dist
 build
 .next
 out
+tsconfig.tsbuildinfo
 
 # Misc
 .DS_Store
@@ -28,7 +29,7 @@ yarn-error.log*
 
 # Vercel
 .vercel
-
+.tanstack
 # Turbo
 .turbo
 

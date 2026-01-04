@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { RPCHandler } from "@orpc/server/fetch";
 import { onError } from "@orpc/server";
 import { router } from "./router";
+import { obsidianRouter } from "./routes/obsidian";
 
 const app = new Hono();
 
@@ -41,6 +42,8 @@ app.use("/rpc/*", async (c, next) => {
 
   await next();
 });
+
+app.route("/", obsidianRouter);
 
 // Health check
 app.get("/health", (c) => {

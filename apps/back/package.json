@@ -12,10 +12,11 @@
     "dev": "bun run src/index.ts",
     "build": "tsc",
     "start": "bun run dist/index.js",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit --incremental",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@daily-brain-bits/integrations-obsidian": "workspace:*",
     "@daily-brain-bits/db": "workspace:*",
     "@daily-brain-bits/types": "workspace:*",
     "@orpc/server": "^1.13.1",

@@ -59,3 +59,10 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
 * Handle third-party constraints explicitly:
     * Notion API pagination + 429 `Retry-After` backoff
     * Obsidian plugin must batch + debounce vault events
+
+
+Todo list:
+- [ ] Implement DB schema
+- [ ] Build Notion integration (syncing)
+- [ ] Build Obsidian integration (syncing)
+- [ ] Build onboarding
