@@ -13,7 +13,7 @@ export const documentSchema = z.object({
   title: z.string(),
   contentMarkdown: z.string(),
   contentHash: z.string(),
-  metadata: z.record(z.unknown()).nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
   createdAtSource: z.string().datetime().nullable(),
   updatedAtSource: z.string().datetime().nullable(),
   deletedAtSource: z.string().datetime().nullable(),

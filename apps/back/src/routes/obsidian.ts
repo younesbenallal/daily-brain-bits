@@ -1,14 +1,16 @@
 import { CryptoHasher } from "bun";
 import { Hono } from "hono";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
 import {
   syncBatchRequestSchema,
   type SyncBatchResponse,
 } from "@daily-brain-bits/integrations-obsidian";
 import {
+  and,
   db,
+  eq,
   integrationConnections,
+  integrationScopeItems,
   obsidianVaults,
 } from "@daily-brain-bits/db";
 import { runSyncPipeline } from "../integrations/sync-pipeline";

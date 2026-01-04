@@ -36,7 +36,8 @@ Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) in
 | `apps/obsidian/src/main.ts` | Obsidian plugin entrypoint (settings, commands, event listeners, sync kickoff). |
 | `apps/obsidian/src/syncer.ts` | Full scan + incremental queueing + batched uploads with retries/backoff. |
 | `apps/obsidian/src/settings.ts` | Plugin settings UI + settings normalization. |
-| `packages/db/src/schema/index.ts` | DB tables for connections, scope items, documents, and sync state. |
+| `packages/db/src/schema/index.ts` | DB tables and enums (Drizzle schema). |
+| `packages/db/src/schema/models.ts` | TypeScript types inferred from the Drizzle schema (`InferSelectModel` / `InferInsertModel`). |
 
 ## Main Flows
 

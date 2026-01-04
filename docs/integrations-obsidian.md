@@ -27,7 +27,8 @@ The Obsidian integration is a local-first sync: an Obsidian community plugin sca
 | `packages/integrations/obsidian/src/filters.ts` | Simple glob matcher used by plugin scope filtering. |
 | `apps/back/src/routes/obsidian.ts` | Backend endpoints for `/register` and `/sync/batch` that upsert into `documents`. |
 | `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline (scope filter + conflict resolution + ingest). |
-| `packages/db/src/schema/index.ts` | `integration_connections`, `obsidian_vaults`, `documents`, `sync_state`. |
+| `packages/db/src/schema/index.ts` | Tables and enums (Drizzle schema). |
+| `packages/db/src/schema/models.ts` | Types inferred from the Drizzle schema (rows + inserts). |
 
 ## Main Flows
 

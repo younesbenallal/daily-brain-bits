@@ -1,7 +1,6 @@
 import type { SyncCursor } from "@daily-brain-bits/core";
-import { and, eq } from "drizzle-orm";
-import type { integrationConnections } from "@daily-brain-bits/db";
-import { db, integrationScopeItems } from "@daily-brain-bits/db";
+import type { IntegrationKind } from "@daily-brain-bits/db";
+import { and, db, eq, integrationScopeItems } from "@daily-brain-bits/db";
 import { createPathFilter } from "@daily-brain-bits/integrations-obsidian";
 import { ingestSyncItems, type IngestResult } from "./ingest";
 
@@ -16,7 +15,7 @@ export type SyncPipelineParams = {
   userId: string;
   items: unknown[];
   receivedAt: Date;
-  sourceKind: typeof integrationConnections.$inferSelect.kind;
+  sourceKind: IntegrationKind;
   nextCursor?: SyncCursor | null;
   defaultDeletedAtSource?: string | null;
 };

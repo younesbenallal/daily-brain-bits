@@ -12,7 +12,7 @@ export const syncItemUpsertSchema = z.object({
   contentHash: nonEmptyString,
   updatedAtSource: dateTimeNullable,
   deletedAtSource: dateTimeNullable,
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const syncItemDeleteSchema = z.object({
@@ -21,7 +21,7 @@ export const syncItemDeleteSchema = z.object({
   title: z.string().optional(),
   updatedAtSource: dateTimeNullable,
   deletedAtSource: dateTimeRequired,
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const syncItemSchema = z.discriminatedUnion("op", [
@@ -29,7 +29,7 @@ export const syncItemSchema = z.discriminatedUnion("op", [
   syncItemDeleteSchema,
 ]);
 
-export const syncCursorSchema = z.record(z.unknown());
+export const syncCursorSchema = z.record(z.string(), z.unknown());
 
 export type SyncItem = z.infer<typeof syncItemSchema>;
 export type SyncCursor = z.infer<typeof syncCursorSchema>;

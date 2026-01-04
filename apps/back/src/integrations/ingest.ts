@@ -7,8 +7,7 @@ import {
   syncItemUpsertSchema,
 } from "@daily-brain-bits/core";
 import type { SyncCursor, SyncItem } from "@daily-brain-bits/core";
-import { and, eq } from "drizzle-orm";
-import { db, documents, syncState } from "@daily-brain-bits/db";
+import { and, db, documents, eq, syncState } from "@daily-brain-bits/db";
 
 export type IngestResult = {
   accepted: number;

@@ -346,3 +346,33 @@ export const emailItems = pgTable(
     ),
   ]
 );
+
+export type {
+  DocumentRow,
+  DocumentRowInsert,
+  EmailBatch,
+  EmailBatchInsert,
+  EmailBatchStatus,
+  EmailItem,
+  EmailItemInsert,
+  IntegrationConnection,
+  IntegrationConnectionInsert,
+  IntegrationKind,
+  IntegrationScopeItem,
+  IntegrationScopeItemInsert,
+  IntegrationScopeType,
+  IntegrationStatus,
+  ObsidianVault,
+  ObsidianVaultInsert,
+  ReviewEvent,
+  ReviewEventInsert,
+  ReviewState,
+  ReviewStateInsert,
+  ReviewStatus,
+  SyncRun,
+  SyncRunInsert,
+  SyncRunKind,
+  SyncRunStatus,
+  SyncStateRow,
+  SyncStateRowInsert,
+} from "./models";
