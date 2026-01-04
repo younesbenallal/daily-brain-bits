@@ -9,11 +9,9 @@ import {
 import {
   db,
   integrationConnections,
-  integrationScopeItems,
   obsidianVaults,
 } from "@daily-brain-bits/db";
-import { createPathFilter } from "@daily-brain-bits/integrations-obsidian";
-import { ingestSyncItems } from "../integrations/ingest";
+import { runSyncPipeline } from "../integrations/sync-pipeline";
 
 const registerRequestSchema = z.object({
   userId: z.string().min(1),
@@ -32,12 +30,6 @@ function bytesToHex(bytes: Uint8Array): string {
     hex += byte.toString(16).padStart(2, "0");
   }
   return hex;
-}
-
-function fallbackTitle(path: string): string {
-  const parts = path.split("/");
-  const last = parts[parts.length - 1] || path;
-  return last.replace(/\.md$/i, "");
 }
 
 export const obsidianRouter = new Hono();
@@ -106,7 +98,10 @@ obsidianRouter.get("/v1/integrations/obsidian/scope", async (c) => {
   }
 
   const scopeItems = await db
-    .select({ value: integrationScopeItems.scopeValue })
+    .select({
+      value: integrationScopeItems.scopeValue,
+      updatedAt: integrationScopeItems.updatedAt,
+    })
     .from(integrationScopeItems)
     .where(
       and(
@@ -116,10 +111,24 @@ obsidianRouter.get("/v1/integrations/obsidian/scope", async (c) => {
       )
     );
 
+  const updatedAt = scopeItems.reduce<string | undefined>(
+    (max, item) => {
+      const value = item.updatedAt?.toISOString();
+      if (!value) {
+        return max;
+      }
+      if (!max || value > max) {
+        return value;
+      }
+      return max;
+    },
+    undefined
+  );
+
   return c.json({
     vaultId,
     patterns: scopeItems.map((item) => item.value),
-    updatedAt: new Date().toISOString(),
+    updatedAt,
   });
 });
 
@@ -155,83 +164,18 @@ obsidianRouter.post("/v1/integrations/obsidian/sync/batch", async (c) => {
   const userId = connection[0].userId;
   const now = new Date();
 
-  const scopeItems = await db
-    .select({ value: integrationScopeItems.scopeValue })
-    .from(integrationScopeItems)
-    .where(
-      and(
-        eq(integrationScopeItems.connectionId, connectionId),
-        eq(integrationScopeItems.scopeType, "obsidian_glob"),
-        eq(integrationScopeItems.enabled, true)
-      )
-    );
-
-  const scopePatterns = scopeItems.map((item) => item.value).filter(Boolean);
-  const allowAll = scopePatterns.length === 0;
-  const pathFilter = createPathFilter({ include: scopePatterns });
-
-  const filteredItems: unknown[] = [];
-  const itemResults: SyncBatchResponse["itemResults"] = [];
-  let rejected = 0;
-
-  for (const item of payload.items) {
-    const path =
-      item.metadata && typeof item.metadata.path === "string"
-        ? item.metadata.path
-        : null;
-    if (!path) {
-      rejected += 1;
-      itemResults.push({
-        externalId: item.externalId,
-        status: "rejected",
-        reason: "missing_path",
-      });
-      continue;
-    }
-
-    if (!allowAll && !pathFilter(path)) {
-      rejected += 1;
-      itemResults.push({
-        externalId: item.externalId,
-        status: "rejected",
-        reason: "out_of_scope",
-      });
-      continue;
-    }
-
-    if (item.op === "upsert") {
-      filteredItems.push({
-        ...item,
-        title: item.title ?? fallbackTitle(path),
-        metadata: {
-          ...item.metadata,
-          path,
-        },
-      });
-      continue;
-    }
-
-    filteredItems.push({
-      ...item,
-      deletedAtSource: item.deletedAtSource ?? payload.sentAt,
-      metadata: {
-        ...item.metadata,
-        path,
-      },
-    });
-  }
-
-  const ingestResult = await ingestSyncItems({
+  const ingestResult = await runSyncPipeline({
     connectionId,
     userId,
-    items: filteredItems,
+    items: payload.items,
     receivedAt: now,
-    nextCursor: { since: payload.sentAt },
+    sourceKind: "obsidian",
+    defaultDeletedAtSource: payload.sentAt,
   });
 
   const accepted = ingestResult.accepted;
-  rejected += ingestResult.rejected;
-  itemResults.push(...ingestResult.itemResults);
+  const rejected = ingestResult.rejected;
+  const itemResults = ingestResult.itemResults;
 
   await db
     .update(integrationConnections)

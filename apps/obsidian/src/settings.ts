@@ -127,6 +127,11 @@ export class DBBSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(containerEl)
+      .setName("Scope")
+      .setDesc("Scope is configured in the backend and fetched automatically.")
+      .setHeading();
+
     new Setting(containerEl).setName("Sync behavior").setHeading();
 
     new Setting(containerEl)

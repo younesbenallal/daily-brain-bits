@@ -44,9 +44,16 @@ export default class DailyBrainBitsPlugin extends Plugin {
       name: "DBB: Show sync status",
       callback: () => {
         const status = this.syncer.getStatus();
+        const scope = this.syncer.getScopeStatus();
+        const scopeLabel = scope.ready
+          ? scope.patterns.length > 0
+            ? `${scope.patterns.length} pattern(s)`
+            : "all (no patterns)"
+          : "loading";
         const message = [
           `Last sync: ${status.lastSyncAt ?? "never"}`,
           `Pending: ${this.index.pendingQueue.length}`,
+          `Scope: ${scopeLabel}`,
           status.lastError ? `Error: ${status.lastError}` : null,
         ]
           .filter(Boolean)
@@ -84,6 +91,10 @@ export default class DailyBrainBitsPlugin extends Plugin {
       })
     );
 
+    await this.syncer.refreshScope({ triggerSync: false });
+    this.registerInterval(
+      window.setInterval(() => void this.syncer.refreshScope(), 5 * 60 * 1000)
+    );
     window.setTimeout(() => void this.syncer.fullSync(), 5_000);
   }
 

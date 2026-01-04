@@ -1,4 +1,11 @@
-import type { SyncCursor, SyncItem, SyncStats } from "@daily-brain-bits/core";
+import { z } from "zod";
+import type { SyncItem, SyncStats } from "@daily-brain-bits/core";
+
+export const notionSyncCursorSchema = z.object({
+  since: z.string().datetime(),
+});
+
+export type NotionSyncCursor = z.infer<typeof notionSyncCursorSchema>;
 
 export type NotionSyncStats = SyncStats & {
   pagesVisited: number;
@@ -14,7 +21,7 @@ export type NotionSyncError = {
 
 export type NotionSyncResult = {
   items: SyncItem[];
-  nextCursor: SyncCursor;
+  nextCursor: NotionSyncCursor;
   errors: NotionSyncError[];
   stats: NotionSyncStats;
 };
@@ -26,7 +33,7 @@ export type NotionSyncProgress = {
 };
 
 export type NotionSyncOptions = {
-  cursor?: SyncCursor;
+  cursor?: NotionSyncCursor;
   safetyMarginSeconds?: number;
   pageSize?: number;
   maxPages?: number;

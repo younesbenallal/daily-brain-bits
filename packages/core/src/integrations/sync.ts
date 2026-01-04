@@ -8,7 +8,7 @@ export const syncItemUpsertSchema = z.object({
   op: z.literal("upsert"),
   externalId: nonEmptyString,
   title: z.string().optional(),
-  contentMarkdown: z.string().min(1),
+  contentMarkdown: z.string(),
   contentHash: nonEmptyString,
   updatedAtSource: dateTimeNullable,
   deletedAtSource: dateTimeNullable,
@@ -29,9 +29,7 @@ export const syncItemSchema = z.discriminatedUnion("op", [
   syncItemDeleteSchema,
 ]);
 
-export const syncCursorSchema = z.object({
-  since: z.string().datetime(),
-});
+export const syncCursorSchema = z.record(z.unknown());
 
 export type SyncItem = z.infer<typeof syncItemSchema>;
 export type SyncCursor = z.infer<typeof syncCursorSchema>;
@@ -43,13 +41,13 @@ export type SyncStats = {
   skipped: number;
 };
 
-export type SyncResult = {
+export type SyncResult<Cursor = SyncCursor> = {
   items: SyncItem[];
-  nextCursor: SyncCursor;
+  nextCursor: Cursor;
   stats: SyncStats;
 };
 
-export type IntegrationSyncAdapter<Scope> = {
+export type IntegrationSyncAdapter<Scope, Cursor = SyncCursor> = {
   kind: "notion" | "obsidian";
-  sync: (scope: Scope, cursor?: SyncCursor) => Promise<SyncResult>;
+  sync: (scope: Scope, cursor?: Cursor) => Promise<SyncResult<Cursor>>;
 };

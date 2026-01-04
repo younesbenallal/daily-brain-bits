@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Notion integration pulls pages from a user-selected list of Notion databases and converts each page to normalized Markdown. It is incremental: after an initial run, subsequent runs query only pages whose `last_edited_time` is newer than the stored `SyncCursor.since` timestamp.
+The Notion integration pulls pages from a user-selected list of Notion databases and converts each page to normalized Markdown. It is incremental: after an initial run, subsequent runs query only pages whose `last_edited_time` is newer than the stored Notion cursor (`{ since }`).
 
 This integration currently focuses on “database sync”. OAuth, webhook ingestion, and worker orchestration are intentionally not implemented yet.
 
@@ -29,7 +29,7 @@ This integration currently focuses on “database sync”. OAuth, webhook ingest
 | `packages/integrations/notion/src/testing.ts` | Test helpers used by scripts (self-test + last_edited_time test). |
 | `packages/integrations/notion/scripts/test-sync.ts` | Thin runner for adapter self-test. |
 | `packages/integrations/notion/scripts/test-last-edited.ts` | Thin runner that validates timestamp filtering with live mutations. |
-| `packages/core/src/integrations/sync.ts` | Shared sync types (`SyncItem`, `SyncCursor`, `IntegrationSyncAdapter`). |
+| `packages/core/src/integrations/sync.ts` | Shared sync types (`SyncItem`, generic `SyncCursor`, `IntegrationSyncAdapter`). |
 
 ## Main Flows
 
@@ -69,7 +69,7 @@ For each page returned by the database query:
 
 ### Cursor advancement
 
-Each sync run returns `nextCursor.since` equal to the maximum `last_edited_time` observed in the processed pages. If no pages were processed:
+Each sync run returns `nextCursor.since` equal to the maximum `last_edited_time` observed in the processed pages. The cursor is stored as JSON in `sync_state.cursorJson`. If no pages were processed:
 
 - If a cursor was provided: `nextCursor` remains unchanged.
 - Otherwise: it uses “now” as the initial cursor value.
@@ -91,4 +91,3 @@ Each sync run returns `nextCursor.since` equal to the maximum `last_edited_time`
   - Behavior: initial sync → create/update a page → incremental sync should return only that page.
 - Timestamp filtering test:
   - `NOTION_API_KEY=... NOTION_DATABASE_ID=... bun packages/integrations/notion/scripts/test-last-edited.ts`
-

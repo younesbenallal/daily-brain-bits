@@ -2,10 +2,10 @@
 
 ## Summary
 
-Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) into a single normalized backend model. Each integration can have very different mechanics (pull vs push), but they converge through a shared sync contract:
+Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) into a single normalized backend model. Each integration can have very different mechanics (pull vs push), but they converge through a shared sync contract and backend sync pipeline:
 
 - Integrations produce a list of `SyncItem`s (`upsert`/`delete`) keyed by a stable `externalId`.
-- The backend upserts those items into `documents`.
+- The backend runs a shared pipeline (scope filtering → conflict resolution → upsert/tombstone) into `documents`.
   - For pull-based integrations (e.g. Notion), a `SyncCursor` is advanced so subsequent runs only process changes.
   - For push-based integrations (e.g. Obsidian), the plugin is responsible for batching changes and avoiding re-uploading unchanged files (via stable hashing + a local index).
 
@@ -31,6 +31,7 @@ Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) in
 | `packages/integrations/notion/src/sync.ts` | Notion incremental database sync using `last_edited_time` filtering. |
 | `packages/integrations/obsidian/src/sync.ts` | Obsidian batch request/response schemas for plugin → backend sync. |
 | `packages/integrations/obsidian/src/adapter.ts` | Maps Obsidian `SyncItem` into core `SyncItem`. |
+| `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline: scope filter + conflict resolution + ingest. |
 | `apps/back/src/routes/obsidian.ts` | Server endpoint implementation that receives plugin batches and upserts into `documents`. |
 | `apps/obsidian/src/main.ts` | Obsidian plugin entrypoint (settings, commands, event listeners, sync kickoff). |
 | `apps/obsidian/src/syncer.ts` | Full scan + incremental queueing + batched uploads with retries/backoff. |
@@ -53,7 +54,10 @@ Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) in
 ### Obsidian (push) → backend route → DB upsert
 
 1. The Obsidian plugin (`apps/obsidian`) batches file changes and POSTs a `SyncBatchRequest` to the backend.
-2. The backend validates the payload and upserts/marks deletions in `documents`.
+2. The backend runs the shared pipeline:
+   - Scope filter (server-side)
+   - Conflict resolution (newer source timestamp wins; stale items are skipped)
+   - Upsert/tombstone into `documents`
 3. The backend updates `sync_state.lastIncrementalSyncAt` and connection “last seen” timestamps.
 
 ## Data Model / DB
@@ -68,6 +72,7 @@ Minimum viable integration storage lives in `packages/db/src/schema/index.ts`:
 ## Notes / TODOs
 
 - Auth is intentionally not implemented yet (Better Auth will own it). The Obsidian routes currently accept `userId` on register and do not validate the plugin token on `/sync/batch`.
+- `SyncCursor` is now integration-specific JSON; Notion uses `{ since }` while push integrations may omit it.
 
 ## External Constraints
 

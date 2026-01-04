@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Obsidian integration is a local-first sync: an Obsidian community plugin scans a vault and pushes batches of note changes (upserts/deletes) to the DBB backend. The plugin maintains a local index keyed by a stable `externalId` and uses normalized SHA-256 hashing to avoid re-uploading unchanged files.
+The Obsidian integration is a local-first sync: an Obsidian community plugin scans a vault and pushes batches of note changes (upserts/deletes) to the DBB backend. The plugin maintains a local index keyed by a stable `externalId` and uses normalized SHA-256 hashing to avoid re-uploading unchanged files. The backend applies scope filtering + conflict resolution and may skip stale items.
 
 ## Scope
 
@@ -26,6 +26,7 @@ The Obsidian integration is a local-first sync: an Obsidian community plugin sca
 | `packages/integrations/obsidian/src/ids.ts` | `externalId` helper: `"<vaultId>::<normalizedPath>"`. |
 | `packages/integrations/obsidian/src/filters.ts` | Simple glob matcher used by plugin scope filtering. |
 | `apps/back/src/routes/obsidian.ts` | Backend endpoints for `/register` and `/sync/batch` that upsert into `documents`. |
+| `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline (scope filter + conflict resolution + ingest). |
 | `packages/db/src/schema/index.ts` | `integration_connections`, `obsidian_vaults`, `documents`, `sync_state`. |
 
 ## Main Flows
@@ -61,7 +62,7 @@ Plugin → backend request (`SyncBatchRequest`):
 
 Backend response (`SyncBatchResponse`):
 
-- `{ accepted, rejected, itemResults[] }` with per-item acceptance/rejection.
+- `{ accepted, rejected, itemResults[] }` with per-item status (`accepted`, `rejected`, `skipped`).
 
 ### Retries / backoff
 
@@ -96,4 +97,3 @@ The plugin retries on transient failures:
   - Install/copy plugin output into a dev vault at `.obsidian/plugins/daily-brain-bits/` (with `manifest.json` + `main.js`).
   - Configure settings (API base URL, vault/device IDs).
   - Run `DBB: Sync now` from the command palette and verify backend receives `/v1/integrations/obsidian/sync/batch`.
-

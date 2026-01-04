@@ -18,7 +18,6 @@ import type { DBBSettings } from "./settings";
 import type { LocalIndex, PendingQueueItem, SyncStatus } from "./types";
 
 const maxBackoffMs = 60_000;
-const scopeRefreshMs = 5 * 60 * 1000;
 
 function buildApiUrl(baseUrl: string, path: string): string {
   const trimmed = baseUrl.replace(/\/$/, "");
@@ -157,7 +156,14 @@ export class Syncer {
   }
 
   updateSettings(settings: DBBSettings) {
+    const scopeReset =
+      this.settings.apiBaseUrl !== settings.apiBaseUrl ||
+      this.settings.vaultId !== settings.vaultId;
     this.settings = settings;
+    if (scopeReset) {
+      this.scopeReady = false;
+      this.scopePatterns = [];
+    }
     this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
     this.flushDebounced = debounce(
       () => void this.flushQueue(),
@@ -178,14 +184,16 @@ export class Syncer {
     };
   }
 
-  async refreshScope(): Promise<boolean> {
-    const patterns = await this.fetchScopePatterns();
-    if (!patterns) {
+  async refreshScope(options: { triggerSync?: boolean } = {}): Promise<boolean> {
+    const triggerSync = options.triggerSync ?? true;
+    const scope = await this.fetchScopePatterns();
+    if (!scope) {
       return false;
     }
-    const normalized = normalizePatterns(patterns);
-    const changed = this.applyScope(normalized);
-    if (changed) {
+    const normalized = normalizePatterns(scope.patterns);
+    const changed = this.applyScope(normalized, scope.updatedAt);
+    this.status.lastError = null;
+    if (changed && triggerSync) {
       void this.fullSync();
     }
     return true;
@@ -232,7 +240,7 @@ export class Syncer {
 
   async fullSync() {
     if (!this.scopeReady) {
-      const refreshed = await this.refreshScope();
+      const refreshed = await this.refreshScope({ triggerSync: false });
       if (!refreshed) {
         return;
       }
@@ -315,14 +323,14 @@ export class Syncer {
     this.flushDebounced();
   }
 
-  private applyScope(patterns: string[]): boolean {
+  private applyScope(patterns: string[], updatedAt?: string): boolean {
     const previous = this.scopePatterns.join("\n");
     const next = patterns.join("\n");
     const changed = previous !== next;
 
     this.scopePatterns = patterns;
     this.scopeReady = true;
-    this.scopeUpdatedAt = new Date().toISOString();
+    this.scopeUpdatedAt = updatedAt ?? new Date().toISOString();
     this.pathFilter = buildScopeFilter(patterns, true);
 
     if (changed) {
@@ -336,9 +344,12 @@ export class Syncer {
     return changed;
   }
 
-  private async fetchScopePatterns(): Promise<string[] | null> {
+  private async fetchScopePatterns(): Promise<{
+    patterns: string[];
+    updatedAt?: string;
+  } | null> {
     if (!this.settings.apiBaseUrl || !this.settings.vaultId) {
-      this.status.lastError = \"Missing API base URL or Vault ID.\";
+      this.status.lastError = "Missing API base URL or Vault ID.";
       return null;
     }
 
@@ -346,9 +357,54 @@ export class Syncer {
       const response = await requestUrl({
         url: buildApiUrl(
           this.settings.apiBaseUrl,
-          `/v1/integrations/obsidian/scope?vaultId=${encodeURIComponent(\n            this.settings.vaultId\n          )}`\n        ),
-        method: \"GET\",
-        headers: {\n          ...(this.settings.pluginToken\n            ? { Authorization: `Bearer ${this.settings.pluginToken}` }\n            : {}),\n        },\n      });\n\n      if (response.status === 401) {\n        this.status.lastError = \"Unauthorized - check plugin token.\";\n        new Notice(\"Daily Brain Bits: token invalid. Reconnect.\");\n        return null;\n      }\n\n      if (response.status === 404) {\n        this.status.lastError = \"Vault not registered with backend.\";\n        return null;\n      }\n\n      if (response.status < 200 || response.status >= 300) {\n        this.status.lastError = `Scope fetch failed (${response.status}).`;\n        return null;\n      }\n\n      const data =\n        typeof response.json === \"object\" && response.json !== null\n          ? response.json\n          : JSON.parse(response.text);\n      const parsed = obsidianScopeResponseSchema.safeParse(data);\n      if (!parsed.success) {\n        this.status.lastError = \"Invalid scope response.\";\n        return null;\n      }\n\n      return parsed.data.patterns;\n    } catch (error) {\n      console.error(\"DBB scope fetch failed\", error);\n      this.status.lastError = \"Failed to refresh scope.\";\n      return null;\n    }\n  }\n*** End Patch}
+          `/v1/integrations/obsidian/scope?vaultId=${encodeURIComponent(
+            this.settings.vaultId
+          )}`
+        ),
+        method: "GET",
+        headers: {
+          ...(this.settings.pluginToken
+            ? { Authorization: `Bearer ${this.settings.pluginToken}` }
+            : {}),
+        },
+      });
+
+      if (response.status === 401) {
+        this.status.lastError = "Unauthorized - check plugin token.";
+        new Notice("Daily Brain Bits: token invalid. Reconnect.");
+        return null;
+      }
+
+      if (response.status === 404) {
+        this.status.lastError = "Vault not registered with backend.";
+        return null;
+      }
+
+      if (response.status < 200 || response.status >= 300) {
+        this.status.lastError = `Scope fetch failed (${response.status}).`;
+        return null;
+      }
+
+      const data =
+        typeof response.json === "object" && response.json !== null
+          ? response.json
+          : JSON.parse(response.text);
+      const parsed = obsidianScopeResponseSchema.safeParse(data);
+      if (!parsed.success) {
+        this.status.lastError = "Invalid scope response.";
+        return null;
+      }
+
+      return {
+        patterns: parsed.data.patterns,
+        updatedAt: parsed.data.updatedAt,
+      };
+    } catch (error) {
+      console.error("DBB scope fetch failed", error);
+      this.status.lastError = "Failed to refresh scope.";
+      return null;
+    }
+  }
 
   private async buildBatch(): Promise<{
     items: SyncItem[];
@@ -398,7 +454,10 @@ export class Syncer {
       return {
         op: "delete",
         externalId: queued.externalId,
-        path: queued.path,
+        deletedAtSource: new Date().toISOString(),
+        metadata: {
+          path: queued.path,
+        },
       };
     }
 
@@ -407,7 +466,10 @@ export class Syncer {
       return {
         op: "delete",
         externalId: queued.externalId,
-        path: queued.path,
+        deletedAtSource: new Date().toISOString(),
+        metadata: {
+          path: queued.path,
+        },
       };
     }
 
@@ -438,12 +500,12 @@ export class Syncer {
     return {
       op: "upsert",
       externalId: queued.externalId,
-      path: file.path,
       title,
       contentMarkdown: content,
       contentHash,
       updatedAtSource: new Date(file.stat.mtime).toISOString(),
       metadata: {
+        path: file.path,
         tags,
         aliases,
         links,
@@ -543,8 +605,16 @@ export class Syncer {
         continue;
       }
 
+      const path =
+        item.metadata && typeof item.metadata.path === "string"
+          ? item.metadata.path
+          : queued?.path;
+      if (!path) {
+        continue;
+      }
+
       this.index.files[item.externalId] = {
-        path: item.path,
+        path,
         contentHash: item.contentHash,
         lastSyncedAt: new Date().toISOString(),
         lastSeenMtime: queued?.lastSeenMtime ?? null,

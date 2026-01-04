@@ -1,15 +1,19 @@
-import type { SyncCursor, SyncItem } from "@daily-brain-bits/core";
+import type { z } from "zod";
 import {
+  normalizeForHash,
+  sha256Hex,
   syncItemSchema,
   syncItemDeleteSchema,
   syncItemUpsertSchema,
 } from "@daily-brain-bits/core";
+import type { SyncCursor, SyncItem } from "@daily-brain-bits/core";
 import { and, eq } from "drizzle-orm";
 import { db, documents, syncState } from "@daily-brain-bits/db";
 
 export type IngestResult = {
   accepted: number;
   rejected: number;
+  skipped: number;
   itemResults: Array<{
     externalId: string;
     status: "accepted" | "rejected" | "skipped";
@@ -43,6 +47,94 @@ function encodeContent(contentMarkdown: string) {
   };
 }
 
+type ExistingDocumentSnapshot = {
+  contentHash: string;
+  updatedAtSource: Date | null;
+  deletedAtSource: Date | null;
+};
+
+type SyncItemUpsert = z.infer<typeof syncItemUpsertSchema>;
+type SyncItemDelete = z.infer<typeof syncItemDeleteSchema>;
+
+type Decision = {
+  action: "apply" | "skip";
+  reason?: "stale_source_timestamp" | "unchanged";
+};
+
+type DeleteDecision = Decision & {
+  tombstone?: boolean;
+};
+
+function resolveSourceTimeMs(
+  value: string | null | undefined,
+  receivedAt: Date
+): number {
+  const parsed = parseDateOrNull(value);
+  return parsed ? parsed.getTime() : receivedAt.getTime();
+}
+
+function getExistingSourceTimeMs(existing: ExistingDocumentSnapshot): number | null {
+  const updatedMs = existing.updatedAtSource?.getTime() ?? null;
+  const deletedMs = existing.deletedAtSource?.getTime() ?? null;
+  if (updatedMs === null && deletedMs === null) {
+    return null;
+  }
+  return Math.max(updatedMs ?? 0, deletedMs ?? 0);
+}
+
+export function resolveUpsertDecision(
+  existing: ExistingDocumentSnapshot | null,
+  upsert: SyncItemUpsert,
+  receivedAt: Date
+): Decision {
+  if (!existing) {
+    return { action: "apply" };
+  }
+
+  const incomingMs = resolveSourceTimeMs(
+    upsert.updatedAtSource ?? null,
+    receivedAt
+  );
+  const existingMs = getExistingSourceTimeMs(existing);
+
+  if (existingMs !== null && incomingMs < existingMs) {
+    return { action: "skip", reason: "stale_source_timestamp" };
+  }
+
+  if (existingMs !== null && incomingMs === existingMs) {
+    if (existing.deletedAtSource) {
+      return { action: "skip", reason: "stale_source_timestamp" };
+    }
+    if (existing.contentHash === upsert.contentHash) {
+      return { action: "skip", reason: "unchanged" };
+    }
+  }
+
+  return { action: "apply" };
+}
+
+export function resolveDeleteDecision(
+  existing: ExistingDocumentSnapshot | null,
+  deleted: SyncItemDelete,
+  receivedAt: Date
+): DeleteDecision {
+  if (!existing) {
+    return { action: "apply", tombstone: true };
+  }
+
+  const incomingMs = resolveSourceTimeMs(
+    deleted.deletedAtSource,
+    receivedAt
+  );
+  const existingMs = getExistingSourceTimeMs(existing);
+
+  if (existingMs !== null && incomingMs <= existingMs) {
+    return { action: "skip", reason: "stale_source_timestamp" };
+  }
+
+  return { action: "apply" };
+}
+
 export async function ingestSyncItems(
   params: IngestParams
 ): Promise<IngestResult> {
@@ -50,14 +142,22 @@ export async function ingestSyncItems(
 
   let accepted = 0;
   let rejected = 0;
+  let skipped = 0;
   const itemResults: IngestResult["itemResults"] = [];
 
   for (const rawItem of items) {
     const parsed = syncItemSchema.safeParse(rawItem);
     if (!parsed.success) {
+      const externalId =
+        rawItem &&
+        typeof rawItem === "object" &&
+        "externalId" in rawItem &&
+        typeof (rawItem as { externalId?: unknown }).externalId === "string"
+          ? (rawItem as { externalId: string }).externalId
+          : "unknown";
       rejected += 1;
       itemResults.push({
-        externalId: "unknown",
+        externalId,
         status: "rejected",
         reason: "invalid_item",
       });
@@ -66,9 +166,36 @@ export async function ingestSyncItems(
 
     const item: SyncItem = parsed.data;
 
+    const [existing] = await db
+      .select({
+        contentHash: documents.contentHash,
+        updatedAtSource: documents.updatedAtSource,
+        deletedAtSource: documents.deletedAtSource,
+      })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.userId, userId),
+          eq(documents.connectionId, connectionId),
+          eq(documents.externalId, parsed.data.externalId)
+        )
+      )
+      .limit(1);
+
     try {
       if (item.op === "upsert") {
         const upsert = syncItemUpsertSchema.parse(item);
+        const decision = resolveUpsertDecision(existing ?? null, upsert, receivedAt);
+        if (decision.action === "skip") {
+          skipped += 1;
+          itemResults.push({
+            externalId: upsert.externalId,
+            status: "skipped",
+            reason: decision.reason,
+          });
+          continue;
+        }
+
         const contentFields = encodeContent(upsert.contentMarkdown);
         const metadataJson = upsert.metadata ?? null;
 
@@ -113,6 +240,42 @@ export async function ingestSyncItems(
       }
 
       const deleted = syncItemDeleteSchema.parse(item);
+      const decision = resolveDeleteDecision(existing ?? null, deleted, receivedAt);
+      if (decision.action === "skip") {
+        skipped += 1;
+        itemResults.push({
+          externalId: deleted.externalId,
+          status: "skipped",
+          reason: decision.reason,
+        });
+        continue;
+      }
+
+      if (!existing && decision.tombstone) {
+        const contentFields = encodeContent("");
+        const emptyHash = sha256Hex(normalizeForHash(""));
+
+        await db.insert(documents).values({
+          userId,
+          connectionId,
+          externalId: deleted.externalId,
+          title: deleted.title ?? null,
+          contentHash: emptyHash,
+          createdAtSource: null,
+          updatedAtSource: parseDateOrNull(deleted.updatedAtSource ?? null),
+          deletedAtSource: parseDateOrNull(deleted.deletedAtSource),
+          lastSyncedAt: receivedAt,
+          metadataJson: deleted.metadata ?? null,
+          ...contentFields,
+        });
+
+        accepted += 1;
+        itemResults.push({
+          externalId: deleted.externalId,
+          status: "accepted",
+        });
+        continue;
+      }
 
       await db
         .update(documents)
@@ -146,18 +309,21 @@ export async function ingestSyncItems(
     }
   }
 
+  const cursorProvided = nextCursor !== undefined;
+  const cursorValue = nextCursor ?? null;
+
   await db
     .insert(syncState)
     .values({
       connectionId,
       lastIncrementalSyncAt: receivedAt,
-      cursorJson: nextCursor ?? undefined,
+      ...(cursorProvided ? { cursorJson: cursorValue } : {}),
     })
     .onConflictDoUpdate({
       target: [syncState.connectionId],
       set: {
         lastIncrementalSyncAt: receivedAt,
-        cursorJson: nextCursor ?? undefined,
+        ...(cursorProvided ? { cursorJson: cursorValue } : {}),
         updatedAt: receivedAt,
       },
     });
@@ -165,6 +331,7 @@ export async function ingestSyncItems(
   return {
     accepted,
     rejected,
+    skipped,
     itemResults,
   };
 }

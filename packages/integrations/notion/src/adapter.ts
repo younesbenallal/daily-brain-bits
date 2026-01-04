@@ -2,7 +2,11 @@ import type { Client } from "@notionhq/client";
 import type { IntegrationSyncAdapter } from "@daily-brain-bits/core";
 import { createNotionRequest } from "./client";
 import { syncDatabase } from "./sync";
-import type { NotionRequest, NotionSyncOptions } from "./types";
+import type {
+  NotionRequest,
+  NotionSyncCursor,
+  NotionSyncOptions,
+} from "./types";
 
 export type NotionSyncScope = {
   databaseId: string;
@@ -17,7 +21,7 @@ export type NotionAdapterOptions = Omit<
 
 export function createNotionSyncAdapter(
   options: { notion: Client } & NotionAdapterOptions
-): IntegrationSyncAdapter<NotionSyncScope> {
+): IntegrationSyncAdapter<NotionSyncScope, NotionSyncCursor> {
   const {
     notion,
     request: providedRequest,
