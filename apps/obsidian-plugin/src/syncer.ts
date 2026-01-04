@@ -19,9 +19,34 @@ import type { LocalIndex, PendingQueueItem, SyncStatus } from "./types";
 
 const maxBackoffMs = 60_000;
 
+type RpcEnvelope<T> = {
+  json: T;
+  meta?: unknown;
+};
+
 function buildApiUrl(baseUrl: string, path: string): string {
   const trimmed = baseUrl.replace(/\/$/, "");
-  return `${trimmed}${path}`;
+  const withRpc = trimmed.endsWith("/rpc") ? trimmed : `${trimmed}/rpc`;
+  return `${withRpc}${path}`;
+}
+
+function buildRpcBody<T>(input: T): string {
+  return JSON.stringify({ json: input } satisfies RpcEnvelope<T>);
+}
+
+function isRpcEnvelope(value: unknown): value is RpcEnvelope<unknown> {
+  return !!value && typeof value === "object" && "json" in value;
+}
+
+function parseRpcResponse<T>(response: { json?: unknown; text: string }): T {
+  const raw =
+    typeof response.json === "object" && response.json !== null
+      ? response.json
+      : JSON.parse(response.text);
+  if (isRpcEnvelope(raw)) {
+    return raw.json as T;
+  }
+  return raw as T;
 }
 
 function parseRetryAfter(value: string | null | undefined): number | null {
@@ -357,16 +382,19 @@ export class Syncer {
       const response = await requestUrl({
         url: buildApiUrl(
           this.settings.apiBaseUrl,
-          `/v1/integrations/obsidian/scope?vaultId=${encodeURIComponent(
-            this.settings.vaultId
-          )}`
+          "/v1/integrations/obsidian/scope"
         ),
-        method: "GET",
+        method: "POST",
+        contentType: "application/json",
+        body: buildRpcBody({
+          vaultId: this.settings.vaultId,
+        }),
         headers: {
           ...(this.settings.pluginToken
             ? { Authorization: `Bearer ${this.settings.pluginToken}` }
             : {}),
         },
+        throw: false,
       });
 
       if (response.status === 401) {
@@ -385,10 +413,7 @@ export class Syncer {
         return null;
       }
 
-      const data =
-        typeof response.json === "object" && response.json !== null
-          ? response.json
-          : JSON.parse(response.text);
+      const data = parseRpcResponse(response);
       const parsed = obsidianScopeResponseSchema.safeParse(data);
       if (!parsed.success) {
         this.status.lastError = "Invalid scope response.";
@@ -529,13 +554,14 @@ export class Syncer {
           "/v1/integrations/obsidian/sync/batch"
         ),
         method: "POST",
+        contentType: "application/json",
         headers: {
-          "Content-Type": "application/json",
           ...(this.settings.pluginToken
             ? { Authorization: `Bearer ${this.settings.pluginToken}` }
             : {}),
         },
-        body: JSON.stringify(payload),
+        body: buildRpcBody(payload),
+        throw: false,
       });
 
       if (response.status === 401) {
@@ -561,10 +587,7 @@ export class Syncer {
       }
 
       this.backoffMs = 1_000;
-      const data =
-        typeof response.json === "object" && response.json !== null
-          ? (response.json as SyncBatchResponse)
-          : (JSON.parse(response.text) as SyncBatchResponse);
+      const data = parseRpcResponse<SyncBatchResponse>(response);
       return data;
     } catch (error) {
       this.status.lastError = "Network error - retrying soon.";

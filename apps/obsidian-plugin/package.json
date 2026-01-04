@@ -4,7 +4,6 @@
   "private": true,
   "main": "dist/main.js",
   "scripts": {
-    "dev": "bun run --watch src/main.ts",
     "build": "bun build src/main.ts --outdir dist --target node --format cjs --external obsidian",
     "type-check": "tsc --noEmit --incremental",
     "clean": "rm -rf dist",

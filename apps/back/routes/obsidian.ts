@@ -26,6 +26,7 @@ const register = base
   .input(registerRequestSchema)
   .output(obsidianRegisterResponseSchema)
   .handler(async ({ input, context }) => {
+    console.log("[obsidian.register] start", { userId: input.userId, displayName: input.displayName ?? null });
     const vaultId = crypto.randomUUID();
     const pluginToken = crypto.randomUUID();
     const apiBaseUrl = new URL(context.requestUrl).origin;
@@ -63,6 +64,8 @@ const register = base
       settingsJson: {},
     });
 
+    console.log("[obsidian.register] created", { userId: input.userId, vaultId, connectionId });
+
     return {
       pluginToken,
       vaultId,
@@ -79,6 +82,7 @@ const scope = base
   )
   .output(obsidianScopeResponseSchema)
   .handler(async ({ input }) => {
+    console.log("[obsidian.scope] start", { vaultId: input.vaultId });
     const connection = await db
       .select({
         id: integrationConnections.id,
@@ -121,6 +125,12 @@ const scope = base
       return max;
     }, undefined);
 
+    console.log("[obsidian.scope] resolved", {
+      vaultId: input.vaultId,
+      connectionId,
+      patternCount: scopeItems.length,
+    });
+
     return {
       vaultId: input.vaultId,
       patterns: scopeItems.map((item) => item.value),
@@ -132,6 +142,12 @@ const syncBatch = base
   .input(syncBatchRequestSchema)
   .output(syncBatchResponseSchema)
   .handler(async ({ input }) => {
+    console.log("[obsidian.sync] start", {
+      vaultId: input.vaultId,
+      deviceId: input.deviceId,
+      itemCount: input.items.length,
+      sentAt: input.sentAt,
+    });
     const connection = await db
       .select({
         id: integrationConnections.id,
@@ -193,6 +209,14 @@ const syncBatch = base
         updatedAt: now,
       })
       .where(eq(obsidianVaults.vaultId, input.vaultId));
+
+    console.log("[obsidian.sync] done", {
+      vaultId: input.vaultId,
+      connectionId,
+      accepted: ingestResult.accepted,
+      rejected: ingestResult.rejected,
+      skipped: ingestResult.skipped,
+    });
 
     return {
       accepted: ingestResult.accepted,
