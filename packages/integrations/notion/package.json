@@ -11,5 +11,8 @@
   "dependencies": {
     "@daily-brain-bits/core": "workspace:*",
     "@notionhq/client": "^2.2.15"
+  },
+  "devDependencies": {
+    "@daily-brain-bits/typescript-config": "workspace:*"
   }
 }

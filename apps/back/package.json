@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./index.ts",
   "exports": {
-    "./router": "./src/router.ts",
-    "./*": "./src/*"
+    "./router": "./router.ts",
+    "./*": "./*"
   },
   "scripts": {
-    "dev": "bun run src/index.ts",
+    "dev": "bun run index.ts",
     "build": "tsc",
     "start": "bun run dist/index.js",
     "type-check": "tsc --noEmit --incremental",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "@daily-brain-bits/typescript-config": "workspace:*"
   }
 }

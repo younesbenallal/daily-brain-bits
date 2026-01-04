@@ -1,13 +1,8 @@
-import type { z } from "zod";
-import {
-  normalizeForHash,
-  sha256Hex,
-  syncItemSchema,
-  syncItemDeleteSchema,
-  syncItemUpsertSchema,
-} from "@daily-brain-bits/core";
 import type { SyncCursor, SyncItem } from "@daily-brain-bits/core";
-import { and, db, documents, eq, syncState } from "@daily-brain-bits/db";
+import { normalizeForHash, sha256Hex, syncItemDeleteSchema, syncItemSchema, syncItemUpsertSchema } from "@daily-brain-bits/core";
+import { db, documents, syncState } from "@daily-brain-bits/db";
+import { and, eq } from "drizzle-orm";
+import type { z } from "zod";
 
 export type IngestResult = {
   accepted: number;
@@ -64,10 +59,7 @@ type DeleteDecision = Decision & {
   tombstone?: boolean;
 };
 
-function resolveSourceTimeMs(
-  value: string | null | undefined,
-  receivedAt: Date
-): number {
+function resolveSourceTimeMs(value: string | null | undefined, receivedAt: Date): number {
   const parsed = parseDateOrNull(value);
   return parsed ? parsed.getTime() : receivedAt.getTime();
 }
@@ -90,10 +82,7 @@ export function resolveUpsertDecision(
     return { action: "apply" };
   }
 
-  const incomingMs = resolveSourceTimeMs(
-    upsert.updatedAtSource ?? null,
-    receivedAt
-  );
+  const incomingMs = resolveSourceTimeMs(upsert.updatedAtSource ?? null, receivedAt);
   const existingMs = getExistingSourceTimeMs(existing);
 
   if (existingMs !== null && incomingMs < existingMs) {
@@ -121,10 +110,7 @@ export function resolveDeleteDecision(
     return { action: "apply", tombstone: true };
   }
 
-  const incomingMs = resolveSourceTimeMs(
-    deleted.deletedAtSource,
-    receivedAt
-  );
+  const incomingMs = resolveSourceTimeMs(deleted.deletedAtSource, receivedAt);
   const existingMs = getExistingSourceTimeMs(existing);
 
   if (existingMs !== null && incomingMs <= existingMs) {
@@ -134,9 +120,7 @@ export function resolveDeleteDecision(
   return { action: "apply" };
 }
 
-export async function ingestSyncItems(
-  params: IngestParams
-): Promise<IngestResult> {
+export async function ingestSyncItems(params: IngestParams): Promise<IngestResult> {
   const { connectionId, userId, items, receivedAt, nextCursor } = params;
 
   let accepted = 0;
@@ -214,11 +198,7 @@ export async function ingestSyncItems(
             ...contentFields,
           })
           .onConflictDoUpdate({
-            target: [
-              documents.userId,
-              documents.connectionId,
-              documents.externalId,
-            ],
+            target: [documents.userId, documents.connectionId, documents.externalId],
             set: {
               title: upsert.title ?? null,
               contentHash: upsert.contentHash,

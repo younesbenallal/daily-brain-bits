@@ -1,18 +1,9 @@
 import { createHash } from "node:crypto";
+import { db, integrationConnections, integrationScopeItems, obsidianVaults } from "@daily-brain-bits/db";
+import { type SyncBatchResponse, syncBatchRequestSchema } from "@daily-brain-bits/integrations-obsidian";
+import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import {
-  syncBatchRequestSchema,
-  type SyncBatchResponse,
-} from "@daily-brain-bits/integrations-obsidian";
-import {
-  and,
-  db,
-  eq,
-  integrationConnections,
-  integrationScopeItems,
-  obsidianVaults,
-} from "@daily-brain-bits/db";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
 
 const registerRequestSchema = z.object({
@@ -77,12 +68,7 @@ obsidianRouter.get("/v1/integrations/obsidian/scope", async (c) => {
       id: integrationConnections.id,
     })
     .from(integrationConnections)
-    .where(
-      and(
-        eq(integrationConnections.kind, "obsidian"),
-        eq(integrationConnections.accountExternalId, vaultId)
-      )
-    )
+    .where(and(eq(integrationConnections.kind, "obsidian"), eq(integrationConnections.accountExternalId, vaultId)))
     .limit(1);
 
   if (connection.length === 0) {
@@ -103,19 +89,16 @@ obsidianRouter.get("/v1/integrations/obsidian/scope", async (c) => {
       )
     );
 
-  const updatedAt = scopeItems.reduce<string | undefined>(
-    (max, item) => {
-      const value = item.updatedAt?.toISOString();
-      if (!value) {
-        return max;
-      }
-      if (!max || value > max) {
-        return value;
-      }
+  const updatedAt = scopeItems.reduce<string | undefined>((max, item) => {
+    const value = item.updatedAt?.toISOString();
+    if (!value) {
       return max;
-    },
-    undefined
-  );
+    }
+    if (!max || value > max) {
+      return value;
+    }
+    return max;
+  }, undefined);
 
   return c.json({
     vaultId,
@@ -132,24 +115,22 @@ obsidianRouter.post("/v1/integrations/obsidian/sync/batch", async (c) => {
       userId: integrationConnections.userId,
     })
     .from(integrationConnections)
-    .where(
-      and(
-        eq(integrationConnections.kind, "obsidian"),
-        eq(integrationConnections.accountExternalId, payload.vaultId)
-      )
-    )
+    .where(and(eq(integrationConnections.kind, "obsidian"), eq(integrationConnections.accountExternalId, payload.vaultId)))
     .limit(1);
 
   if (connection.length === 0) {
-    return c.json({
-      accepted: 0,
-      rejected: payload.items.length,
-      itemResults: payload.items.map((item) => ({
-        externalId: item.externalId,
-        status: "rejected",
-        reason: "unknown_vault",
-      })),
-    } satisfies SyncBatchResponse, 404);
+    return c.json(
+      {
+        accepted: 0,
+        rejected: payload.items.length,
+        itemResults: payload.items.map((item) => ({
+          externalId: item.externalId,
+          status: "rejected",
+          reason: "unknown_vault",
+        })),
+      } satisfies SyncBatchResponse,
+      404
+    );
   }
 
   const connectionId = connection[0].id;
@@ -185,12 +166,8 @@ obsidianRouter.post("/v1/integrations/obsidian/sync/batch", async (c) => {
     .limit(1);
 
   if (payload.deviceId && vaultRows.length > 0) {
-    const existing = Array.isArray(vaultRows[0].deviceIdsJson)
-      ? vaultRows[0].deviceIdsJson
-      : [];
-    const nextDeviceIds = Array.from(
-      new Set([...existing, payload.deviceId])
-    );
+    const existing = Array.isArray(vaultRows[0].deviceIdsJson) ? vaultRows[0].deviceIdsJson : [];
+    const nextDeviceIds = Array.from(new Set([...existing, payload.deviceId]));
 
     await db
       .update(obsidianVaults)
