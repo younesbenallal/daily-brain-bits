@@ -1,27 +1,15 @@
 import type { Client } from "@notionhq/client";
 import { createNotionRequest } from "./client";
-import { syncDatabase } from "./sync";
-
-type SnapshotItem = {
-  externalId: string;
-  title: string;
-  contentHash: string;
-  updatedAtSource: string | null;
-};
-
-type Snapshot = {
-  databaseId: string;
-  capturedAt: string;
-  items: SnapshotItem[];
-};
+import { createNotionSyncAdapter } from "./adapter";
 
 export type SelfTestResult = {
   pageId: string;
-  added: SnapshotItem[];
-  updated: SnapshotItem[];
-  removed: SnapshotItem[];
-  beforeCount: number;
-  afterCount: number;
+  initialCursor: string;
+  initialItems: number;
+  incrementalItems: number;
+  returnedPageIds: string[];
+  missingPageIds: string[];
+  extraPageIds: string[];
 };
 
 export type LastEditedTestResult = {
@@ -38,24 +26,37 @@ export async function runNotionSelfTest(options: {
   notion: Client;
   databaseId: string;
   log?: (message: string) => void;
+  delayMs?: number;
 }): Promise<SelfTestResult> {
   const log = options.log ?? (() => {});
+  const delayMs = options.delayMs ?? 1500;
   const { notion, databaseId } = options;
   const request = createNotionRequest();
+  const adapter = createNotionSyncAdapter({
+    notion,
+    request,
+    safetyMarginSeconds: 0,
+  });
 
-  log("Running Notion self-test: create/update/archive a test page.");
+  log("Running Notion self-test: initial sync.");
+  const initial = await adapter.sync({ databaseId });
+  const cursor = initial.nextCursor;
+
+  await sleep(delayMs);
+
   const titleProp = await resolveTitleProperty(notion, databaseId, request);
   if (!titleProp) {
     throw new Error("Could not identify the title property for the database.");
   }
 
+  log("Creating and updating a test page.");
   const page = await request(() =>
     notion.pages.create({
       parent: { database_id: databaseId },
       properties: {
         [titleProp]: {
           title: [
-            { text: { content: `DBB Sync Test ${new Date().toISOString()}` } },
+            { text: { content: `DBB Adapter Test ${new Date().toISOString()}` } },
           ],
         },
       },
@@ -70,29 +71,24 @@ export async function runNotionSelfTest(options: {
           object: "block",
           type: "paragraph",
           paragraph: {
-            rich_text: [{ type: "text", text: { content: "Initial content." } }],
+            rich_text: [
+              { type: "text", text: { content: "Adapter test content." } },
+            ],
           },
         },
       ],
     })
   );
 
-  const before = await takeSnapshot(notion, databaseId, log);
+  if (delayMs > 0) {
+    await sleep(delayMs);
+  }
 
-  await request(() =>
-    notion.blocks.children.append({
-      block_id: page.id,
-      children: [
-        {
-          object: "block",
-          type: "paragraph",
-          paragraph: {
-            rich_text: [{ type: "text", text: { content: "Updated content." } }],
-          },
-        },
-      ],
-    })
-  );
+  const incremental = await adapter.sync({ databaseId }, cursor);
+  const returnedPageIds = incremental.items.map((item) => item.externalId);
+  const returnedSet = new Set(returnedPageIds);
+  const missingPageIds = returnedSet.has(page.id) ? [] : [page.id];
+  const extraPageIds = returnedPageIds.filter((id) => id !== page.id);
 
   await request(() =>
     notion.pages.update({
@@ -101,16 +97,14 @@ export async function runNotionSelfTest(options: {
     })
   );
 
-  const after = await takeSnapshot(notion, databaseId, log);
-  const diff = compareSnapshots(before, after);
-
   return {
     pageId: page.id,
-    added: diff.added,
-    updated: diff.updated,
-    removed: diff.removed,
-    beforeCount: before.items.length,
-    afterCount: after.items.length,
+    initialCursor: cursor.since,
+    initialItems: initial.items.length,
+    incrementalItems: incremental.items.length,
+    returnedPageIds,
+    missingPageIds,
+    extraPageIds,
   };
 }
 
@@ -233,31 +227,6 @@ export async function runNotionLastEditedTimeTest(options: {
   };
 }
 
-async function takeSnapshot(
-  notion: Client,
-  databaseId: string,
-  log: (message: string) => void
-): Promise<Snapshot> {
-  const result = await syncDatabase(notion, databaseId, {
-    onPage: (progress) => {
-      if (progress.pageId) {
-        log(`Fetched ${progress.pageId}`);
-      }
-    },
-  });
-
-  return {
-    databaseId,
-    capturedAt: new Date().toISOString(),
-    items: result.items.map((item) => ({
-      externalId: item.externalId,
-      title: item.title,
-      contentHash: item.contentHash,
-      updatedAtSource: item.updatedAtSource,
-    })),
-  };
-}
-
 async function resolveTitleProperty(
   notion: Client,
   databaseId: string,
@@ -276,38 +245,6 @@ async function resolveTitleProperty(
   }
 
   return null;
-}
-
-function compareSnapshots(previous: Snapshot, current: Snapshot) {
-  const previousMap = new Map(
-    previous.items.map((item) => [item.externalId, item])
-  );
-  const currentMap = new Map(
-    current.items.map((item) => [item.externalId, item])
-  );
-
-  const added: SnapshotItem[] = [];
-  const updated: SnapshotItem[] = [];
-  const removed: SnapshotItem[] = [];
-
-  for (const [externalId, item] of currentMap) {
-    const prev = previousMap.get(externalId);
-    if (!prev) {
-      added.push(item);
-      continue;
-    }
-    if (prev.contentHash !== item.contentHash) {
-      updated.push(item);
-    }
-  }
-
-  for (const [externalId, item] of previousMap) {
-    if (!currentMap.has(externalId)) {
-      removed.push(item);
-    }
-  }
-
-  return { added, updated, removed };
 }
 
 async function queryPagesEditedAfter(

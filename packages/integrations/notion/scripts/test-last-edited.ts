@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 import { runNotionLastEditedTimeTest } from "../src/testing";
 
-const DATABASE_ID = "REPLACE_ME";
+const DATABASE_ID = "2de3d5af15788012bb9dca6175b2ad0f";
 
 const token = process.env.NOTION_API_KEY ?? process.env.NOTION_TOKEN ?? "";
 const databaseId = process.env.NOTION_DATABASE_ID ?? DATABASE_ID;

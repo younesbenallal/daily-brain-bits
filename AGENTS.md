@@ -49,7 +49,7 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
 
 ## Engineering conventions (Cursor should follow)
 * Keep modules small and focused; split large files.
-* Prefer shared domain types in `packages/core` and integration-specific adapters in `packages/integrations-*`.
+* Prefer shared domain types in `packages/core` and integration-specific adapters in `packages/integrations/*`.
 * Sync is idempotent:
     * identify documents by `(userId, sourceKind, accountId, externalId)`
     * skip unchanged content via stable hashing
@@ -60,6 +60,10 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
     * Notion API pagination + 429 `Retry-After` backoff
     * Obsidian plugin must batch + debounce vault events
 
+## Docs
+- `docs/integrations-architecture.md` — Shared sync contract and integration architecture.
+- `docs/integrations-notion.md` — Notion incremental database sync (cursor, rate limits, markdown).
+- `docs/integrations-obsidian.md` — Obsidian plugin push sync (batching, local index, glob scope).
 
 Todo list:
 - [ ] Implement DB schema

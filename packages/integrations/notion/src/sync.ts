@@ -7,20 +7,19 @@ import type {
   PartialPageObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import { normalizeForHash, sha256Hex } from "@daily-brain-bits/core";
+import { normalizeForHash, sha256Hex, type SyncItem } from "@daily-brain-bits/core";
 import { blocksToMarkdown, richTextToMarkdown } from "./markdown";
 import { createNotionRequest } from "./client";
 import type {
   NotionRequest,
   NotionSyncError,
-  NotionSyncItem,
   NotionSyncOptions,
   NotionSyncResult,
 } from "./types";
 import type { NotionBlockWithChildren } from "./markdown";
 
 const defaultPageSize = 100;
-const defaultSafetyMarginMinutes = 5;
+const defaultSafetyMarginSeconds = 2;
 
 export async function syncDatabases(
   notion: Client,
@@ -28,15 +27,12 @@ export async function syncDatabases(
   options: NotionSyncOptions = {}
 ): Promise<NotionSyncResult> {
   const request = options.request ?? createNotionRequest();
+  const aggregateStats = createStats();
   const aggregate: NotionSyncResult = {
     items: [],
     errors: [],
-    stats: {
-      pagesVisited: 0,
-      pagesSynced: 0,
-      pagesSkipped: 0,
-    },
-    stoppedEarly: false,
+    stats: aggregateStats,
+    nextCursor: options.cursor ?? { since: new Date().toISOString() },
   };
 
   for (const databaseId of databaseIds) {
@@ -47,10 +43,11 @@ export async function syncDatabases(
 
     aggregate.items.push(...result.items);
     aggregate.errors.push(...result.errors);
-    aggregate.stats.pagesVisited += result.stats.pagesVisited;
-    aggregate.stats.pagesSynced += result.stats.pagesSynced;
-    aggregate.stats.pagesSkipped += result.stats.pagesSkipped;
-    aggregate.stoppedEarly = aggregate.stoppedEarly || result.stoppedEarly;
+    mergeStats(aggregate.stats, result.stats);
+    aggregate.nextCursor = pickLatestCursor(
+      aggregate.nextCursor,
+      result.nextCursor
+    );
   }
 
   return aggregate;
@@ -63,36 +60,41 @@ export async function syncDatabase(
 ): Promise<NotionSyncResult> {
   const request = options.request ?? createNotionRequest();
   const pageSize = options.pageSize ?? defaultPageSize;
-  const safetyMarginMinutes =
-    options.safetyMarginMinutes ?? defaultSafetyMarginMinutes;
-  const since = options.since
-    ? new Date(options.since.getTime() - safetyMarginMinutes * 60_000)
+  const safetyMarginSeconds =
+    options.safetyMarginSeconds ?? defaultSafetyMarginSeconds;
+  const filterAfterIso = options.cursor?.since
+    ? shiftIsoSeconds(options.cursor.since, -safetyMarginSeconds)
     : null;
 
-  const items: NotionSyncItem[] = [];
+  const items: SyncItem[] = [];
   const errors: NotionSyncError[] = [];
-  const stats = {
-    pagesVisited: 0,
-    pagesSynced: 0,
-    pagesSkipped: 0,
-  };
-  let stoppedEarly = false;
+  const stats = createStats();
+  let maxEditedTime: string | null = null;
 
   const query = (args: Parameters<Client["databases"]["query"]>[0]) =>
     request(() => notion.databases.query(args));
 
-  const iterator = iteratePaginatedAPI(query, {
+  const queryArgs: Parameters<Client["databases"]["query"]>[0] = {
     database_id: databaseId,
     page_size: pageSize,
     sorts: [{ timestamp: "last_edited_time", direction: "descending" }],
-  });
+  };
+  if (filterAfterIso) {
+    queryArgs.filter = {
+      timestamp: "last_edited_time",
+      last_edited_time: {
+        after: filterAfterIso,
+      },
+    };
+  }
+
+  const iterator = iteratePaginatedAPI(query, queryArgs);
 
   for await (const page of iterator) {
     const pageId = page.id;
     stats.pagesVisited += 1;
 
     if (options.maxPages && stats.pagesVisited > options.maxPages) {
-      stoppedEarly = true;
       break;
     }
 
@@ -100,13 +102,14 @@ export async function syncDatabase(
       const fullPage = await ensureFullPage(notion, page, request);
       if (!fullPage) {
         stats.pagesSkipped += 1;
+        stats.skipped += 1;
         continue;
       }
 
-      const lastEditedAt = new Date(fullPage.last_edited_time);
-      if (since && lastEditedAt <= since) {
-        stoppedEarly = true;
-        break;
+      if (isPageArchivedOrTrashed(fullPage)) {
+        stats.pagesSkipped += 1;
+        stats.skipped += 1;
+        continue;
       }
 
       options.onPage?.({
@@ -120,6 +123,12 @@ export async function syncDatabase(
       });
       items.push(item);
       stats.pagesSynced += 1;
+      stats.items += 1;
+      stats.upserts += 1;
+      maxEditedTime = pickLatestEditedTime(
+        maxEditedTime,
+        fullPage.last_edited_time
+      );
     } catch (error: unknown) {
       const syncError = toSyncError(error, pageId);
       errors.push(syncError);
@@ -128,6 +137,7 @@ export async function syncDatabase(
         throw error;
       }
       stats.pagesSkipped += 1;
+      stats.skipped += 1;
     }
   }
 
@@ -135,7 +145,7 @@ export async function syncDatabase(
     items,
     errors,
     stats,
-    stoppedEarly,
+    nextCursor: resolveNextCursor(options.cursor, maxEditedTime),
   };
 }
 
@@ -145,7 +155,7 @@ async function pageToSyncItem(
   databaseId: string,
   request: NotionRequest,
   options: { pageSize: number }
-): Promise<NotionSyncItem> {
+): Promise<SyncItem> {
   const blocks = await fetchBlocksWithChildren(notion, page.id, request, {
     pageSize: options.pageSize,
   });
@@ -155,11 +165,11 @@ async function pageToSyncItem(
   const title = extractPageTitle(page) || "Untitled";
 
   return {
+    op: "upsert",
     externalId: page.id,
     title,
     contentMarkdown: markdown,
     contentHash,
-    createdAtSource: page.created_time ?? null,
     updatedAtSource: page.last_edited_time ?? null,
     deletedAtSource: null,
     metadata: {
@@ -356,6 +366,92 @@ function toSyncError(error: unknown, pageId?: string): NotionSyncError {
     pageId,
     message: "Unknown error",
   };
+}
+
+function createStats(): NotionSyncResult["stats"] {
+  return {
+    items: 0,
+    upserts: 0,
+    deletes: 0,
+    skipped: 0,
+    pagesVisited: 0,
+    pagesSynced: 0,
+    pagesSkipped: 0,
+  };
+}
+
+function mergeStats(
+  target: NotionSyncResult["stats"],
+  source: NotionSyncResult["stats"]
+): void {
+  target.items += source.items;
+  target.upserts += source.upserts;
+  target.deletes += source.deletes;
+  target.skipped += source.skipped;
+  target.pagesVisited += source.pagesVisited;
+  target.pagesSynced += source.pagesSynced;
+  target.pagesSkipped += source.pagesSkipped;
+}
+
+function pickLatestCursor(
+  current: NotionSyncResult["nextCursor"],
+  next: NotionSyncResult["nextCursor"]
+): NotionSyncResult["nextCursor"] {
+  const currentTime = Date.parse(current.since);
+  const nextTime = Date.parse(next.since);
+  if (Number.isNaN(currentTime)) {
+    return next;
+  }
+  if (Number.isNaN(nextTime)) {
+    return current;
+  }
+  return nextTime > currentTime ? next : current;
+}
+
+function resolveNextCursor(
+  cursor: NotionSyncOptions["cursor"],
+  maxEditedTime: string | null
+): NotionSyncResult["nextCursor"] {
+  if (maxEditedTime) {
+    return { since: maxEditedTime };
+  }
+  if (cursor) {
+    return cursor;
+  }
+  return { since: new Date().toISOString() };
+}
+
+function pickLatestEditedTime(
+  current: string | null,
+  candidate: string
+): string {
+  if (!current) {
+    return candidate;
+  }
+  const currentTime = Date.parse(current);
+  const candidateTime = Date.parse(candidate);
+  if (Number.isNaN(currentTime)) {
+    return candidate;
+  }
+  if (Number.isNaN(candidateTime)) {
+    return current;
+  }
+  return candidateTime > currentTime ? candidate : current;
+}
+
+function shiftIsoSeconds(iso: string, deltaSeconds: number): string {
+  const date = new Date(iso);
+  return new Date(date.getTime() + deltaSeconds * 1000).toISOString();
+}
+
+function isPageArchivedOrTrashed(page: PageObjectResponse): boolean {
+  if (page.archived) {
+    return true;
+  }
+  if ("in_trash" in page && page.in_trash) {
+    return true;
+  }
+  return false;
 }
 
 export type { NotionBlockWithChildren, RichTextItemResponse };

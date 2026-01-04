@@ -1,15 +1,6 @@
-export type NotionSyncItem = {
-  externalId: string;
-  title: string;
-  contentMarkdown: string;
-  contentHash: string;
-  createdAtSource: string | null;
-  updatedAtSource: string | null;
-  deletedAtSource: string | null;
-  metadata: Record<string, unknown> | null;
-};
+import type { SyncCursor, SyncItem, SyncStats } from "@daily-brain-bits/core";
 
-export type NotionSyncStats = {
+export type NotionSyncStats = SyncStats & {
   pagesVisited: number;
   pagesSynced: number;
   pagesSkipped: number;
@@ -22,10 +13,10 @@ export type NotionSyncError = {
 };
 
 export type NotionSyncResult = {
-  items: NotionSyncItem[];
+  items: SyncItem[];
+  nextCursor: SyncCursor;
   errors: NotionSyncError[];
   stats: NotionSyncStats;
-  stoppedEarly: boolean;
 };
 
 export type NotionSyncProgress = {
@@ -35,8 +26,8 @@ export type NotionSyncProgress = {
 };
 
 export type NotionSyncOptions = {
-  since?: Date;
-  safetyMarginMinutes?: number;
+  cursor?: SyncCursor;
+  safetyMarginSeconds?: number;
   pageSize?: number;
   maxPages?: number;
   onPage?: (progress: NotionSyncProgress) => void;

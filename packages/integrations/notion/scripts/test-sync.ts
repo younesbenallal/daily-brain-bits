@@ -28,11 +28,21 @@ runNotionSelfTest({
   .then((result) => {
     console.log("Self-test complete.");
     console.log(`- Page: ${result.pageId}`);
-    console.log(`- Before: ${result.beforeCount}`);
-    console.log(`- After: ${result.afterCount}`);
-    console.log(`- Added: ${result.added.length}`);
-    console.log(`- Updated: ${result.updated.length}`);
-    console.log(`- Removed: ${result.removed.length}`);
+    console.log(`- Initial cursor: ${result.initialCursor}`);
+    console.log(`- Initial items: ${result.initialItems}`);
+    console.log(`- Incremental items: ${result.incrementalItems}`);
+    console.log(`- Missing IDs: ${result.missingPageIds.length}`);
+    console.log(`- Extra IDs: ${result.extraPageIds.length}`);
+    if (result.missingPageIds.length > 0) {
+      console.log("Missing page IDs:");
+      console.log(result.missingPageIds.join("\n"));
+      process.exit(1);
+    }
+    if (result.extraPageIds.length > 0) {
+      console.log("Extra page IDs:");
+      console.log(result.extraPageIds.join("\n"));
+      process.exit(1);
+    }
   })
   .catch((error) => {
     console.error(error);
