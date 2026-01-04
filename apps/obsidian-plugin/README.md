@@ -12,15 +12,15 @@ This package contains the Obsidian plugin that syncs a vault with the Daily Brai
 From repo root:
 
 ```bash
-cd apps/obsidian
+cd apps/obsidian-plugin
 bun install
 bun run build
 ```
 
 Build output:
 
-- `apps/obsidian/main.js` (plugin bundle)
-- `apps/obsidian/manifest.json` (plugin manifest)
+- `apps/obsidian-plugin/main.js` (plugin bundle)
+- `apps/obsidian-plugin/manifest.json` (plugin manifest)
 
 ## Local install (dev vault)
 
@@ -31,8 +31,8 @@ VAULT_PATH="/path/to/your/vault"
 PLUGIN_DIR="$VAULT_PATH/.obsidian/plugins/daily-brain-bits"
 
 mkdir -p "$PLUGIN_DIR"
-cp apps/obsidian/manifest.json "$PLUGIN_DIR/"
-cp apps/obsidian/main.js "$PLUGIN_DIR/"
+cp apps/obsidian-plugin/manifest.json "$PLUGIN_DIR/"
+cp apps/obsidian-plugin/main.js "$PLUGIN_DIR/"
 ```
 
 Then open Obsidian, enable the plugin, and configure its settings.
@@ -40,10 +40,10 @@ Then open Obsidian, enable the plugin, and configure its settings.
 ## Release
 
 1. Bump versions (keep them in sync):
-   - `apps/obsidian/manifest.json` `version`
-   - `apps/obsidian/package.json` `version`
+   - `apps/obsidian-plugin/manifest.json` `version`
+   - `apps/obsidian-plugin/package.json` `version`
 2. Build the bundle:
-   - `cd apps/obsidian && bun run build`
+   - `cd apps/obsidian-plugin && bun run build`
 3. Prepare the release artifacts:
    - `manifest.json`
    - `main.js`
@@ -56,7 +56,7 @@ Then open Obsidian, enable the plugin, and configure its settings.
 Example zip:
 
 ```bash
-cd apps/obsidian
+cd apps/obsidian-plugin
 zip -r daily-brain-bits.zip manifest.json main.js
 ```
 

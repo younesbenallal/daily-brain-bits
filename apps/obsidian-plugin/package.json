@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "dev": "bun run --watch src/main.ts",
-    "build": "bun build src/main.ts --outdir . --target node",
+    "build": "bun build src/main.ts --outdir . --target node --external obsidian",
     "type-check": "tsc --noEmit --incremental",
     "clean": "rm -f main.js"
   },

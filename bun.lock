@@ -54,7 +54,7 @@
         "vite": "^7.3.0",
       },
     },
-    "apps/obsidian": {
+    "apps/obsidian-plugin": {
       "name": "@daily-brain-bits/obsidian",
       "version": "0.0.0",
       "dependencies": {
@@ -196,7 +196,7 @@
 
     "@daily-brain-bits/integrations-obsidian": ["@daily-brain-bits/integrations-obsidian@workspace:packages/integrations/obsidian"],
 
-    "@daily-brain-bits/obsidian": ["@daily-brain-bits/obsidian@workspace:apps/obsidian"],
+    "@daily-brain-bits/obsidian": ["@daily-brain-bits/obsidian@workspace:apps/obsidian-plugin"],
 
     "@daily-brain-bits/types": ["@daily-brain-bits/types@workspace:packages/types"],
 

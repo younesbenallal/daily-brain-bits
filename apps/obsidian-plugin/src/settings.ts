@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 export type DBBSettings = {
   apiBaseUrl: string;
@@ -57,7 +57,7 @@ export function normalizeSettings(
   };
 }
 
-export type SettingsOwner = {
+export type SettingsOwner = Plugin & {
   settings: DBBSettings;
   saveSettings: () => Promise<void>;
 };

@@ -33,9 +33,9 @@ Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) in
 | `packages/integrations/obsidian/src/adapter.ts` | Maps Obsidian `SyncItem` into core `SyncItem`. |
 | `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline: scope filter + conflict resolution + ingest. |
 | `apps/back/src/routes/obsidian.ts` | Server endpoint implementation that receives plugin batches and upserts into `documents`. |
-| `apps/obsidian/src/main.ts` | Obsidian plugin entrypoint (settings, commands, event listeners, sync kickoff). |
-| `apps/obsidian/src/syncer.ts` | Full scan + incremental queueing + batched uploads with retries/backoff. |
-| `apps/obsidian/src/settings.ts` | Plugin settings UI + settings normalization. |
+| `apps/obsidian-plugin/src/main.ts` | Obsidian plugin entrypoint (settings, commands, event listeners, sync kickoff). |
+| `apps/obsidian-plugin/src/syncer.ts` | Full scan + incremental queueing + batched uploads with retries/backoff. |
+| `apps/obsidian-plugin/src/settings.ts` | Plugin settings UI + settings normalization. |
 | `packages/db/src/schema/index.ts` | DB tables and enums (Drizzle schema). |
 | `packages/db/src/schema/models.ts` | TypeScript types inferred from the Drizzle schema (`InferSelectModel` / `InferInsertModel`). |
 
@@ -54,7 +54,7 @@ Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) in
 
 ### Obsidian (push) → backend route → DB upsert
 
-1. The Obsidian plugin (`apps/obsidian`) batches file changes and POSTs a `SyncBatchRequest` to the backend.
+1. The Obsidian plugin (`apps/obsidian-plugin`) batches file changes and POSTs a `SyncBatchRequest` to the backend.
 2. The backend runs the shared pipeline:
    - Scope filter (server-side)
    - Conflict resolution (newer source timestamp wins; stale items are skipped)

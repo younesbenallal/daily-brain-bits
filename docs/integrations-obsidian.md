@@ -18,10 +18,10 @@ The Obsidian integration is a local-first sync: an Obsidian community plugin sca
 
 | Path | Responsibility |
 |------|----------------|
-| `apps/obsidian/src/main.ts` | Plugin entrypoint; loads settings/index, registers commands and vault listeners, triggers sync. |
-| `apps/obsidian/src/settings.ts` | Settings schema, defaults, UI, normalization. |
-| `apps/obsidian/src/syncer.ts` | Full scan, change queue, debounced flush, batch building, HTTP retries/backoff. |
-| `apps/obsidian/src/storage.ts` | Persists plugin settings + local index via `loadData()` / `saveData()`. |
+| `apps/obsidian-plugin/src/main.ts` | Plugin entrypoint; loads settings/index, registers commands and vault listeners, triggers sync. |
+| `apps/obsidian-plugin/src/settings.ts` | Settings schema, defaults, UI, normalization. |
+| `apps/obsidian-plugin/src/syncer.ts` | Full scan, change queue, debounced flush, batch building, HTTP retries/backoff. |
+| `apps/obsidian-plugin/src/storage.ts` | Persists plugin settings + local index via `loadData()` / `saveData()`. |
 | `packages/integrations/obsidian/src/sync.ts` | Zod schemas for `SyncBatchRequest` / `SyncBatchResponse` and register response. |
 | `packages/integrations/obsidian/src/ids.ts` | `externalId` helper: `"<vaultId>::<normalizedPath>"`. |
 | `packages/integrations/obsidian/src/filters.ts` | Simple glob matcher used by plugin scope filtering. |
@@ -91,7 +91,7 @@ The plugin retries on transient failures:
 ## Testing / Verification
 
 - Build plugin bundle:
-  - `cd apps/obsidian && bun run build`
+  - `cd apps/obsidian-plugin && bun run build`
 - Run backend:
   - `bun --cwd apps/back dev`
 - Manual smoke test:
