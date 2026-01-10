@@ -16,6 +16,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@daily-brain-bits/auth": "workspace:*",
     "@daily-brain-bits/core": "workspace:*",
     "@daily-brain-bits/db": "workspace:*",
     "@daily-brain-bits/integrations-obsidian": "workspace:*",

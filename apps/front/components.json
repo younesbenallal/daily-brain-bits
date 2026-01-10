@@ -1,8 +1,11 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "default",
   "rsc": false,
   "tsx": true,
+  "menuColor": "default",
+  "menuAccent": "bold",
+  "iconLibrary": "lucide",
+  "style": "base-maia",
   "tailwind": {
     "config": "tailwind.config.ts",
     "css": "src/index.css",

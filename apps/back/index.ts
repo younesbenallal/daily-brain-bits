@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { router } from "./router";
-
+import { auth } from "@daily-brain-bits/auth";
 const app = new Hono();
 
 // Middleware
@@ -16,6 +16,7 @@ app.use(
     credentials: true,
   })
 );
+app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
 // oRPC handler
 const rpcHandler = new RPCHandler(router, {
