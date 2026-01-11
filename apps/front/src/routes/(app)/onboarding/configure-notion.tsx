@@ -1,10 +1,21 @@
 import { Notion } from "@ridemountainpig/svgl-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { CheckIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Tags,
+  TagsContent,
+  TagsEmpty,
+  TagsGroup,
+  TagsInput,
+  TagsItem,
+  TagsList,
+  TagsTrigger,
+  TagsValue,
+} from "@/components/ui/shadcn-io/tags";
 import { orpc } from "@/lib/orpc-client";
 
 export const Route = createFileRoute("/(app)/onboarding/configure-notion")({
@@ -26,7 +37,13 @@ function ConfigureNotionPage() {
 
   const statusQueryOptions = useMemo(() => orpc.notion.status.queryOptions(), []);
   const statusQuery = useQuery(statusQueryOptions);
-  const connected = statusQuery.data?.connected ?? false;
+  const statusData = statusQuery.data as {
+    connected: boolean;
+    workspaceName?: string | null;
+    workspaceIcon?: string | null;
+    databases: typeof selectedDatabases;
+  } | undefined;
+  const connected = statusData?.connected ?? false;
 
   const searchQuery = useQuery(
     orpc.notion.databases.search.queryOptions({
@@ -34,12 +51,13 @@ function ConfigureNotionPage() {
       enabled: connected && query.trim().length > 0,
     })
   );
+  const searchData = searchQuery.data as { databases: typeof selectedDatabases } | undefined;
 
   useEffect(() => {
-    if (statusQuery.data?.databases) {
-      setSelectedDatabases(statusQuery.data.databases);
+    if (statusData?.databases) {
+      setSelectedDatabases(statusData.databases);
     }
-  }, [statusQuery.data?.databases]);
+  }, [statusData?.databases]);
 
   const saveMutation = useMutation(
     orpc.notion.databases.set.mutationOptions({
@@ -58,7 +76,7 @@ function ConfigureNotionPage() {
     setSelectedDatabases((prev) => {
       const exists = prev.some((item) => item.id === database.id);
       const next = exists ? prev.filter((item) => item.id !== database.id) : [...prev, database];
-      saveMutation.mutate({ databases: next });
+      saveMutation.mutate({ databases: next } as any);
       return next;
     });
   };
@@ -66,8 +84,8 @@ function ConfigureNotionPage() {
   const selectedIds = new Set(selectedDatabases.map((item) => item.id));
 
   const statusLabel = connected
-    ? statusQuery.data?.workspaceName
-      ? `Connected to ${statusQuery.data.workspaceName}`
+    ? statusData?.workspaceName
+      ? `Connected to ${statusData.workspaceName}`
       : "Connected to Notion"
     : "Not connected";
 
@@ -94,67 +112,86 @@ function ConfigureNotionPage() {
           <p className="text-sm text-[#737373]">
             Select the database in your Notion workspace that you'd like to receive reminders for.
           </p>
-          <Input
-            placeholder={connected ? "Search databases..." : "Connect Notion to search"}
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            disabled={!connected}
-          />
-          {connected ? (
-            <div className="space-y-3">
-              <div className="flex min-h-[45px] flex-wrap items-center gap-2 rounded-[12px] border border-[#d4d4d4] bg-white px-3 py-2">
-                {selectedDatabases.length === 0 ? (
-                  <span className="text-sm text-[#a3a3a3]">No databases selected yet.</span>
-                ) : (
-                  selectedDatabases.map((database) => (
-                    <button
-                      key={database.id}
-                      type="button"
-                      onClick={() => toggleDatabase(database)}
-                      className="rounded-full bg-[#f5e1e7] px-4 py-1 text-sm font-medium text-[#262626]"
-                    >
-                      {database.icon ? `${database.icon} ` : ""}
-                      {database.title}
-                    </button>
-                  ))
-                )}
-              </div>
-              {searchQuery.data?.databases && searchQuery.data.databases.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-[#737373]">Search results</p>
-                  <div className="space-y-2">
-                    {searchQuery.data.databases.map((database) => {
-                      const isSelected = selectedIds.has(database.id);
-                      return (
-                        <button
-                          key={database.id}
-                          type="button"
-                          onClick={() => toggleDatabase(database)}
-                          className={`flex w-full items-center justify-between rounded-[12px] border px-3 py-2 text-left text-sm ${
-                            isSelected ? "border-[#2d71c4] bg-[#ecf3fb]" : "border-[#e5e7eb] bg-white"
-                          }`}
-                        >
-                          <span className="flex items-center gap-2">
-                            {database.icon ? <span>{database.icon}</span> : null}
-                            <span>{database.title}</span>
-                          </span>
-                          <span className="text-xs text-[#737373]">{isSelected ? "Selected" : "Select"}</span>
-                        </button>
-                      );
-                    })}
+
+          <Tags>
+            <TagsTrigger
+              disabled={!connected}
+              placeholder={connected ? "Select databases..." : "Connect Notion to pick databases"}
+              className="bg-white"
+            >
+              {selectedDatabases.map((database) => (
+                <TagsValue
+                  key={database.id}
+                  onRemove={() => toggleDatabase(database)}
+                  className="bg-[#f5e1e7] text-[#262626] hover:bg-[#f5e1e7]/80"
+                >
+                  {database.icon ? (
+                    database.icon.startsWith("http") ? (
+                      <img
+                        src={database.icon}
+                        alt=""
+                        className="mr-1 h-3 w-3 shrink-0 rounded-sm object-contain"
+                      />
+                    ) : (
+                      `${database.icon} `
+                    )
+                  ) : null}
+                  {database.title}
+                </TagsValue>
+              ))}
+            </TagsTrigger>
+            <TagsContent commandProps={{ shouldFilter: false }}>
+              <TagsInput
+                placeholder="Search databases..."
+                value={query}
+                onValueChange={setQuery}
+              />
+              <TagsList>
+                {searchQuery.isLoading && (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2Icon className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Searching...</span>
                   </div>
-                </div>
-              )}
-              {searchQuery.isFetching && <p className="text-sm text-[#a3a3a3]">Searching databases...</p>}
-              {searchQuery.isError && <p className="text-sm text-[#ef4444]">Failed to load databases.</p>}
-              {saveMutation.isError && <p className="text-sm text-[#ef4444]">Failed to save selection.</p>}
-            </div>
-          ) : (
-            <div className="flex min-h-[45px] items-center rounded-[12px] border border-dashed border-[#d4d4d4] bg-white px-3 py-2 text-sm text-[#a3a3a3]">
-              Connect Notion to pick databases.
-            </div>
-          )}
+                )}
+                {!searchQuery.isLoading && searchData?.databases?.length === 0 && query.length > 0 && (
+                  <TagsEmpty>No databases found for "{query}"</TagsEmpty>
+                )}
+                {!searchQuery.isLoading && (!searchData?.databases || searchData.databases.length === 0) && query.length === 0 && (
+                  <TagsEmpty>Type to search your Notion databases...</TagsEmpty>
+                )}
+                <TagsGroup>
+                  {searchData?.databases?.map((database) => {
+                    const isSelected = selectedIds.has(database.id);
+                    return (
+                      <TagsItem
+                        key={database.id}
+                        onSelect={() => toggleDatabase(database)}
+                        className="cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2">
+                          {database.icon ? (
+                            database.icon.startsWith("http") ? (
+                              <img
+                                src={database.icon}
+                                alt=""
+                                className="h-4 w-4 shrink-0 rounded-sm object-contain"
+                              />
+                            ) : (
+                              <span>{database.icon}</span>
+                            )
+                          ) : null}
+                          <span>{database.title}</span>
+                        </span>
+                        {isSelected && <CheckIcon className="ml-auto h-4 w-4 text-[#2d71c4]" />}
+                      </TagsItem>
+                    );
+                  })}
+                </TagsGroup>
+              </TagsList>
+            </TagsContent>
+          </Tags>
+
+          {saveMutation.isError && <p className="text-sm text-[#ef4444]">Failed to save selection.</p>}
         </div>
 
         <div className="flex justify-end">
