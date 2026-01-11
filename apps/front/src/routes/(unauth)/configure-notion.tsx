@@ -1,6 +1,7 @@
+import { Notion } from "@ridemountainpig/svgl-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { OnboardingLayout } from "../../components/layouts/onboarding-layout";
-import { Button } from "../../components/ui/button";
+import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/(unauth)/configure-notion")({
   component: ConfigureNotionPage,
@@ -12,7 +13,10 @@ function ConfigureNotionPage() {
     <OnboardingLayout>
       <div className="space-y-6">
         <div className="space-y-3">
-          <h1 className="font-display text-3xl text-[#2d71c4]">Configure Notion</h1>
+          <Notion className="h-8 w-8" />
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-3xl text-[#2d71c4]">Configure Notion</h1>
+          </div>
           <p className="text-sm text-[#737373]">Tell us what notes you would like to receive in your inbox</p>
         </div>
 

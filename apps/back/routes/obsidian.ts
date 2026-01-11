@@ -16,7 +16,7 @@ const registerRequestSchema = z.object({
   displayName: z.string().min(1).optional(),
 });
 
-const base = os.$context<{ requestUrl: string }>();
+const base = os.$context();
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -25,11 +25,11 @@ function hashToken(token: string): string {
 const register = base
   .input(registerRequestSchema)
   .output(obsidianRegisterResponseSchema)
-  .handler(async ({ input, context }) => {
+  .handler(async ({ input }) => {
     console.log("[obsidian.register] start", { userId: input.userId, displayName: input.displayName ?? null });
     const vaultId = crypto.randomUUID();
     const pluginToken = crypto.randomUUID();
-    const apiBaseUrl = new URL(context.requestUrl).origin;
+    const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:3001";
 
     const [connection] = await db
       .insert(integrationConnections)
@@ -88,9 +88,7 @@ const scope = base
         id: integrationConnections.id,
       })
       .from(integrationConnections)
-      .where(
-        and(eq(integrationConnections.kind, "obsidian"), eq(integrationConnections.accountExternalId, input.vaultId))
-      )
+      .where(and(eq(integrationConnections.kind, "obsidian"), eq(integrationConnections.accountExternalId, input.vaultId)))
       .limit(1);
 
     const connectionId = connection[0]?.id;

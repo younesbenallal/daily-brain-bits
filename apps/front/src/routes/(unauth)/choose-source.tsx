@@ -1,6 +1,7 @@
+import { Notion, Obsidian } from "@ridemountainpig/svgl-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { OnboardingLayout } from "../../components/layouts/onboarding-layout";
-import { Button } from "../../components/ui/button";
+import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/(unauth)/choose-source")({
   component: ChooseSourcePage,
@@ -18,8 +19,8 @@ function ChooseSourcePage() {
 
         <div className="flex flex-col items-center gap-4">
           {[
-            { label: "Notion", id: "notion" },
-            { label: "Obsidian", id: "obsidian" },
+            { label: "Notion", id: "notion", Logo: Notion },
+            { label: "Obsidian", id: "obsidian", Logo: Obsidian },
           ].map((item) => (
             <Button
               key={item.id}
@@ -27,12 +28,12 @@ function ChooseSourcePage() {
               className="h-[59px] w-[150px] gap-3 bg-white text-[#404040] border-[#d4d4d4]"
               type="button"
               onClick={() => {
-                router.navigate({ to: item.id === "notion" ? "/configure-notion" : "/configure-obsidian" });
+                router.navigate({
+                  to: item.id === "notion" ? "/configure-notion" : "/configure-obsidian",
+                });
               }}
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e5e7eb] text-[10px] text-[#6b7280]">
-                {item.label.slice(0, 1)}
-              </span>
+              <item.Logo className="h-5 w-5" />
               {item.label}
             </Button>
           ))}

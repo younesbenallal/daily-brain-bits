@@ -40,6 +40,7 @@
         "@daily-brain-bits/types": "workspace:*",
         "@orpc/client": "^1.13.1",
         "@orpc/react-query": "^1.13.1",
+        "@ridemountainpig/svgl-react": "^1.0.14",
         "@tanstack/react-query": "^5.60.5",
         "@tanstack/react-router": "^1.114.3",
         "@tanstack/router-devtools": "^1.114.3",
@@ -408,6 +409,8 @@
     "@orpc/standard-server-peer": ["@orpc/standard-server-peer@1.13.2", "", { "dependencies": { "@orpc/shared": "1.13.2", "@orpc/standard-server": "1.13.2" } }, "sha512-LMxaMSmp98jnm0jiHpqPgH5qHXeOvah7pmysrcLaqMfwH+GwRS6S+/ls2hAy9aIba4LrTZyIpTgSohHD/Ed73g=="],
 
     "@orpc/tanstack-query": ["@orpc/tanstack-query@1.13.2", "", { "dependencies": { "@orpc/shared": "1.13.2" }, "peerDependencies": { "@orpc/client": "1.13.2", "@tanstack/query-core": ">=5.80.2" } }, "sha512-a/BzZP4YZiqPCBoWzr1miHPHDpqGhH8BKPf1RyB9i61s554Utic3MQqKO0PHa61TT0OxEXuZTowVgdwk1zsQFA=="],
+
+    "@ridemountainpig/svgl-react": ["@ridemountainpig/svgl-react@1.0.14", "", { "peerDependencies": { "react": "^16.8 || ^17.0 || ^18.0 || ^19.0", "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0" } }, "sha512-nCFhnM5cR8dgAUZYqs4mdPTF/zgKPYsIW627xbd1eAvVefmmt0a6odj0DhPxlt50J5rrc5SmrcUV+n+01bAcTw=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.53", "", {}, "sha512-vENRlFU4YbrwVqNDZ7fLvy+JR1CRkyr01jhSiDpE1u6py3OMzQfztQU2jxykW3ALNxO4kSlqIDeYyD0Y9RcQeQ=="],
 

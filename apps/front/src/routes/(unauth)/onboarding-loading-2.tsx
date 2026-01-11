@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { OnboardingLayout } from "../../components/layouts/onboarding-layout";
+import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 
 export const Route = createFileRoute("/(unauth)/onboarding-loading-2")({
   component: OnboardingLoadingTwoPage,
@@ -18,9 +18,7 @@ function OnboardingLoadingTwoPage() {
       }
     >
       <div className="space-y-4 text-center">
-        <h1 className="font-display text-3xl text-[#163c6b]">
-          In the meantime, let us introduce you to the app
-        </h1>
+        <h1 className="font-display text-3xl text-[#163c6b]">In the meantime, let us introduce you to the app</h1>
       </div>
     </OnboardingLayout>
   );

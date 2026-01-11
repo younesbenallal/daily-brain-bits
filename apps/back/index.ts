@@ -1,25 +1,59 @@
-import { onError } from "@orpc/server";
+import { auth } from "@daily-brain-bits/auth";
+import { ORPCError, onError, os } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { router } from "./router";
-import { auth } from "@daily-brain-bits/auth";
-const app = new Hono();
+import * as obsidianRoutes from "./routes/obsidian";
 
-// Middleware
-app.use("*", logger());
-app.use(
-  "*",
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true,
+type Context = {
+  user: typeof auth.$Infer.Session.user;
+  session: typeof auth.$Infer.Session.session;
+};
+
+const ORPCRouter = {
+  obsidian: obsidianRoutes,
+};
+
+const app = new Hono<{ Variables: Context }>()
+  .use("*", logger())
+  .use(
+    "*",
+    cors({
+      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      credentials: true,
+    })
+  )
+  .on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
+  .use("*", async (c, next) => {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session) {
+      //@ts-expect-error
+      c.set("user", null);
+      //@ts-expect-error
+      c.set("session", null);
+      return next();
+    }
+
+    c.set("user", session.user);
+    c.set("session", session.session);
+    return next();
   })
-);
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
+  .use("/rpc/*", async (c, next) => {
+    const { matched, response } = await rpcHandler.handle(c.req.raw, {
+      prefix: "/rpc",
+      context: {},
+    });
+
+    if (matched) {
+      return c.newResponse(response.body, response);
+    }
+
+    await next();
+  });
 
 // oRPC handler
-const rpcHandler = new RPCHandler(router, {
+const rpcHandler = new RPCHandler(ORPCRouter, {
   interceptors: [
     onError((error) => {
       console.error("oRPC Error:", error);
@@ -28,22 +62,18 @@ const rpcHandler = new RPCHandler(router, {
 });
 
 // Mount oRPC routes
-app.use("/rpc/*", async (c, next) => {
-  const { matched, response } = await rpcHandler.handle(c.req.raw, {
-    prefix: "/rpc",
-    context: {
-      requestUrl: c.req.url,
-    },
-  });
-
-  if (matched) {
-    return c.newResponse(response.body, response);
-  }
-
-  await next();
-});
-
 const port = Number(process.env.PORT) || 3001;
+
+export type AppType = typeof app;
+export type ORPCRouterType = typeof ORPCRouter;
+
+export const baseRoute = os.$context<Context>().use(({ context, next }) => {
+  const session = context.session;
+  if (!session) {
+    throw new ORPCError("Unauthorized");
+  }
+  return next();
+});
 
 export default {
   port,
