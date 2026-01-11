@@ -47,7 +47,7 @@ function PreferencesPage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/choose-source" });
+              router.navigate({ to: "/onboarding/choose-source" });
             }}
           >
             Next

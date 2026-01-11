@@ -31,7 +31,7 @@ function OnboardingFinalPage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/app" });
+              router.navigate({ to: "/dash" });
             }}
           >
             Check my daily review

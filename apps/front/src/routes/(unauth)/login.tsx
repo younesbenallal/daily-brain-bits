@@ -26,7 +26,7 @@ function LoginPage() {
           className="w-full"
           type="submit"
           onClick={() => {
-            router.navigate({ to: "/preferences" });
+            router.navigate({ to: "/onboarding/preferences" });
           }}
         >
           Login

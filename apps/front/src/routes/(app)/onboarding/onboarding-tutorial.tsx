@@ -37,7 +37,7 @@ function OnboardingTutorialPage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/onboarding-final" });
+              router.navigate({ to: "/onboarding/onboarding-final" });
             }}
           >
             Next

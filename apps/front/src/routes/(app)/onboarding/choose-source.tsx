@@ -29,7 +29,7 @@ function ChooseSourcePage() {
               type="button"
               onClick={() => {
                 router.navigate({
-                  to: item.id === "notion" ? "/configure-notion" : "/configure-obsidian",
+                  to: item.id === "notion" ? "/onboarding/configure-notion" : "/onboarding/configure-obsidian",
                 });
               }}
             >
@@ -43,7 +43,7 @@ function ChooseSourcePage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/app" });
+              router.navigate({ to: "/dash" });
             }}
           >
             Go to app

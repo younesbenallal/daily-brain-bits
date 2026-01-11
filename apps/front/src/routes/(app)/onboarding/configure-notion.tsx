@@ -38,7 +38,7 @@ function ConfigureNotionPage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/onboarding-loading" });
+              router.navigate({ to: "/onboarding/onboarding-loading" });
             }}
           >
             Go to app
