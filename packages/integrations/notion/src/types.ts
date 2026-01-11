@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { SyncItem, SyncStats } from "@daily-brain-bits/core";
+import { z } from "zod/v4";
 
 export const notionSyncCursorSchema = z.object({
   since: z.string().datetime(),

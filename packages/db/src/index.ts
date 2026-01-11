@@ -1,2 +1,3 @@
 export * from "./connection";
-export * from "./schema";
+export * from "./schemas/auth";
+export * from "./schemas/core";

@@ -1,5 +1,5 @@
-import { APIErrorCode, isNotionClientError } from "@notionhq/client";
-import { iteratePaginatedAPI, type Client } from "@notionhq/client";
+import { normalizeForHash, type SyncItem, sha256Hex } from "@daily-brain-bits/core";
+import { APIErrorCode, type Client, isNotionClientError, iteratePaginatedAPI } from "@notionhq/client";
 import type {
   BlockObjectResponse,
   PageObjectResponse,
@@ -7,16 +7,10 @@ import type {
   PartialPageObjectResponse,
   RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import { normalizeForHash, sha256Hex, type SyncItem } from "@daily-brain-bits/core";
-import { blocksToMarkdown, richTextToMarkdown } from "./markdown";
 import { createNotionRequest } from "./client";
-import type {
-  NotionRequest,
-  NotionSyncError,
-  NotionSyncOptions,
-  NotionSyncResult,
-} from "./types";
 import type { NotionBlockWithChildren } from "./markdown";
+import { blocksToMarkdown, richTextToMarkdown } from "./markdown";
+import type { NotionRequest, NotionSyncError, NotionSyncOptions, NotionSyncResult } from "./types";
 
 const defaultPageSize = 100;
 const defaultSafetyMarginSeconds = 2;
@@ -44,10 +38,7 @@ export async function syncDatabases(
     aggregate.items.push(...result.items);
     aggregate.errors.push(...result.errors);
     mergeStats(aggregate.stats, result.stats);
-    aggregate.nextCursor = pickLatestCursor(
-      aggregate.nextCursor,
-      result.nextCursor
-    );
+    aggregate.nextCursor = pickLatestCursor(aggregate.nextCursor, result.nextCursor);
   }
 
   return aggregate;
@@ -60,19 +51,15 @@ export async function syncDatabase(
 ): Promise<NotionSyncResult> {
   const request = options.request ?? createNotionRequest();
   const pageSize = options.pageSize ?? defaultPageSize;
-  const safetyMarginSeconds =
-    options.safetyMarginSeconds ?? defaultSafetyMarginSeconds;
-  const filterAfterIso = options.cursor?.since
-    ? shiftIsoSeconds(options.cursor.since, -safetyMarginSeconds)
-    : null;
+  const safetyMarginSeconds = options.safetyMarginSeconds ?? defaultSafetyMarginSeconds;
+  const filterAfterIso = options.cursor?.since ? shiftIsoSeconds(options.cursor.since, -safetyMarginSeconds) : null;
 
   const items: SyncItem[] = [];
   const errors: NotionSyncError[] = [];
   const stats = createStats();
   let maxEditedTime: string | null = null;
 
-  const query = (args: Parameters<Client["databases"]["query"]>[0]) =>
-    request(() => notion.databases.query(args));
+  const query = (args: Parameters<Client["databases"]["query"]>[0]) => request(() => notion.databases.query(args));
 
   const queryArgs: Parameters<Client["databases"]["query"]>[0] = {
     database_id: databaseId,
@@ -99,7 +86,7 @@ export async function syncDatabase(
     }
 
     try {
-      const fullPage = await ensureFullPage(notion, page, request);
+      const fullPage = await ensureFullPage(notion, page as PageObjectResponse, request);
       if (!fullPage) {
         stats.pagesSkipped += 1;
         stats.skipped += 1;
@@ -125,10 +112,7 @@ export async function syncDatabase(
       stats.pagesSynced += 1;
       stats.items += 1;
       stats.upserts += 1;
-      maxEditedTime = pickLatestEditedTime(
-        maxEditedTime,
-        fullPage.last_edited_time
-      );
+      maxEditedTime = pickLatestEditedTime(maxEditedTime, fullPage.last_edited_time);
     } catch (error: unknown) {
       const syncError = toSyncError(error, pageId);
       errors.push(syncError);
@@ -186,8 +170,7 @@ async function fetchBlocksWithChildren(
   request: NotionRequest,
   options: { pageSize: number }
 ): Promise<NotionBlockWithChildren[]> {
-  const list = (args: Parameters<Client["blocks"]["children"]["list"]>[0]) =>
-    request(() => notion.blocks.children.list(args));
+  const list = (args: Parameters<Client["blocks"]["children"]["list"]>[0]) => request(() => notion.blocks.children.list(args));
 
   const iterator = iteratePaginatedAPI(list, {
     block_id: blockId,
@@ -203,12 +186,7 @@ async function fetchBlocksWithChildren(
 
     const enriched: NotionBlockWithChildren = { ...block };
     if (block.has_children) {
-      enriched.children = await fetchBlocksWithChildren(
-        notion,
-        block.id,
-        request,
-        options
-      );
+      enriched.children = await fetchBlocksWithChildren(notion, block.id, request, options);
     }
 
     blocks.push(enriched);
@@ -227,37 +205,26 @@ async function ensureFullPage(
   }
 
   try {
-    const fullPage = await request(() =>
-      notion.pages.retrieve({ page_id: page.id })
-    );
+    const fullPage = await request(() => notion.pages.retrieve({ page_id: page.id }));
     return isFullPage(fullPage) ? fullPage : null;
   } catch (error: unknown) {
-    if (
-      isNotionClientError(error) &&
-      error.code === APIErrorCode.ObjectNotFound
-    ) {
+    if (isNotionClientError(error) && error.code === APIErrorCode.ObjectNotFound) {
       return null;
     }
     throw error;
   }
 }
 
-function isFullPage(
-  page: PageObjectResponse | PartialPageObjectResponse
-): page is PageObjectResponse {
+function isFullPage(page: PageObjectResponse | PartialPageObjectResponse): page is PageObjectResponse {
   return "properties" in page;
 }
 
-function isFullBlock(
-  block: BlockObjectResponse | PartialBlockObjectResponse
-): block is BlockObjectResponse {
+function isFullBlock(block: BlockObjectResponse | PartialBlockObjectResponse): block is BlockObjectResponse {
   return "type" in block;
 }
 
 function extractPageTitle(page: PageObjectResponse): string {
-  const titleProperty = Object.values(page.properties).find(
-    (property) => property.type === "title"
-  );
+  const titleProperty = Object.values(page.properties).find((property) => property.type === "title");
 
   if (!titleProperty || titleProperty.type !== "title") {
     return "";
@@ -266,9 +233,7 @@ function extractPageTitle(page: PageObjectResponse): string {
   return richTextToMarkdown(titleProperty.title).trim();
 }
 
-function summarizeProperties(
-  properties: PageObjectResponse["properties"]
-): Record<string, unknown> {
+function summarizeProperties(properties: PageObjectResponse["properties"]): Record<string, unknown> {
   const summary: Record<string, unknown> = {};
 
   for (const [name, property] of Object.entries(properties)) {
@@ -298,7 +263,7 @@ function summarizeProperties(
         summary[name] = property.date?.start ?? null;
         break;
       case "people":
-        summary[name] = property.people.map((person) => person.name || person.id);
+        summary[name] = property.people.map((person) => ("name" in person ? person.name : person.id));
         break;
       case "files":
         summary[name] = property.files
@@ -380,10 +345,7 @@ function createStats(): NotionSyncResult["stats"] {
   };
 }
 
-function mergeStats(
-  target: NotionSyncResult["stats"],
-  source: NotionSyncResult["stats"]
-): void {
+function mergeStats(target: NotionSyncResult["stats"], source: NotionSyncResult["stats"]): void {
   target.items += source.items;
   target.upserts += source.upserts;
   target.deletes += source.deletes;
@@ -408,10 +370,7 @@ function pickLatestCursor(
   return nextTime > currentTime ? next : current;
 }
 
-function resolveNextCursor(
-  cursor: NotionSyncOptions["cursor"],
-  maxEditedTime: string | null
-): NotionSyncResult["nextCursor"] {
+function resolveNextCursor(cursor: NotionSyncOptions["cursor"], maxEditedTime: string | null): NotionSyncResult["nextCursor"] {
   if (maxEditedTime) {
     return { since: maxEditedTime };
   }
@@ -421,10 +380,7 @@ function resolveNextCursor(
   return { since: new Date().toISOString() };
 }
 
-function pickLatestEditedTime(
-  current: string | null,
-  candidate: string
-): string {
+function pickLatestEditedTime(current: string | null, candidate: string): string {
   if (!current) {
     return candidate;
   }

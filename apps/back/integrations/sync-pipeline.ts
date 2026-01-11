@@ -1,9 +1,9 @@
 import type { SyncCursor } from "@daily-brain-bits/core";
-import type { IntegrationKind } from "@daily-brain-bits/db";
 import { db, integrationScopeItems } from "@daily-brain-bits/db";
 import { createPathFilter } from "@daily-brain-bits/integrations-obsidian";
-import { ingestSyncItems, type IngestResult } from "./ingest";
+import type { IntegrationKind } from "@daily-brain-bits/types";
 import { and, eq } from "drizzle-orm";
+import { type IngestResult, ingestSyncItems } from "./ingest";
 
 type ScopeFilterResult = {
   filteredItems: unknown[];

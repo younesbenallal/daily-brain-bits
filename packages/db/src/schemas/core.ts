@@ -14,17 +14,9 @@ import {
 
 export const integrationKind = pgEnum("integration_kind", ["obsidian", "notion"]);
 
-export const integrationStatus = pgEnum("integration_status", [
-  "active",
-  "paused",
-  "revoked",
-  "error",
-]);
+export const integrationStatus = pgEnum("integration_status", ["active", "paused", "revoked", "error"]);
 
-export const integrationScopeType = pgEnum("integration_scope_type", [
-  "notion_database",
-  "obsidian_glob",
-]);
+export const integrationScopeType = pgEnum("integration_scope_type", ["notion_database", "obsidian_glob"]);
 
 export const integrationConnections = pgTable(
   "integration_connections",
@@ -37,29 +29,14 @@ export const integrationConnections = pgTable(
     accountExternalId: text("account_external_id").notNull(),
     configJson: jsonb("config_json"),
     secretsJsonEncrypted: text("secrets_json_encrypted"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("integration_connections_user_kind_external_idx").on(
-      table.userId,
-      table.kind,
-      table.accountExternalId
-    ),
-    index("integration_connections_user_kind_status_idx").on(
-      table.userId,
-      table.kind,
-      table.status
-    ),
-    index("integration_connections_user_last_seen_idx").on(
-      table.userId,
-      table.lastSeenAt
-    ),
+    uniqueIndex("integration_connections_user_kind_external_idx").on(table.userId, table.kind, table.accountExternalId),
+    index("integration_connections_user_kind_status_idx").on(table.userId, table.kind, table.status),
+    index("integration_connections_user_last_seen_idx").on(table.userId, table.lastSeenAt),
   ]
 );
 
@@ -74,23 +51,12 @@ export const integrationScopeItems = pgTable(
     scopeValue: text("scope_value").notNull(),
     enabled: boolean("enabled").notNull(),
     metadataJson: jsonb("metadata_json"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("integration_scope_items_connection_type_value_idx").on(
-      table.connectionId,
-      table.scopeType,
-      table.scopeValue
-    ),
-    index("integration_scope_items_connection_enabled_idx").on(
-      table.connectionId,
-      table.enabled
-    ),
+    uniqueIndex("integration_scope_items_connection_type_value_idx").on(table.connectionId, table.scopeType, table.scopeValue),
+    index("integration_scope_items_connection_enabled_idx").on(table.connectionId, table.enabled),
   ]
 );
 
@@ -99,25 +65,15 @@ export const obsidianVaults = pgTable(
   {
     vaultId: text("vault_id").primaryKey(),
     userId: text("user_id").notNull(),
-    connectionId: integer("connection_id").references(
-      () => integrationConnections.id,
-      { onDelete: "cascade" }
-    ),
+    connectionId: integer("connection_id").references(() => integrationConnections.id, { onDelete: "cascade" }),
     pluginTokenHash: text("plugin_token_hash"),
     deviceIdsJson: jsonb("device_ids_json"),
     settingsJson: jsonb("settings_json"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   },
-  (table) => [
-    index("obsidian_vaults_user_idx").on(table.userId),
-    index("obsidian_vaults_last_seen_idx").on(table.lastSeenAt),
-  ]
+  (table) => [index("obsidian_vaults_user_idx").on(table.userId), index("obsidian_vaults_last_seen_idx").on(table.lastSeenAt)]
 );
 
 export const documents = pgTable(
@@ -143,38 +99,16 @@ export const documents = pgTable(
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("documents_user_connection_external_idx").on(
-      table.userId,
-      table.connectionId,
-      table.externalId
-    ),
-    index("documents_user_deleted_at_source_idx").on(
-      table.userId,
-      table.deletedAtSource
-    ),
-    index("documents_connection_updated_at_source_idx").on(
-      table.connectionId,
-      table.updatedAtSource
-    ),
-    index("documents_user_last_synced_at_idx").on(
-      table.userId,
-      table.lastSyncedAt
-    ),
+    uniqueIndex("documents_user_connection_external_idx").on(table.userId, table.connectionId, table.externalId),
+    index("documents_user_deleted_at_source_idx").on(table.userId, table.deletedAtSource),
+    index("documents_connection_updated_at_source_idx").on(table.connectionId, table.updatedAtSource),
+    index("documents_user_last_synced_at_idx").on(table.userId, table.lastSyncedAt),
   ]
 );
 
-export const syncRunKind = pgEnum("sync_run_kind", [
-  "initial",
-  "incremental",
-  "manual",
-]);
+export const syncRunKind = pgEnum("sync_run_kind", ["initial", "incremental", "manual"]);
 
-export const syncRunStatus = pgEnum("sync_run_status", [
-  "running",
-  "success",
-  "failed",
-  "partial",
-]);
+export const syncRunStatus = pgEnum("sync_run_status", ["running", "success", "failed", "partial"]);
 
 export const syncState = pgTable(
   "sync_state",
@@ -189,9 +123,7 @@ export const syncState = pgTable(
     cursorJson: jsonb("cursor_json"),
     backoffUntil: timestamp("backoff_until", { withTimezone: true }),
     healthJson: jsonb("health_json"),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("sync_state_backoff_until_idx").on(table.backoffUntil)]
 );
@@ -209,27 +141,15 @@ export const syncRuns = pgTable(
     errorJson: jsonb("error_json"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("sync_runs_connection_started_at_idx").on(
-      table.connectionId,
-      table.startedAt
-    ),
-    index("sync_runs_status_started_at_idx").on(
-      table.status,
-      table.startedAt
-    ),
+    index("sync_runs_connection_started_at_idx").on(table.connectionId, table.startedAt),
+    index("sync_runs_status_started_at_idx").on(table.status, table.startedAt),
   ]
 );
 
-export const reviewStatus = pgEnum("review_status", [
-  "new",
-  "reviewing",
-  "suspended",
-]);
+export const reviewStatus = pgEnum("review_status", ["new", "reviewing", "suspended"]);
 
 export const reviewStates = pgTable(
   "review_states",
@@ -250,9 +170,7 @@ export const reviewStates = pgTable(
     intervalDays: integer("interval_days"),
     easeFactor: doublePrecision("ease_factor"),
     repetitions: integer("repetitions"),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("review_states_user_next_due_idx").on(table.userId, table.nextDueAt),
@@ -270,25 +188,15 @@ export const reviewEvents = pgTable(
       .references(() => documents.id, { onDelete: "cascade" }),
     type: text("type").notNull(),
     payloadJson: jsonb("payload_json"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("review_events_user_created_at_idx").on(table.userId, table.createdAt),
-    index("review_events_document_created_at_idx").on(
-      table.documentId,
-      table.createdAt
-    ),
+    index("review_events_document_created_at_idx").on(table.documentId, table.createdAt),
   ]
 );
 
-export const emailBatchStatus = pgEnum("email_batch_status", [
-  "scheduled",
-  "sent",
-  "failed",
-  "skipped",
-]);
+export const emailBatchStatus = pgEnum("email_batch_status", ["scheduled", "sent", "failed", "skipped"]);
 
 export const emailBatches = pgTable(
   "email_batches",
@@ -300,22 +208,12 @@ export const emailBatches = pgTable(
     status: emailBatchStatus("status").notNull(),
     payloadJson: jsonb("payload_json"),
     errorJson: jsonb("error_json"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("email_batches_user_scheduled_for_idx").on(
-      table.userId,
-      table.scheduledFor
-    ),
-    index("email_batches_status_scheduled_for_idx").on(
-      table.status,
-      table.scheduledFor
-    ),
+    index("email_batches_user_scheduled_for_idx").on(table.userId, table.scheduledFor),
+    index("email_batches_status_scheduled_for_idx").on(table.status, table.scheduledFor),
   ]
 );
 
@@ -331,48 +229,10 @@ export const emailItems = pgTable(
       .references(() => documents.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
     contentHashAtSend: text("content_hash_at_send").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("email_items_batch_document_idx").on(
-      table.emailBatchId,
-      table.documentId
-    ),
-    index("email_items_batch_position_idx").on(
-      table.emailBatchId,
-      table.position
-    ),
+    uniqueIndex("email_items_batch_document_idx").on(table.emailBatchId, table.documentId),
+    index("email_items_batch_position_idx").on(table.emailBatchId, table.position),
   ]
 );
-
-export type {
-  DocumentRow,
-  DocumentRowInsert,
-  EmailBatch,
-  EmailBatchInsert,
-  EmailBatchStatus,
-  EmailItem,
-  EmailItemInsert,
-  IntegrationConnection,
-  IntegrationConnectionInsert,
-  IntegrationKind,
-  IntegrationScopeItem,
-  IntegrationScopeItemInsert,
-  IntegrationScopeType,
-  IntegrationStatus,
-  ObsidianVault,
-  ObsidianVaultInsert,
-  ReviewEvent,
-  ReviewEventInsert,
-  ReviewState,
-  ReviewStateInsert,
-  ReviewStatus,
-  SyncRun,
-  SyncRunInsert,
-  SyncRunKind,
-  SyncRunStatus,
-  SyncStateRow,
-  SyncStateRowInsert,
-} from "./models";

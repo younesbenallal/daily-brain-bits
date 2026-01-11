@@ -1,12 +1,9 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@daily-brain-bits/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true
+    "rootDir": "."
   },
-  "include": ["src/**/*"],
+  "include": ["tables.ts", "index.ts"],
   "exclude": ["node_modules", "dist"]
 }
