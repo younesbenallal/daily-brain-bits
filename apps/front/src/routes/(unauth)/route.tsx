@@ -1,4 +1,5 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 
 export const Route = createFileRoute("/(unauth)")({
   component: RouteComponent,
@@ -13,5 +14,9 @@ export const Route = createFileRoute("/(unauth)")({
 });
 
 function RouteComponent() {
-  return <div>Hello "/(unauth)"!</div>;
+  return (
+    <OnboardingLayout>
+      <Outlet />
+    </OnboardingLayout>
+  );
 }
