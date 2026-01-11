@@ -4,7 +4,7 @@ import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export const Route = createFileRoute("/(unauth)/configure-obsidian")({
+export const Route = createFileRoute("/(app)/onboarding/configure-obsidian")({
   component: ConfigureObsidianPage,
 });
 

@@ -1,12 +1,13 @@
+import { Notion, Obsidian } from "@ridemountainpig/svgl-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/(unauth)/oauth")({
-  component: OAuthPage,
+export const Route = createFileRoute("/(app)/onboarding/choose-source")({
+  component: ChooseSourcePage,
 });
 
-function OAuthPage() {
+function ChooseSourcePage() {
   const router = useRouter();
   return (
     <OnboardingLayout>
@@ -16,18 +17,24 @@ function OAuthPage() {
           <p className="text-sm text-[#737373]">Give us a place to swallow your notes</p>
         </div>
 
-        <div className="space-y-4">
-          {["Connected to Perso of test@gmail.com", "Connected to Sam's Vault"].map((label) => (
+        <div className="flex flex-col items-center gap-4">
+          {[
+            { label: "Notion", id: "notion", Logo: Notion },
+            { label: "Obsidian", id: "obsidian", Logo: Obsidian },
+          ].map((item) => (
             <Button
-              key={label}
+              key={item.id}
               variant="outline"
-              className="h-[59px] w-full justify-start gap-3 bg-[#fafafa] px-6 text-[#404040] border-[#d4d4d4]"
+              className="h-[59px] w-[150px] gap-3 bg-white text-[#404040] border-[#d4d4d4]"
               type="button"
+              onClick={() => {
+                router.navigate({
+                  to: item.id === "notion" ? "/configure-notion" : "/configure-obsidian",
+                });
+              }}
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e5e7eb] text-[10px] text-[#6b7280]">
-                ✓
-              </span>
-              {label}
+              <item.Logo className="h-5 w-5" />
+              {item.label}
             </Button>
           ))}
         </div>
@@ -36,10 +43,10 @@ function OAuthPage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/onboarding-loading" });
+              router.navigate({ to: "/app" });
             }}
           >
-            Next
+            Go to app
             <span aria-hidden="true">→</span>
           </Button>
         </div>

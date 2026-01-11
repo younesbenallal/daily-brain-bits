@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 
-export const Route = createFileRoute("/(unauth)/onboarding-loading-2")({
+export const Route = createFileRoute("/(app)/onboarding/onboarding-loading-2")({
   component: OnboardingLoadingTwoPage,
 });
 

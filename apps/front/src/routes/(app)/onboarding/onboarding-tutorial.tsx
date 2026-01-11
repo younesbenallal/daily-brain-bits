@@ -2,7 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/(unauth)/onboarding-tutorial")({
+export const Route = createFileRoute("/(app)/onboarding/onboarding-tutorial")({
   component: OnboardingTutorialPage,
 });
 

@@ -1,13 +1,12 @@
-import { Notion, Obsidian } from "@ridemountainpig/svgl-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/(unauth)/choose-source")({
-  component: ChooseSourcePage,
+export const Route = createFileRoute("/(app)/onboarding/oauth")({
+  component: OAuthPage,
 });
 
-function ChooseSourcePage() {
+function OAuthPage() {
   const router = useRouter();
   return (
     <OnboardingLayout>
@@ -17,24 +16,18 @@ function ChooseSourcePage() {
           <p className="text-sm text-[#737373]">Give us a place to swallow your notes</p>
         </div>
 
-        <div className="flex flex-col items-center gap-4">
-          {[
-            { label: "Notion", id: "notion", Logo: Notion },
-            { label: "Obsidian", id: "obsidian", Logo: Obsidian },
-          ].map((item) => (
+        <div className="space-y-4">
+          {["Connected to Perso of test@gmail.com", "Connected to Sam's Vault"].map((label) => (
             <Button
-              key={item.id}
+              key={label}
               variant="outline"
-              className="h-[59px] w-[150px] gap-3 bg-white text-[#404040] border-[#d4d4d4]"
+              className="h-[59px] w-full justify-start gap-3 bg-[#fafafa] px-6 text-[#404040] border-[#d4d4d4]"
               type="button"
-              onClick={() => {
-                router.navigate({
-                  to: item.id === "notion" ? "/configure-notion" : "/configure-obsidian",
-                });
-              }}
             >
-              <item.Logo className="h-5 w-5" />
-              {item.label}
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e5e7eb] text-[10px] text-[#6b7280]">
+                ✓
+              </span>
+              {label}
             </Button>
           ))}
         </div>
@@ -43,10 +36,10 @@ function ChooseSourcePage() {
           <Button
             type="button"
             onClick={() => {
-              router.navigate({ to: "/app" });
+              router.navigate({ to: "/onboarding-loading" });
             }}
           >
-            Go to app
+            Next
             <span aria-hidden="true">→</span>
           </Button>
         </div>

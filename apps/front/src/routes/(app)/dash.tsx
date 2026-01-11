@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppLayout } from "@/components/layouts/app-layout";
 
-export const Route = createFileRoute("/(app)/app")({
+export const Route = createFileRoute("/(app)/dash")({
   component: AppPage,
 });
 

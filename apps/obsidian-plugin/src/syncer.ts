@@ -1,11 +1,4 @@
-import {
-  App,
-  Notice,
-  TFile,
-  debounce,
-  getAllTags,
-  requestUrl,
-} from "obsidian";
+import { normalizeForHash, sha256Hex } from "@daily-brain-bits/core";
 import {
   buildExternalId,
   createPathFilter,
@@ -13,7 +6,7 @@ import {
   type SyncBatchResponse,
   type SyncItem,
 } from "@daily-brain-bits/integrations-obsidian";
-import { normalizeForHash, sha256Hex } from "@daily-brain-bits/core";
+import { type App, debounce, getAllTags, Notice, requestUrl, TFile } from "obsidian";
 import type { DBBSettings } from "./settings";
 import type { LocalIndex, PendingQueueItem, SyncStatus } from "./types";
 
@@ -39,10 +32,7 @@ function isRpcEnvelope(value: unknown): value is RpcEnvelope<unknown> {
 }
 
 function parseRpcResponse<T>(response: { json?: unknown; text: string }): T {
-  const raw =
-    typeof response.json === "object" && response.json !== null
-      ? response.json
-      : JSON.parse(response.text);
+  const raw = typeof response.json === "object" && response.json !== null ? response.json : JSON.parse(response.text);
   if (isRpcEnvelope(raw)) {
     return raw.json as T;
   }
@@ -72,10 +62,7 @@ function normalizePatterns(patterns: string[]): string[] {
   return patterns.map((pattern) => pattern.trim()).filter(Boolean);
 }
 
-function buildScopeFilter(
-  patterns: string[],
-  scopeReady: boolean
-): (path: string) => boolean {
+function buildScopeFilter(patterns: string[], scopeReady: boolean): (path: string) => boolean {
   if (!scopeReady) {
     return () => false;
   }
@@ -95,20 +82,13 @@ function pickFrontmatter(frontmatter?: Record<string, unknown>) {
     if (key === "position") {
       continue;
     }
-    if (
-      typeof value === "string" ||
-      typeof value === "number" ||
-      typeof value === "boolean"
-    ) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
       result[key] = value;
       continue;
     }
     if (Array.isArray(value)) {
       const filtered = value.filter(
-        (entry) =>
-          typeof entry === "string" ||
-          typeof entry === "number" ||
-          typeof entry === "boolean"
+        (entry) => typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean"
       );
       if (filtered.length > 0) {
         result[key] = filtered;
@@ -133,10 +113,7 @@ function extractAliases(frontmatter?: Record<string, unknown>): string[] {
   return [];
 }
 
-function shouldSyncFile(
-  file: TFile,
-  filter: (path: string) => boolean
-): boolean {
+function shouldSyncFile(file: TFile, filter: (path: string) => boolean): boolean {
   if (!filter(file.path)) {
     return false;
   }
@@ -157,12 +134,7 @@ export class Syncer {
   private scopeReady = false;
   private scopeUpdatedAt: string | null = null;
 
-  constructor(
-    app: App,
-    settings: DBBSettings,
-    index: LocalIndex,
-    saveData: () => Promise<void>
-  ) {
+  constructor(app: App, settings: DBBSettings, index: LocalIndex, saveData: () => Promise<void>) {
     this.app = app;
     this.settings = settings;
     this.index = index;
@@ -173,28 +145,18 @@ export class Syncer {
       lastResult: null,
     };
     this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
-    this.flushDebounced = debounce(
-      () => void this.flushQueue(),
-      settings.debounceMs,
-      true
-    );
+    this.flushDebounced = debounce(() => void this.flushQueue(), settings.debounceMs, true);
   }
 
   updateSettings(settings: DBBSettings) {
-    const scopeReset =
-      this.settings.apiBaseUrl !== settings.apiBaseUrl ||
-      this.settings.vaultId !== settings.vaultId;
+    const scopeReset = this.settings.apiBaseUrl !== settings.apiBaseUrl || this.settings.vaultId !== settings.vaultId;
     this.settings = settings;
     if (scopeReset) {
       this.scopeReady = false;
       this.scopePatterns = [];
     }
     this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
-    this.flushDebounced = debounce(
-      () => void this.flushQueue(),
-      settings.debounceMs,
-      true
-    );
+    this.flushDebounced = debounce(() => void this.flushQueue(), settings.debounceMs, true);
   }
 
   getStatus(): SyncStatus {
@@ -337,9 +299,7 @@ export class Syncer {
 
   private enqueue(item: PendingQueueItem) {
     const key = toQueueKey(item);
-    const existing = new Set(
-      this.index.pendingQueue.map((entry) => toQueueKey(entry))
-    );
+    const existing = new Set(this.index.pendingQueue.map((entry) => toQueueKey(entry)));
     if (existing.has(key)) {
       return;
     }
@@ -380,19 +340,14 @@ export class Syncer {
 
     try {
       const response = await requestUrl({
-        url: buildApiUrl(
-          this.settings.apiBaseUrl,
-          "/v1/integrations/obsidian/scope"
-        ),
+        url: buildApiUrl(this.settings.apiBaseUrl, "/v1/integrations/obsidian/scope"),
         method: "POST",
         contentType: "application/json",
         body: buildRpcBody({
           vaultId: this.settings.vaultId,
         }),
         headers: {
-          ...(this.settings.pluginToken
-            ? { Authorization: `Bearer ${this.settings.pluginToken}` }
-            : {}),
+          ...(this.settings.pluginToken ? { Authorization: `Bearer ${this.settings.pluginToken}` } : {}),
         },
         throw: false,
       });
@@ -455,9 +410,7 @@ export class Syncer {
       }
 
       const projectedBytes = Buffer.byteLength(JSON.stringify(built), "utf8");
-      const wouldOverflow =
-        items.length > 0 &&
-        projectedBytes + batchBytes > this.settings.maxBytesPerBatch;
+      const wouldOverflow = items.length > 0 && projectedBytes + batchBytes > this.settings.maxBytesPerBatch;
 
       if (wouldOverflow) {
         break;
@@ -472,9 +425,7 @@ export class Syncer {
     return { items, queueItems, itemMap, skippedKeys };
   }
 
-  private async buildSyncItem(
-    queued: PendingQueueItem
-  ): Promise<SyncItem | null> {
+  private async buildSyncItem(queued: PendingQueueItem): Promise<SyncItem | null> {
     if (queued.op === "delete") {
       return {
         op: "delete",
@@ -517,10 +468,7 @@ export class Syncer {
     const tags = cache ? getAllTags(cache) : [];
     const aliases = extractAliases(cache?.frontmatter);
     const links = cache?.links?.map((link) => link.link) ?? [];
-    const title =
-      typeof cache?.frontmatter?.title === "string"
-        ? cache.frontmatter.title
-        : file.basename;
+    const title = typeof cache?.frontmatter?.title === "string" ? cache.frontmatter.title : file.basename;
 
     return {
       op: "upsert",
@@ -549,16 +497,11 @@ export class Syncer {
 
     try {
       const response = await requestUrl({
-        url: buildApiUrl(
-          this.settings.apiBaseUrl,
-          "/v1/integrations/obsidian/sync/batch"
-        ),
+        url: buildApiUrl(this.settings.apiBaseUrl, "/v1/integrations/obsidian/sync/batch"),
         method: "POST",
         contentType: "application/json",
         headers: {
-          ...(this.settings.pluginToken
-            ? { Authorization: `Bearer ${this.settings.pluginToken}` }
-            : {}),
+          ...(this.settings.pluginToken ? { Authorization: `Bearer ${this.settings.pluginToken}` } : {}),
         },
         body: buildRpcBody(payload),
         throw: false,
@@ -571,9 +514,7 @@ export class Syncer {
       }
 
       if (response.status === 429 || response.status === 503) {
-        const retryAfter = parseRetryAfter(
-          response.headers?.["retry-after"] ?? response.headers?.["Retry-After"]
-        );
+        const retryAfter = parseRetryAfter(response.headers?.["retry-after"] ?? response.headers?.["Retry-After"]);
         const backoff = retryAfter ?? Math.min(this.backoffMs * 2, maxBackoffMs);
         this.backoffMs = backoff;
         this.status.lastError = "Rate limited - retrying soon.";
@@ -607,13 +548,9 @@ export class Syncer {
     response: SyncBatchResponse
   ) {
     const queueKeys = new Set(batch.queueItems.map((item) => toQueueKey(item)));
-    this.index.pendingQueue = this.index.pendingQueue.filter(
-      (item) => !queueKeys.has(toQueueKey(item))
-    );
+    this.index.pendingQueue = this.index.pendingQueue.filter((item) => !queueKeys.has(toQueueKey(item)));
 
-    const queueByExternalId = new Map(
-      batch.queueItems.map((item) => [item.externalId, item])
-    );
+    const queueByExternalId = new Map(batch.queueItems.map((item) => [item.externalId, item]));
 
     for (const result of response.itemResults) {
       const item = batch.itemMap.get(result.externalId);
@@ -628,10 +565,7 @@ export class Syncer {
         continue;
       }
 
-      const path =
-        item.metadata && typeof item.metadata.path === "string"
-          ? item.metadata.path
-          : queued?.path;
+      const path = item.metadata && typeof item.metadata.path === "string" ? item.metadata.path : queued?.path;
       if (!path) {
         continue;
       }
@@ -656,8 +590,6 @@ export class Syncer {
     if (keys.size === 0) {
       return;
     }
-    this.index.pendingQueue = this.index.pendingQueue.filter(
-      (item) => !keys.has(toQueueKey(item))
-    );
+    this.index.pendingQueue = this.index.pendingQueue.filter((item) => !keys.has(toQueueKey(item)));
   }
 }
