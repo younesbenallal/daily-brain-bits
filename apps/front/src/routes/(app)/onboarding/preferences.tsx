@@ -25,8 +25,8 @@ const FALLBACK_TIMEZONES = [
 function PreferencesPage() {
 	const router = useRouter();
 	const timezoneOptions = useMemo(() => {
-		if (typeof Intl !== "undefined" && typeof Intl.supportedValuesOf === "function") {
-			const supported = Intl.supportedValuesOf("timeZone");
+		if (typeof Intl !== "undefined" && typeof (Intl as any).supportedValuesOf === "function") {
+			const supported = (Intl as any).supportedValuesOf("timeZone");
 			if (supported.length) {
 				return supported;
 			}
@@ -60,10 +60,10 @@ function PreferencesPage() {
 						<p className="text-sm text-[#737373]">We tried to guess the timezone of your area.</p>
 						<Select value={timezone} onValueChange={setTimezone}>
 							<SelectTrigger>
-								<SelectValue placeholder="Select timezone" />
+								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{timezoneOptions.map((option) => (
+								{timezoneOptions.map((option: string) => (
 									<SelectItem key={option} value={option}>
 										{option}
 									</SelectItem>
@@ -79,7 +79,7 @@ function PreferencesPage() {
 						</p>
 						<Select value={frequency} onValueChange={(value) => setFrequency(value as PreferenceFrequency)}>
 							<SelectTrigger>
-								<SelectValue placeholder="Select frequency" />
+								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
 								{preferenceFrequencyOptions.map((option) => (

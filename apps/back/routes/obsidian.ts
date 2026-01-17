@@ -1,26 +1,17 @@
-import { createHash } from "node:crypto";
 import { apikey, db, integrationConnections } from "@daily-brain-bits/db";
 import {
 	obsidianConnectionConfigSchema,
-	obsidianRegisterResponseSchema,
+	obsidianConnectRequestSchema,
+	obsidianConnectResponseSchema,
 	parseObsidianConnectionConfig,
-	serializeObsidianConnectionSecrets,
 	syncBatchRequestSchema,
 	syncBatchResponseSchema,
 } from "@daily-brain-bits/integrations-obsidian";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { apiKeyRoute, baseRoute } from "../context";
+import { apiKeyRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
-
-const registerRequestSchema = z.object({
-	displayName: z.string().min(1).optional(),
-});
-
-function hashToken(token: string): string {
-	return createHash("sha256").update(token).digest("hex");
-}
 
 function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; settings?: Record<string, unknown> }) {
 	return obsidianConnectionConfigSchema.parse({
@@ -30,60 +21,61 @@ function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; s
 	});
 }
 
-const register = baseRoute
-	.input(registerRequestSchema)
-	.output(obsidianRegisterResponseSchema)
+const connect = apiKeyRoute
+	.input(obsidianConnectRequestSchema)
+	.output(obsidianConnectResponseSchema)
 	.handler(async ({ context, input }) => {
 		const userId = context.user?.id;
 		if (!userId) {
 			throw new ORPCError("Unauthorized");
 		}
 
-		console.log("[obsidian.register] start", {
+		console.log("[obsidian.connect] start", {
 			userId,
-			displayName: input.displayName ?? null,
+			vaultId: input.vaultId,
+			vaultName: input.vaultName ?? null,
 		});
-		const vaultId = crypto.randomUUID();
-		const pluginToken = crypto.randomUUID();
-		const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:3001";
-
-		const config = buildObsidianConfig({ vaultId });
-		const secretsJsonEncrypted = serializeObsidianConnectionSecrets({
-			pluginTokenHash: hashToken(pluginToken),
+		const { connectionId, displayName, config } = await ensureConnectionForVault({
+			userId,
+			vaultId: input.vaultId,
+			displayName: input.vaultName,
 		});
 
-		const [connection] = await db
-			.insert(integrationConnections)
-			.values({
-				userId,
-				kind: "obsidian",
-				status: "active",
-				displayName: input.displayName,
-				accountExternalId: vaultId,
-				configJson: config,
-				secretsJsonEncrypted,
-			})
-			.returning({
-				id: integrationConnections.id,
-			});
+		const now = new Date();
+		let nextConfig = config;
+		let shouldUpdateConfig = false;
 
-		const connectionId = connection?.id;
-		if (!connectionId) {
-			throw new ORPCError("INTERNAL_SERVER_ERROR", {
-				message: "failed_to_create_connection",
-			});
+		if (input.deviceId) {
+			const existingDeviceIds = Array.isArray(config.deviceIds) ? config.deviceIds : [];
+			if (!existingDeviceIds.includes(input.deviceId)) {
+				nextConfig = obsidianConnectionConfigSchema.parse({
+					...config,
+					vaultId: config.vaultId ?? input.vaultId,
+					deviceIds: [...existingDeviceIds, input.deviceId],
+				});
+				shouldUpdateConfig = true;
+			}
 		}
 
-		console.log("[obsidian.register] created", {
+		const updates: { lastSeenAt: Date; updatedAt?: Date; configJson?: typeof nextConfig } = {
+			lastSeenAt: now,
+		};
+		if (shouldUpdateConfig) {
+			updates.configJson = nextConfig;
+			updates.updatedAt = now;
+		}
+
+		await db.update(integrationConnections).set(updates).where(eq(integrationConnections.id, connectionId));
+
+		console.log("[obsidian.connect] ok", {
 			userId,
-			vaultId,
+			vaultId: input.vaultId,
 			connectionId,
+			displayName,
 		});
 
 		return {
-			pluginToken,
-			vaultId,
-			apiBaseUrl,
+			connected: true,
 			connectionId,
 		};
 	});
@@ -178,6 +170,14 @@ const syncBatch = apiKeyRoute
 			throw new ORPCError("Unauthorized");
 		}
 
+		console.log("[obsidian.sync.batch] start", {
+			userId,
+			vaultId: input.vaultId,
+			vaultName: input.vaultName,
+			deviceId: input.deviceId,
+			itemCount: input.items.length,
+		});
+
 		const { connectionId, config } = await ensureConnectionForVault({
 			userId,
 			vaultId: input.vaultId,
@@ -224,6 +224,14 @@ const syncBatch = apiKeyRoute
 		}
 
 		await db.update(integrationConnections).set(updates).where(eq(integrationConnections.id, connectionId));
+
+		console.log("[obsidian.sync.batch] complete", {
+			userId,
+			connectionId,
+			accepted: ingestResult.accepted,
+			rejected: ingestResult.rejected,
+			itemResultsCount: ingestResult.itemResults.length,
+		});
 
 		return {
 			accepted: ingestResult.accepted,
@@ -305,7 +313,7 @@ const status = apiKeyRoute
 	});
 
 export const obsidianRouter = {
-	register,
+	connect,
 	status,
 	sync: {
 		batch: syncBatch,

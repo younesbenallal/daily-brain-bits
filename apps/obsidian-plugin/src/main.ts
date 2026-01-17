@@ -96,6 +96,20 @@ export default class DailyBrainBitsPlugin extends Plugin {
 		}
 	}
 
+	async resetSyncState() {
+		this.index.files = {};
+		this.index.pendingQueue = [];
+		this.index.lastFullScanAt = null;
+		await this.saveData({
+			settings: this.settings,
+			index: this.index,
+		});
+		if (this.syncer) {
+			this.syncer.resetLocalIndex();
+		}
+		new Notice("Daily Brain Bits: local sync state cleared.");
+	}
+
 	private ensureIds() {
 		if (!this.settings.vaultId) {
 			this.settings.vaultId = crypto.randomUUID();

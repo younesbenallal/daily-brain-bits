@@ -18,9 +18,11 @@ function OnboardingFinalPage() {
 		refetchInterval: 5_000,
 	});
 	const statusData = statusQuery.data as { noteDigestReady?: boolean } | undefined;
-	const canProceed = isOnboardingStepComplete("loading", {
-		noteDigestReady: statusData?.noteDigestReady ?? false,
-	});
+	const canProceed =
+		statusData?.noteDigestReady &&
+		isOnboardingStepComplete("loading", {
+			noteDigestReady: true as const,
+		});
 
 	useEffect(() => {
 		if (!canProceed && !statusQuery.isLoading) {
@@ -51,8 +53,8 @@ function OnboardingFinalPage() {
 					<Button
 						type="button"
 						onClick={async () => {
-							await completeMutation.mutateAsync();
-							window.location.assign("/dash");
+							await completeMutation.mutateAsync({});
+							router.navigate({ to: "/dash" });
 						}}
 					>
 						Check my daily review

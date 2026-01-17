@@ -82,6 +82,16 @@ export const auth = betterAuth({
 			},
 		},
 	},
+	user: {
+		additionalFields: {
+			showOnboarding: {
+				type: "boolean",
+				default: true,
+				required: true,
+				description: "Whether the user has completed onboarding",
+			},
+		},
+	},
 	socialProviders: {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID as string,

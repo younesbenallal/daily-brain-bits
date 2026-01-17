@@ -88,6 +88,7 @@ export class SyncOperations {
 			const response = await this.rpcClient.sendBatch(this.settings.vaultId, this.app.vault.getName(), this.settings.deviceId, batch.items);
 
 			if (!response) {
+				this.status.lastError = this.rpcClient.getLastError() ?? "sync_failed";
 				this.isSyncing = false;
 				return;
 			}
@@ -102,6 +103,28 @@ export class SyncOperations {
 		} finally {
 			this.isSyncing = false;
 		}
+	}
+
+	async connect() {
+		if (!this.settings.apiBaseUrl || !this.settings.vaultId) {
+			this.status.lastError = "missing_settings";
+			return;
+		}
+		if (!this.settings.pluginToken) {
+			this.status.lastError = "missing_token";
+			return;
+		}
+
+		const response = await this.rpcClient.connect(this.settings.vaultId, this.app.vault.getName(), this.settings.deviceId);
+
+		if (!response) {
+			this.status.lastError = this.rpcClient.getLastError() ?? "connect_failed";
+			return;
+		}
+
+		this.status.lastSyncAt = new Date().toISOString();
+		this.status.lastResult = { accepted: 0, rejected: 0 };
+		this.status.lastError = null;
 	}
 
 	private async buildBatch(pathFilter: (path: string) => boolean): Promise<{
@@ -245,10 +268,10 @@ export class SyncOperations {
 		}
 
 		this.status.lastSyncAt = new Date().toISOString();
-		this.status.lastResult = {
-			accepted: response.accepted,
-			rejected: response.rejected,
-		};
-		this.status.lastError = null;
+			this.status.lastResult = {
+				accepted: response.accepted,
+				rejected: response.rejected,
+			};
+			this.status.lastError = null;
 	}
 }

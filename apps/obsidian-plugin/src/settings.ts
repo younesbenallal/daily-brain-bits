@@ -55,6 +55,7 @@ export type SettingsOwner = Plugin & {
 	settings: DBBSettings;
 	saveSettings: () => Promise<void>;
 	syncer?: Syncer;
+	resetSyncState: () => Promise<void>;
 };
 
 export class DBBSettingTab extends PluginSettingTab {
@@ -91,8 +92,13 @@ export class DBBSettingTab extends PluginSettingTab {
 					.setPlaceholder("paste token")
 					.setValue(this.plugin.settings.pluginToken)
 					.onChange(async (value) => {
-						this.plugin.settings.pluginToken = value.trim();
+						const nextToken = value.trim();
+						const prevToken = this.plugin.settings.pluginToken;
+						this.plugin.settings.pluginToken = nextToken;
 						await this.plugin.saveSettings();
+						if (nextToken && nextToken !== prevToken) {
+							await this.plugin.syncer?.refreshConnection();
+						}
 					}),
 			);
 
@@ -159,6 +165,16 @@ export class DBBSettingTab extends PluginSettingTab {
 			.setName("Sync now")
 			.setDesc("Trigger a full sync with the current scope.")
 			.addButton((button) => button.setButtonText("Sync now").onClick(() => void this.plugin.syncer?.fullSync()));
+
+		new Setting(containerEl)
+			.setName("Reset local index")
+			.setDesc("Clears local sync state so the next sync re-sends everything.")
+			.addButton((button) =>
+				button.setButtonText("Reset & sync").onClick(async () => {
+					await this.plugin.resetSyncState();
+					await this.plugin.syncer?.fullSync();
+				}),
+			);
 
 		new Setting(containerEl)
 			.setName("Batch size")

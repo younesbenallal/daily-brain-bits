@@ -32,12 +32,12 @@ function ConfigureObsidianPage() {
 		},
 	});
 	const statusData = statusQuery.data as
-			| {
-					connected: boolean;
-					vaultId?: string | null;
-					vaultName?: string | null;
-					lastSeenAt?: string | null;
-			  }
+		| {
+				connected: boolean;
+				vaultId?: string | null;
+				vaultName?: string | null;
+				lastSeenAt?: string | null;
+		  }
 		| undefined;
 	const connected = statusData?.connected ?? false;
 
@@ -100,11 +100,15 @@ function ConfigureObsidianPage() {
 
 	const vaultLabel = statusData?.vaultName ?? (statusData?.vaultId ? `Vault ${statusData.vaultId.slice(0, 8)}` : "Obsidian Vault");
 	const statusLabel = connected ? `Connected to ${vaultLabel}` : "Waiting for Obsidian to connect";
-	const canProceed = isOnboardingStepComplete("configureObsidian", {
-		connected,
-		vaultId: statusData?.vaultId ?? "",
-		lastSeenAt: statusData?.lastSeenAt ?? "",
-	});
+	const canProceed =
+		connected &&
+		statusData?.vaultId &&
+		statusData?.lastSeenAt &&
+		isOnboardingStepComplete("configureObsidian", {
+			connected: true as const,
+			vaultId: statusData.vaultId,
+			lastSeenAt: statusData.lastSeenAt,
+		});
 
 	const pluginInstallUrl = "https://github.com/younesbenallal/daily-brain-bits";
 	return (
@@ -184,11 +188,7 @@ function ConfigureObsidianPage() {
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
-				{!canProceed ? (
-					<p className="text-sm text-[#737373]">
-						Finish connecting the Obsidian plugin (token saved + first sync) to continue.
-					</p>
-				) : null}
+				{!canProceed ? <p className="text-sm text-[#737373]">Finish connecting the Obsidian plugin (token saved + first sync) to continue.</p> : null}
 			</div>
 		</OnboardingLayout>
 	);

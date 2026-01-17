@@ -38,18 +38,6 @@ function ChooseSourcePage() {
 						</Button>
 					))}
 				</div>
-
-				<div className="flex justify-end">
-					<Button
-						type="button"
-						onClick={() => {
-							router.navigate({ to: "/dash" });
-						}}
-					>
-						Go to app
-						<span aria-hidden="true">→</span>
-					</Button>
-				</div>
 			</div>
 		</OnboardingLayout>
 	);

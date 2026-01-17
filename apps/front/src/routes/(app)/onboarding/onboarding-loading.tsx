@@ -21,9 +21,11 @@ function OnboardingLoadingPage() {
 		refetchInterval: REFRESH_INTERVAL,
 	});
 	const statusData = statusQuery.data as { noteDigestReady?: boolean } | undefined;
-	const canProceed = isOnboardingStepComplete("loading", {
-		noteDigestReady: statusData?.noteDigestReady ?? false,
-	});
+	const canProceed =
+		statusData?.noteDigestReady &&
+		isOnboardingStepComplete("loading", {
+			noteDigestReady: true as const,
+		});
 
 	useEffect(() => {
 		if (step === "loading-one") {
@@ -50,9 +52,7 @@ function OnboardingLoadingPage() {
 			) : step === "loading-two" ? (
 				<LoadingStepTwo />
 			) : (
-				<TutorialStep
-					noteDigestReady={statusData?.noteDigestReady ?? false}
-				/>
+				<TutorialStep noteDigestReady={statusData?.noteDigestReady ?? false} />
 			)}
 		</OnboardingLayout>
 	);

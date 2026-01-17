@@ -20,11 +20,11 @@ export const syncItemDeleteSchema = coreDeleteSchema.extend({
 export const syncItemSchema = z.discriminatedUnion("op", [syncItemUpsertSchema, syncItemDeleteSchema]);
 
 export const syncBatchRequestSchema = z.object({
-  vaultId: nonEmptyString,
-  vaultName: z.string().min(1).optional(),
-  deviceId: nonEmptyString,
-  sentAt: z.string().datetime(),
-  items: z.array(syncItemSchema).min(1),
+	vaultId: nonEmptyString,
+	vaultName: z.string().min(1).optional(),
+	deviceId: nonEmptyString,
+	sentAt: z.string().datetime(),
+	items: z.array(syncItemSchema).min(1),
 });
 
 export const syncItemResultSchema = z.object({
@@ -39,11 +39,15 @@ export const syncBatchResponseSchema = z.object({
 	itemResults: z.array(syncItemResultSchema),
 });
 
-export const obsidianRegisterResponseSchema = z.object({
-	pluginToken: nonEmptyString,
+export const obsidianConnectRequestSchema = z.object({
 	vaultId: nonEmptyString,
-	apiBaseUrl: nonEmptyString,
-	connectionId: z.number().int().optional(),
+	vaultName: z.string().min(1).optional(),
+	deviceId: nonEmptyString.optional(),
+});
+
+export const obsidianConnectResponseSchema = z.object({
+	connected: z.boolean(),
+	connectionId: z.number().int(),
 });
 
 export type SyncItemUpsert = z.infer<typeof syncItemUpsertSchema>;
@@ -51,4 +55,5 @@ export type SyncItemDelete = z.infer<typeof syncItemDeleteSchema>;
 export type SyncItem = z.infer<typeof syncItemSchema>;
 export type SyncBatchRequest = z.infer<typeof syncBatchRequestSchema>;
 export type SyncBatchResponse = z.infer<typeof syncBatchResponseSchema>;
-export type ObsidianRegisterResponse = z.infer<typeof obsidianRegisterResponseSchema>;
+export type ObsidianConnectRequest = z.infer<typeof obsidianConnectRequestSchema>;
+export type ObsidianConnectResponse = z.infer<typeof obsidianConnectResponseSchema>;

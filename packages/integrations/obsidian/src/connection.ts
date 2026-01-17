@@ -6,7 +6,7 @@ export const obsidianConnectionConfigSchema = z
 	.object({
 		vaultId: nonEmptyString.optional(),
 		deviceIds: z.array(nonEmptyString).default([]),
-		settings: z.record(z.unknown()).default({}),
+		settings: z.record(z.string(), z.unknown()).default({}),
 	})
 	.passthrough();
 

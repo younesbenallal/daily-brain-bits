@@ -75,7 +75,7 @@ function ConfigureNotionPage() {
 	const selectedIds = new Set(selectedDatabases.map((item) => item.id));
 
 	const statusLabel = connected ? (statusData?.workspaceName ? `Connected to ${statusData.workspaceName}` : "Connected to Notion") : "Not connected";
-	const canProceed = isOnboardingStepComplete("configureNotion", { connected });
+	const canProceed = connected && isOnboardingStepComplete("configureNotion", { connected: true as const });
 
 	return (
 		<OnboardingLayout>
