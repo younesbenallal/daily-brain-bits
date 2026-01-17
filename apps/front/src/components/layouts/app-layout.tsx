@@ -69,7 +69,7 @@ export function AppLayout({ children, maxWidth = "max-w-[450px]" }: AppLayoutPro
 			<main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-20">
 				<div
 					className={cn(
-						"w-full rounded-[12px] border border-white/20 bg-white/95 p-10 shadow-(--shadow-crisp) backdrop-blur-sm dark:border-white/10 dark:bg-card/95",
+						"w-full rounded-[12px] border border-white/20 bg-white/95 p-10 shadow-(--shadow-crisp) backdrop-blur-sm dark:border-white/5 dark:bg-card/95",
 						maxWidth,
 					)}
 				>

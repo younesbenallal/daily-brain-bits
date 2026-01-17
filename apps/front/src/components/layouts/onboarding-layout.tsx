@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/lib/auth-client";
-import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 
 interface OnboardingLayoutProps {
 	children: ReactNode;
@@ -21,7 +21,11 @@ export function OnboardingLayout({ children, footer }: OnboardingLayoutProps) {
 					</DropdownMenuTrigger>
 					<DropdownMenuContent>
 						<DropdownMenuItem
-							onClick={() => signOut().then(() => { window.location.href = "/login"; })}
+							onClick={() =>
+								signOut().then(() => {
+									window.location.href = "/login";
+								})
+							}
 							className="text-destructive focus:bg-destructive/10 focus:text-destructive"
 						>
 							Logout

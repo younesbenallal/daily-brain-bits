@@ -14,7 +14,7 @@ function ChooseSourcePage() {
 			<div className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-[#2d71c4]">Choose source</h1>
-					<p className="text-sm text-[#737373]">Give us a place to swallow your notes</p>
+					<p className="text-sm text-muted-foreground">Give us a place to swallow your notes</p>
 				</div>
 
 				<div className="flex flex-col items-center gap-4">
@@ -25,7 +25,7 @@ function ChooseSourcePage() {
 						<Button
 							key={item.id}
 							variant="outline"
-							className="h-[59px] w-[150px] gap-3 bg-white text-[#404040] border-[#d4d4d4]"
+							className="h-[59px] w-[150px] gap-3 bg-card text-foreground border-border"
 							type="button"
 							onClick={() => {
 								router.navigate({

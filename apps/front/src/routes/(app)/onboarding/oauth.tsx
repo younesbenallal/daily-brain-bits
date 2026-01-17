@@ -13,7 +13,7 @@ function OAuthPage() {
 			<div className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-[#2d71c4]">Choose source</h1>
-					<p className="text-sm text-[#737373]">Give us a place to swallow your notes</p>
+					<p className="text-sm text-muted-foreground">Give us a place to swallow your notes</p>
 				</div>
 
 				<div className="space-y-4">
@@ -21,10 +21,10 @@ function OAuthPage() {
 						<Button
 							key={label}
 							variant="outline"
-							className="h-[59px] w-full justify-start gap-3 bg-[#fafafa] px-6 text-[#404040] border-[#d4d4d4]"
+							className="h-[59px] w-full justify-start gap-3 bg-secondary px-6 text-secondary-foreground border-border"
 							type="button"
 						>
-							<span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e5e7eb] text-[10px] text-[#6b7280]">✓</span>
+							<span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] text-muted-foreground">✓</span>
 							{label}
 						</Button>
 					))}

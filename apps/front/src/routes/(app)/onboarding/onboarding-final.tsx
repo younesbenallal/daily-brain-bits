@@ -44,10 +44,10 @@ function OnboardingFinalPage() {
 			<div className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-[#2d71c4]">Everything is ready!</h1>
-					<p className="text-sm text-[#737373]">We've successfully synced your notes.</p>
+					<p className="text-sm text-muted-foreground">We've successfully synced your notes.</p>
 				</div>
 
-				<p className="text-sm text-[#737373]">From now on, you will receive a daily note</p>
+				<p className="text-sm text-muted-foreground">From now on, you will receive a daily note</p>
 
 				<div className="flex justify-end">
 					<Button
@@ -62,7 +62,7 @@ function OnboardingFinalPage() {
 					</Button>
 				</div>
 
-				<p className="text-sm text-[#737373]">
+				<p className="text-sm text-muted-foreground">
 					You can also check your data policy here (syncing regularity, notes pulled, ...)
 					<br />
 					You can also check how we manage your data in our Privacy terms

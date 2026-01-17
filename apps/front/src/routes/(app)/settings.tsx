@@ -109,7 +109,7 @@ function AccountSettings() {
 							<div className="flex h-8 w-8 items-center justify-center rounded bg-black font-bold text-white">N</div>
 							<div>
 								<div className="font-medium">Notion</div>
-								<div className="text-xs font-medium text-green-500">Connected</div>
+								<div className="text-xs font-medium text-primary">Connected</div>
 							</div>
 						</div>
 						<button type="button" className="text-sm text-destructive hover:underline">
@@ -118,7 +118,7 @@ function AccountSettings() {
 					</div>
 					<div className="flex items-center justify-between p-4">
 						<div className="flex items-center gap-3">
-							<div className="flex h-8 w-8 items-center justify-center rounded bg-purple-600 font-bold text-white">O</div>
+							<div className="flex h-8 w-8 items-center justify-center rounded bg-primary font-bold text-primary-foreground">O</div>
 							<div>
 								<div className="font-medium">Obsidian</div>
 								<div className="text-xs text-muted-foreground">Not connected</div>
@@ -149,7 +149,7 @@ function BillingSettings() {
 				<h3 className="text-lg font-medium">Payment Information</h3>
 				<div className="flex items-center justify-between rounded-lg border p-4">
 					<div className="flex items-center gap-3">
-						<div className="flex h-6 w-10 items-center justify-center rounded border bg-slate-100 text-[10px] font-bold">VISA</div>
+						<div className="flex h-6 w-10 items-center justify-center rounded border bg-muted text-[10px] font-bold">VISA</div>
 						<div className="text-sm">•••• •••• •••• 4242</div>
 					</div>
 					<button type="button" className="text-sm hover:underline">
@@ -171,7 +171,7 @@ function BillingSettings() {
 								<span className="font-medium">{invoice.amount}</span>
 							</div>
 							<div className="flex items-center gap-4">
-								<span className="font-medium text-green-500">{invoice.status}</span>
+								<span className="font-medium text-primary">{invoice.status}</span>
 								<button type="button" className="text-primary hover:underline">
 									Download
 								</button>

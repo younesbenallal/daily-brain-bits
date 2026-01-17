@@ -43,9 +43,9 @@ function LoginPage() {
 			</p>
 
 			<div className="flex items-center gap-4">
-				<div className="h-px flex-1 bg-[#e5e7eb]" />
+				<div className="h-px flex-1 bg-border" />
 				<span className="font-ui text-sm font-medium text-muted-foreground">Or</span>
-				<div className="h-px flex-1 bg-[#e5e7eb]" />
+				<div className="h-px flex-1 bg-border" />
 			</div>
 
 			<div className="space-y-3">

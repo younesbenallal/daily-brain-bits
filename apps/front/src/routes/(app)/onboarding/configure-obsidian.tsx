@@ -119,12 +119,12 @@ function ConfigureObsidianPage() {
 						<Obsidian className="h-8 w-8" />
 						<h1 className="font-display text-3xl text-[#2d71c4]">Configure Obsidian</h1>
 					</div>
-					<p className="text-sm text-[#737373]">Tell us what notes you would like to receive in your inbox</p>
+					<p className="text-sm text-muted-foreground">Tell us what notes you would like to receive in your inbox</p>
 				</div>
 
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-[#163c6b]">Install the plugin</p>
-					<p className="text-sm text-[#737373]">Open the GitHub repo to follow the plugin install steps.</p>
+					<p className="text-sm text-muted-foreground">Open the GitHub repo to follow the plugin install steps.</p>
 					<Button
 						type="button"
 						variant="outline"
@@ -137,7 +137,7 @@ function ConfigureObsidianPage() {
 
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-[#163c6b]">API token</p>
-					<p className="text-sm text-[#737373]">Generate a token, then paste it into the plugin settings inside Obsidian.</p>
+					<p className="text-sm text-muted-foreground">Generate a token, then paste it into the plugin settings inside Obsidian.</p>
 					<div className="flex flex-wrap items-center gap-3">
 						<Button
 							type="button"
@@ -158,21 +158,21 @@ function ConfigureObsidianPage() {
 									{copyState === "copied" ? <CheckIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
 									{copyState === "copied" ? "Copied" : "Copy token"}
 								</Button>
-								<p className="text-xs text-[#737373]">Regenerating will invalidate the previous token.</p>
+								<p className="text-xs text-muted-foreground">Regenerating will invalidate the previous token.</p>
 							</div>
 						</div>
 					) : null}
-					{apiKeyError ? <p className="text-sm text-[#ef4444]">{apiKeyError}</p> : null}
+					{apiKeyError ? <p className="text-sm text-destructive">{apiKeyError}</p> : null}
 				</div>
 
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-[#163c6b]">Connection status</p>
 					<div className="flex items-center gap-3">
 						<Badge variant={connected ? "secondary" : "outline"}>{connected ? "Connected" : "Not connected"}</Badge>
-						<p className="text-sm text-[#737373]">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
+						<p className="text-sm text-muted-foreground">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
 					</div>
 					{!connected ? (
-						<p className="text-xs text-[#737373]">Add the token in Obsidian to finish linking. This page will update automatically.</p>
+						<p className="text-xs text-muted-foreground">Add the token in Obsidian to finish linking. This page will update automatically.</p>
 					) : null}
 				</div>
 
@@ -188,7 +188,9 @@ function ConfigureObsidianPage() {
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
-				{!canProceed ? <p className="text-sm text-[#737373]">Finish connecting the Obsidian plugin (token saved + first sync) to continue.</p> : null}
+				{!canProceed ? (
+					<p className="text-sm text-muted-foreground">Finish connecting the Obsidian plugin (token saved + first sync) to continue.</p>
+				) : null}
 			</div>
 		</OnboardingLayout>
 	);

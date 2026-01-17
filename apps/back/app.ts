@@ -5,12 +5,14 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import * as notionRoutes from "./routes/notion";
 import * as obsidianRoutes from "./routes/obsidian";
+import { digestRouter } from "./routes/digest";
 import { onboardingRouter } from "./routes/onboarding";
 import { createApiKeySession } from "./utils/api-key";
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,
 	notion: notionRoutes.notionRouter,
+	digest: digestRouter,
 	onboarding: onboardingRouter,
 };
 

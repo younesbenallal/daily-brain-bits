@@ -85,19 +85,19 @@ function ConfigureNotionPage() {
 					<div className="flex items-center gap-3">
 						<h1 className="font-display text-3xl text-[#2d71c4]">Configure Notion</h1>
 					</div>
-					<p className="text-sm text-[#737373]">Tell us what notes you would like to receive in your inbox</p>
+					<p className="text-sm text-muted-foreground">Tell us what notes you would like to receive in your inbox</p>
 				</div>
 
 				<div className="space-y-3">
 					<Button type="button" variant="outline" className="gap-2 bg-white" onClick={handleConnect}>
 						Connect to Notion
 					</Button>
-					<p className="text-sm text-[#737373]">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
+					<p className="text-sm text-muted-foreground">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
 				</div>
 
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-[#163c6b]">Databases to pull</p>
-					<p className="text-sm text-[#737373]">Select the database in your Notion workspace that you'd like to receive reminders for.</p>
+					<p className="text-sm text-muted-foreground">Select the database in your Notion workspace that you'd like to receive reminders for.</p>
 
 					<Tags>
 						<TagsTrigger
@@ -157,7 +157,7 @@ function ConfigureNotionPage() {
 						</TagsContent>
 					</Tags>
 
-					{saveMutation.isError && <p className="text-sm text-[#ef4444]">Failed to save selection.</p>}
+					{saveMutation.isError && <p className="text-sm text-destructive">Failed to save selection.</p>}
 				</div>
 
 				<div className="flex justify-end">
@@ -172,7 +172,7 @@ function ConfigureNotionPage() {
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
-				{!canProceed ? <p className="text-sm text-[#737373]">Connect your Notion workspace to continue.</p> : null}
+				{!canProceed ? <p className="text-sm text-muted-foreground">Connect your Notion workspace to continue.</p> : null}
 			</div>
 		</OnboardingLayout>
 	);

@@ -4,13 +4,19 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
 
 export const auth = betterAuth({
-	database: drizzleAdapter(db, {
-		provider: "pg", // or "mysql", "sqlite"
-	}),
-	trustedOrigins: [process.env.FRONTEND_URL || "http://localhost:3000"],
-	emailAndPassword: {
-		enabled: true,
-	},
+  database: drizzleAdapter(db, {
+    provider: "pg", // or "mysql", "sqlite"
+  }),
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["notion"],
+    },
+  },
+  trustedOrigins: [process.env.FRONTEND_URL || "http://localhost:3000"],
+  emailAndPassword: {
+    enabled: true,
+  },
 	plugins: [
 		apiKey({
 			enableMetadata: true,

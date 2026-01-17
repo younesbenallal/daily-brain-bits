@@ -51,13 +51,13 @@ function PreferencesPage() {
 			<div className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-[#2d71c4]">Gimme your preferences</h1>
-					<p className="text-sm text-[#a3a3a3]">Help us craft your experience to your wishes.</p>
+					<p className="text-sm text-muted-foreground">Help us craft your experience to your wishes.</p>
 				</div>
 
 				<div className="space-y-4">
 					<div className="space-y-2">
 						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">Timezone</p>
-						<p className="text-sm text-[#737373]">We tried to guess the timezone of your area.</p>
+						<p className="text-sm text-muted-foreground">We tried to guess the timezone of your area.</p>
 						<Select value={timezone} onValueChange={setTimezone}>
 							<SelectTrigger>
 								<SelectValue />
@@ -74,7 +74,7 @@ function PreferencesPage() {
 
 					<div className="space-y-2">
 						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">Digest frequency</p>
-						<p className="text-sm text-[#737373]">
+						<p className="text-sm text-muted-foreground">
 							How often should we send your note digest? Daily is a solid default, but choose what fits your rhythm.
 						</p>
 						<Select value={frequency} onValueChange={(value) => setFrequency(value as PreferenceFrequency)}>

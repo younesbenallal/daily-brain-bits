@@ -73,7 +73,7 @@ function LoadingStepOne() {
 	return (
 		<div className="space-y-4">
 			<h1 className="font-display text-3xl text-[#163c6b]">We are preparing your app...</h1>
-			<p className="text-sm text-[#737373]">Getting your notes ready for the first sync.</p>
+			<p className="text-sm text-muted-foreground">Getting your notes ready for the first sync.</p>
 		</div>
 	);
 }
@@ -82,7 +82,7 @@ function LoadingStepTwo() {
 	return (
 		<div className="space-y-4 text-center">
 			<h1 className="font-display text-3xl text-[#163c6b]">While we sync, here&apos;s a quick tour</h1>
-			<p className="text-sm text-[#737373]">This takes a moment. You can still explore the basics.</p>
+			<p className="text-sm text-muted-foreground">This takes a moment. You can still explore the basics.</p>
 		</div>
 	);
 }
@@ -92,19 +92,19 @@ function TutorialStep({ noteDigestReady }: { noteDigestReady: boolean }) {
 		<div className="space-y-6">
 			<div className="space-y-3">
 				<h1 className="font-display text-3xl text-[#2d71c4]">How to prioritize a note</h1>
-				<p className="text-sm text-[#737373]">Use the priority tag to surface what matters most.</p>
+				<p className="text-sm text-muted-foreground">Use the priority tag to surface what matters most.</p>
 			</div>
 
 			<div className="flex justify-center">
-				<div className="flex h-44 w-44 items-center justify-center rounded-[12px] border border-[#e5e5e5] bg-[#f8fafc] text-xs text-[#94a3b8]">
+				<div className="flex h-44 w-44 items-center justify-center rounded-[12px] border border-border bg-card text-xs text-muted-foreground">
 					Screenshot
 				</div>
 			</div>
 
-			<p className="text-sm text-[#737373]">Prioritized notes appear more often in your note digest, helping you review them faster.</p>
+			<p className="text-sm text-muted-foreground">Prioritized notes appear more often in your note digest, helping you review them faster.</p>
 
 			<div className="flex justify-end">
-				<span className="text-sm text-[#737373]">
+				<span className="text-sm text-muted-foreground">
 					{noteDigestReady ? "Finishing setup..." : "Hang tight while we prepare your first note digest."}
 				</span>
 			</div>

@@ -13,7 +13,7 @@ function LoginCredentialsPage() {
 			<form className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-primary">What's your email?</h1>
-					<p className="text-sm text-[#64748b]">
+					<p className="text-sm text-muted-foreground">
 						It allows Daily Brain Bits to send you your notes by email. We will send you some product updates as well.
 					</p>
 				</div>
