@@ -1,8 +1,8 @@
+import type Router from "@daily-brain-bits/back";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createORPCReactQueryUtils } from "@orpc/react-query";
 import type { RouterClient } from "@orpc/server";
-import type { Router } from "@daily-brain-bits/back/router";
 
 const link = new RPCLink({
 	url: () => new URL("/rpc", import.meta.env.VITE_API_URL || "http://localhost:3001"),

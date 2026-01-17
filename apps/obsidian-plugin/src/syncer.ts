@@ -71,18 +71,19 @@ function toQueueKey(item: PendingQueueItem): string {
 	return `${item.op}:${item.externalId}:${item.path}`;
 }
 
-function normalizePatterns(patterns: string[]): string[] {
-	return patterns.map((pattern) => pattern.trim()).filter(Boolean);
+function normalizeGlobPatterns(glob: string): string[] {
+  return glob
+    .split("\n")
+    .map((pattern) => pattern.trim())
+    .filter(Boolean);
 }
 
-function buildScopeFilter(patterns: string[], scopeReady: boolean): (path: string) => boolean {
-	if (!scopeReady) {
-		return () => false;
-	}
-	if (patterns.length === 0) {
-		return () => true;
-	}
-	return createPathFilter({ include: patterns });
+function buildScopeFilter(glob: string): (path: string) => boolean {
+  const patterns = normalizeGlobPatterns(glob);
+  if (patterns.length === 0) {
+    return () => true;
+  }
+  return createPathFilter({ include: patterns });
 }
 
 function pickFrontmatter(frontmatter?: Record<string, unknown>) {
@@ -138,13 +139,10 @@ export class Syncer {
 	private saveData: () => Promise<void>;
 	private status: SyncStatus;
 	private isSyncing = false;
-	private backoffMs = 1_000;
-	private pathFilter: (path: string) => boolean;
-	private flushDebounced: () => void;
-	private rpcClient: RouterClient<ORPCRouterType>;
-	private scopePatterns: string[] = [];
-	private scopeReady = false;
-	private scopeUpdatedAt: string | null = null;
+  private backoffMs = 1_000;
+  private pathFilter: (path: string) => boolean;
+  private flushDebounced: () => void;
+  private rpcClient: RouterClient<ORPCRouterType>;
 
 	constructor(app: App, settings: DBBSettings, index: LocalIndex, saveData: () => Promise<void>) {
 		this.app = app;
@@ -156,21 +154,16 @@ export class Syncer {
 			lastError: null,
 			lastResult: null,
 		};
-		this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
-		this.flushDebounced = debounce(() => void this.flushQueue(), settings.debounceMs, true);
-		this.rpcClient = this.createRpcClient();
-	}
+    this.pathFilter = buildScopeFilter(settings.scopeGlob);
+    this.flushDebounced = debounce(() => void this.flushQueue(), settings.debounceMs, true);
+    this.rpcClient = this.createRpcClient();
+  }
 
 	updateSettings(settings: DBBSettings) {
-		const scopeReset = this.settings.apiBaseUrl !== settings.apiBaseUrl || this.settings.vaultId !== settings.vaultId;
-		this.settings = settings;
-		if (scopeReset) {
-			this.scopeReady = false;
-			this.scopePatterns = [];
-		}
-		this.pathFilter = buildScopeFilter(this.scopePatterns, this.scopeReady);
-		this.flushDebounced = debounce(() => void this.flushQueue(), settings.debounceMs, true);
-	}
+    this.settings = settings;
+    this.pathFilter = buildScopeFilter(settings.scopeGlob);
+    this.flushDebounced = debounce(() => void this.flushQueue(), settings.debounceMs, true);
+  }
 
 	private createRpcClient() {
 		const link = new RPCLink({
@@ -185,13 +178,13 @@ export class Syncer {
 		return this.status;
 	}
 
-	getScopeStatus() {
-		return {
-			ready: this.scopeReady,
-			patterns: [...this.scopePatterns],
-			updatedAt: this.scopeUpdatedAt,
-		};
-	}
+  getScopeStatus() {
+    return {
+      ready: true,
+      patterns: normalizeGlobPatterns(this.settings.scopeGlob),
+      updatedAt: null,
+    };
+  }
 
 	getScopePreview(limit = 5) {
 		const files = this.app.vault.getMarkdownFiles();
@@ -213,51 +206,6 @@ export class Syncer {
 		}
 
 		return { included, excluded };
-	}
-
-  async setScopeGlob(glob: string): Promise<boolean> {
-		if (!this.settings.apiBaseUrl || !this.settings.vaultId) {
-			this.status.lastError = "Missing API base URL or Vault ID.";
-			return false;
-		}
-
-		try {
-      const normalized = glob.trim();
-      const vaultName = this.app.vault.getName();
-      await this.rpcClient.obsidian.setGlob({
-        vaultId: this.settings.vaultId,
-        vaultName,
-        glob: normalized.length > 0 ? normalized : null,
-      });
-
-			this.status.lastError = null;
-			await this.refreshScope({ triggerSync: true });
-			return true;
-		} catch (error) {
-			if (isUnauthorized(error)) {
-				this.status.lastError = "Unauthorized - check plugin token.";
-				new Notice("Daily Brain Bits: token invalid. Reconnect.");
-			} else {
-				console.error("DBB scope update failed", error);
-				this.status.lastError = "Failed to update scope.";
-			}
-			return false;
-		}
-	}
-
-	async refreshScope(options: { triggerSync?: boolean } = {}): Promise<boolean> {
-		const triggerSync = options.triggerSync ?? true;
-		const scope = await this.fetchScopePatterns();
-		if (!scope) {
-			return false;
-		}
-		const normalized = normalizePatterns(scope.patterns);
-		const changed = this.applyScope(normalized, scope.updatedAt);
-		this.status.lastError = null;
-		if (changed && triggerSync) {
-			void this.fullSync();
-		}
-		return true;
 	}
 
 	enqueueUpsert(file: TFile) {
@@ -300,12 +248,6 @@ export class Syncer {
 	}
 
 	async fullSync() {
-		if (!this.scopeReady) {
-			const refreshed = await this.refreshScope({ triggerSync: false });
-			if (!refreshed) {
-				return;
-			}
-		}
 		const files = this.app.vault.getMarkdownFiles();
 		const now = new Date().toISOString();
 
@@ -380,58 +322,6 @@ export class Syncer {
 		this.index.pendingQueue.push(item);
 		void this.saveData();
 		this.flushDebounced();
-	}
-
-	private applyScope(patterns: string[], updatedAt?: string): boolean {
-		const previous = this.scopePatterns.join("\n");
-		const next = patterns.join("\n");
-		const changed = previous !== next;
-
-		this.scopePatterns = patterns;
-		this.scopeReady = true;
-		this.scopeUpdatedAt = updatedAt ?? new Date().toISOString();
-		this.pathFilter = buildScopeFilter(patterns, true);
-
-		if (changed) {
-			for (const entry of Object.values(this.index.files)) {
-				if (!this.pathFilter(entry.path)) {
-					this.enqueueDelete(entry.path);
-				}
-			}
-		}
-
-		return changed;
-	}
-
-	private async fetchScopePatterns(): Promise<{
-		patterns: string[];
-		updatedAt?: string;
-	} | null> {
-		if (!this.settings.apiBaseUrl || !this.settings.vaultId) {
-			this.status.lastError = "Missing API base URL or Vault ID.";
-			return null;
-		}
-
-		try {
-      const scope = await this.rpcClient.obsidian.scope({
-        vaultId: this.settings.vaultId,
-        vaultName: this.app.vault.getName(),
-      });
-
-			return {
-				patterns: scope.patterns,
-				updatedAt: scope.updatedAt,
-			};
-		} catch (error) {
-			if (isUnauthorized(error)) {
-				this.status.lastError = "Unauthorized - check plugin token.";
-				new Notice("Daily Brain Bits: token invalid. Reconnect.");
-			} else {
-				console.error("DBB scope fetch failed", error);
-				this.status.lastError = "Failed to refresh scope.";
-			}
-			return null;
-		}
 	}
 
 	private async buildBatch(): Promise<{

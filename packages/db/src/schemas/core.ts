@@ -4,7 +4,7 @@ export const integrationKind = pgEnum("integration_kind", ["obsidian", "notion"]
 
 export const integrationStatus = pgEnum("integration_status", ["active", "paused", "revoked", "error"]);
 
-export const integrationScopeType = pgEnum("integration_scope_type", ["notion_database", "obsidian_glob"]);
+export const integrationScopeType = pgEnum("integration_scope_type", ["notion_database"]);
 
 export const integrationConnections = pgTable(
 	"integration_connections",

@@ -1,5 +1,5 @@
 import { CryptoHasher } from "bun";
-import { db, integrationConnections, integrationScopeItems, obsidianVaults } from "@daily-brain-bits/db";
+import { db, integrationConnections, obsidianVaults } from "@daily-brain-bits/db";
 import { and, eq } from "drizzle-orm";
 
 function hashToken(token: string): string {
@@ -16,21 +16,10 @@ function bytesToHex(bytes: Uint8Array): string {
 	return hex;
 }
 
-function parseScope(value?: string): string[] {
-	if (!value) {
-		return [];
-	}
-	return value
-		.split(",")
-		.map((entry) => entry.trim())
-		.filter(Boolean);
-}
-
 const userId = process.env.USER_ID ?? "dev-user";
 const displayName = process.env.DISPLAY_NAME ?? "Test Vault";
 const vaultId = process.env.VAULT_ID ?? crypto.randomUUID();
 const pluginToken = process.env.PLUGIN_TOKEN ?? crypto.randomUUID();
-const scopePatterns = parseScope(process.env.OBSIDIAN_SCOPE);
 
 const existingConnection = await db
 	.select({ id: integrationConnections.id })
@@ -89,26 +78,11 @@ await db
 		},
 	});
 
-if (scopePatterns.length > 0) {
-	const scopeRows = scopePatterns.map((pattern) => ({
-		connectionId,
-		scopeType: "obsidian_glob" as const,
-		scopeValue: pattern,
-		enabled: true,
-		metadataJson: null,
-	}));
-
-	await db.insert(integrationScopeItems).values(scopeRows).onConflictDoNothing();
-}
-
 console.log("Obsidian test setup complete.");
 console.log(`- User ID:        ${userId}`);
 console.log(`- Vault ID:       ${vaultId}`);
 console.log(`- Plugin token:   ${pluginToken}`);
 console.log(`- Connection ID:  ${connectionId}`);
-if (scopePatterns.length > 0) {
-	console.log(`- Scope patterns: ${scopePatterns.join(", ")}`);
-}
 console.log("");
 console.log("Manual steps:");
 console.log("1) In Obsidian plugin settings, set:");

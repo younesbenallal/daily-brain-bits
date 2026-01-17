@@ -5,7 +5,6 @@ import { RPCHandler } from "@orpc/server/fetch";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import * as notionRoutes from "./routes/notion";
 import * as obsidianRoutes from "./routes/obsidian";
 import { onboardingRouter } from "./routes/onboarding";
@@ -23,7 +22,7 @@ type RequestContext = {
 };
 
 const app = new Hono<{ Variables: RequestContext }>()
-	.use("*", logger())
+	//.use("*", logger({}))
 	.use(
 		"*",
 		cors({
@@ -46,16 +45,11 @@ const app = new Hono<{ Variables: RequestContext }>()
 		if (apiKeyHeader) {
 			try {
 				const hashedKey = hashApiKey(apiKeyHeader);
-				const apiKeyRecord = await db.select().from(apikey).where(eq(apikey.key, hashedKey)).limit(1);
+				const keyData = await db.query.apikey.findFirst({
+					where: eq(apikey.key, hashedKey),
+				});
 
-				if (apiKeyRecord.length > 0) {
-					const keyData = apiKeyRecord[0];
-					if (!keyData) {
-						c.set("user", null);
-						c.set("session", null);
-						return next();
-					}
-
+				if (keyData) {
 					const { user, session } = createApiKeySession(keyData, apiKeyHeader);
 					c.set("user", user as typeof auth.$Infer.Session.user);
 					c.set("session", session as typeof auth.$Infer.Session.session);

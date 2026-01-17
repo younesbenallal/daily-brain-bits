@@ -82,14 +82,6 @@ export default class DailyBrainBitsPlugin extends Plugin {
 			}),
 		);
 
-		await this.syncer.refreshScope({ triggerSync: false });
-		const scopeStatus = this.syncer.getScopeStatus();
-		const nextGlob = scopeStatus.patterns[0] ?? "";
-		if (this.settings.scopeGlob !== nextGlob) {
-			this.settings.scopeGlob = nextGlob;
-			await this.saveSettings();
-		}
-		this.registerInterval(window.setInterval(() => void this.syncer.refreshScope(), 5 * 60 * 1000));
 		window.setTimeout(() => void this.syncer.fullSync(), 5_000);
 	}
 

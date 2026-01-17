@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
-import { apikey, db, integrationConnections, integrationScopeItems, obsidianVaults } from "@daily-brain-bits/db";
+import { apikey, db, integrationConnections, obsidianVaults } from "@daily-brain-bits/db";
 import {
 	obsidianRegisterResponseSchema,
-	obsidianScopeResponseSchema,
 	syncBatchRequestSchema,
 	syncBatchResponseSchema,
 } from "@daily-brain-bits/integrations-obsidian";
@@ -43,7 +42,7 @@ const register = baseRoute
 				userId,
 				kind: "obsidian",
 				status: "active",
-				displayName: input.displayName ?? "Obsidian Vault",
+				displayName: input.displayName,
 				accountExternalId: vaultId,
 				configJson: {
 					vaultId,
@@ -136,10 +135,7 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 		}
 
 		if (displayName && displayName !== existing.displayName) {
-			await db
-				.update(integrationConnections)
-				.set({ displayName })
-				.where(eq(integrationConnections.id, existing.id));
+			await db.update(integrationConnections).set({ displayName }).where(eq(integrationConnections.id, existing.id));
 		}
 
 		return {
@@ -186,88 +182,6 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 
 	return { connectionId, displayName: created.displayName ?? "Obsidian Vault" };
 }
-
-const scope = baseRoute
-	.input(
-		z.object({
-			vaultId: z.string().min(1),
-			vaultName: z.string().min(1).optional(),
-		}),
-	)
-	.output(obsidianScopeResponseSchema)
-	.handler(async ({ context, input }) => {
-		const userId = context.user?.id;
-		if (!userId) {
-			throw new ORPCError("Unauthorized");
-		}
-
-		console.log("[obsidian.scope] start", { vaultId: input.vaultId });
-		const { connectionId } = await ensureConnectionForVault({
-			userId,
-			vaultId: input.vaultId,
-			displayName: input.vaultName,
-		});
-
-		if (!connectionId) {
-			throw new ORPCError("INTERNAL_SERVER_ERROR", {
-				message: "failed_to_get_connection",
-			});
-		}
-
-		const scopeItems = await db
-			.select({
-				value: integrationScopeItems.scopeValue,
-				updatedAt: integrationScopeItems.updatedAt,
-			})
-			.from(integrationScopeItems)
-			.where(
-				and(
-					eq(integrationScopeItems.connectionId, connectionId),
-					eq(integrationScopeItems.scopeType, "obsidian_glob"),
-					eq(integrationScopeItems.enabled, true),
-				),
-			);
-
-		const updatedAt = scopeItems.reduce<string | undefined>((max, item) => {
-			const value = item.updatedAt?.toISOString();
-			if (!value) {
-				return max;
-			}
-			if (!max || value > max) {
-				return value;
-			}
-			return max;
-		}, undefined);
-
-		console.log("[obsidian.scope] resolved", {
-			vaultId: input.vaultId,
-			connectionId,
-			patternCount: scopeItems.length,
-		});
-
-		const now = new Date();
-		await db
-			.update(integrationConnections)
-			.set({
-				lastSeenAt: now,
-				updatedAt: now,
-			})
-			.where(eq(integrationConnections.id, connectionId));
-
-		await db
-			.update(obsidianVaults)
-			.set({
-				lastSeenAt: now,
-				updatedAt: now,
-			})
-			.where(eq(obsidianVaults.vaultId, input.vaultId));
-
-		return {
-			vaultId: input.vaultId,
-			patterns: scopeItems.map((item) => item.value),
-			updatedAt,
-		};
-	});
 
 const syncBatch = baseRoute
 	.input(syncBatchRequestSchema)
@@ -357,16 +271,16 @@ const syncBatch = baseRoute
 		};
 	});
 
-	const status = baseRoute
-		.input(z.object({}).optional())
-		.output(
-			z.object({
-				connected: z.boolean(),
-				vaultId: z.string().nullable(),
-				vaultName: z.string().nullable(),
-				lastSeenAt: z.string().datetime().nullable(),
-			}),
-		)
+const status = baseRoute
+	.input(z.object({}).optional())
+	.output(
+		z.object({
+			connected: z.boolean(),
+			vaultId: z.string().nullable(),
+			vaultName: z.string().nullable(),
+			lastSeenAt: z.string().datetime().nullable(),
+		}),
+	)
 	.handler(async ({ context }) => {
 		const userId = context.user?.id;
 		if (!userId) {
@@ -409,9 +323,9 @@ const syncBatch = baseRoute
 		// If we have an API key but no connection, show as connected with limited info
 		if (!connection && hasApiKey) {
 			return {
-				connected: true,
+				connected: false,
 				vaultId: null,
-				vaultName: "Obsidian Vault",
+				vaultName: null,
 				lastSeenAt: null,
 			};
 		}
@@ -439,76 +353,9 @@ const syncBatch = baseRoute
 		};
 	});
 
-const setGlob = baseRoute
-	.input(
-		z.object({
-			vaultId: z.string().min(1).optional(),
-			vaultName: z.string().min(1).optional(),
-			glob: z.string().nullable().optional(),
-		}),
-	)
-	.output(
-		z.object({
-			success: z.boolean(),
-		}),
-	)
-	.handler(async ({ context, input }) => {
-		const userId = context.user?.id;
-		if (!userId) {
-			throw new ORPCError("Unauthorized");
-		}
-
-		let connectionId: number | null = null;
-		if (input.vaultId) {
-			const ensured = await ensureConnectionForVault({
-				userId,
-				vaultId: input.vaultId,
-				displayName: input.vaultName,
-			});
-			connectionId = ensured.connectionId;
-		} else {
-			const connections = await db
-				.select({
-					id: integrationConnections.id,
-				})
-				.from(integrationConnections)
-				.where(and(eq(integrationConnections.userId, userId), eq(integrationConnections.kind, "obsidian")))
-				.orderBy(desc(integrationConnections.updatedAt))
-				.limit(1);
-
-			connectionId = connections[0]?.id ?? null;
-		}
-
-		if (!connectionId) {
-			throw new ORPCError("NOT_FOUND", { message: "obsidian_not_connected" });
-		}
-
-		const nextGlob = input.glob?.trim() ?? "";
-
-		await db.transaction(async (tx) => {
-			await tx
-				.delete(integrationScopeItems)
-				.where(and(eq(integrationScopeItems.connectionId, connectionId), eq(integrationScopeItems.scopeType, "obsidian_glob")));
-
-			if (nextGlob.length > 0) {
-				await tx.insert(integrationScopeItems).values({
-					connectionId,
-					scopeType: "obsidian_glob",
-					scopeValue: nextGlob,
-					enabled: true,
-					metadataJson: null,
-				});
-			}
-		});
-
-		return { success: true };
-	});
-
 export const obsidianRouter = {
 	register,
 	status,
-	setGlob,
-	scope,
 	sync: {
 		batch: syncBatch,
 	},

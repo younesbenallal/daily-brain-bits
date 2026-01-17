@@ -66,7 +66,7 @@ Daily Brain Bits ingests “notes” from multiple sources (Notion, Obsidian) in
 Minimum viable integration storage lives in `packages/db/src/schema/index.ts`:
 
 - `integration_connections`: one connection per user/source/account (e.g. Notion workspace or Obsidian vault).
-- `integration_scope_items`: user-selected scope items (e.g. `notion_database` IDs, `obsidian_glob` patterns).
+- `integration_scope_items`: user-selected scope items (e.g. `notion_database` IDs).
 - `documents`: normalized storage for note content; uniqueness enforced by `(userId, connectionId, externalId)`.
 - `sync_state`: per-connection state such as last sync timestamps and cursor JSON.
 

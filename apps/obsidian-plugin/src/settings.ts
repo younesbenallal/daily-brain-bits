@@ -94,7 +94,7 @@ export class DBBSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl).setName("Scope").setDesc("Scope is shared with the Daily Brain Bits app.").setHeading();
+		new Setting(containerEl).setName("Scope").setDesc("Scope only affects what this plugin syncs.").setHeading();
 
 		new Setting(containerEl)
 			.setName("Glob filter")
@@ -106,7 +106,6 @@ export class DBBSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.scopeGlob = value.trim();
 						await this.plugin.saveSettings();
-						await this.plugin.syncer?.setScopeGlob(this.plugin.settings.scopeGlob);
 						updatePreview();
 					}),
 			);

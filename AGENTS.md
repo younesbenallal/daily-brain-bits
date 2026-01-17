@@ -4,8 +4,8 @@
 
 Notionist is a suite of productivity tools for knowledge-base apps (Notion, Obsidian, etc.). It currently includes:
 
-- Notionist (Quick Add): an Electron “Spotlight/Raycast-like” app to search and create Notion pages quickly.
-- Daily Brain Bits (DBB): connects to a user’s knowledge base and emails them daily “random” notes + optional AI-generated quizzes to improve long-term recall.
+- Notionist (Quick Add): an Electron "Spotlight/Raycast-like" app to search and create Notion pages quickly.
+- Daily Brain Bits (DBB): connects to a user's knowledge base and emails them daily "random" notes + optional AI-generated quizzes to improve long-term recall.
 
 This repo is a monorepo containing the backend services + integrations + (for Obsidian) a community plugin.
 
@@ -61,6 +61,7 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
 
 - Keep modules small and focused; split large files.
 - Prefer shared domain types in `packages/core` and integration-specific adapters in `packages/integrations/*`.
+- **Database queries**: Use only `db.query.table.findFirst()` or `db.query.table.findMany()` - never `db.select()`
 - Sync is idempotent:
   - identify documents by `(userId, sourceKind, accountId, externalId)`
   - skip unchanged content via stable hashing

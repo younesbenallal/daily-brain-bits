@@ -2,13 +2,13 @@
 
 ## Summary
 
-The Obsidian integration is a local-first sync: an Obsidian community plugin scans a vault and pushes batches of note changes (upserts/deletes) to the DBB backend. The plugin maintains a local index keyed by a stable `externalId` and uses normalized SHA-256 hashing to avoid re-uploading unchanged files. The backend applies scope filtering + conflict resolution and may skip stale items.
+The Obsidian integration is a local-first sync: an Obsidian community plugin scans a vault and pushes batches of note changes (upserts/deletes) to the DBB backend. The plugin maintains a local index keyed by a stable `externalId` and uses normalized SHA-256 hashing to avoid re-uploading unchanged files. The backend applies conflict resolution and may skip stale items.
 
 ## Scope
 
 - In scope:
   - Obsidian plugin full scan + incremental sync via vault events
-  - Glob-based include/exclude filtering for note selection
+  - Glob-based include/exclude filtering in the plugin for note selection
   - Batch upload protocol (`SyncBatchRequest`) and backend ingestion endpoint
 - Out of scope:
   - Better Auth integration / token validation (intentionally deferred)
@@ -26,7 +26,7 @@ The Obsidian integration is a local-first sync: an Obsidian community plugin sca
 | `packages/integrations/obsidian/src/ids.ts` | `externalId` helper: `"<vaultId>::<normalizedPath>"`. |
 | `packages/integrations/obsidian/src/filters.ts` | Simple glob matcher used by plugin scope filtering. |
 | `apps/back/src/routes/obsidian.ts` | Backend endpoints for `/register` and `/sync/batch` that upsert into `documents`. |
-| `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline (scope filter + conflict resolution + ingest). |
+| `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline (conflict resolution + ingest). |
 | `packages/db/src/schema/index.ts` | Tables and enums (Drizzle schema). |
 | `packages/db/src/schema/models.ts` | Types inferred from the Drizzle schema (rows + inserts). |
 
@@ -35,7 +35,7 @@ The Obsidian integration is a local-first sync: an Obsidian community plugin sca
 ### Full scan (initial + manual)
 
 1. Enumerate all Markdown files in the vault (`app.vault.getMarkdownFiles()`).
-2. Apply scope filter (include folders, exclude folders, exclude patterns).
+2. Apply local scope filter in the plugin (include/exclude patterns).
 3. For each eligible file:
    - Read markdown (`vault.cachedRead(file)`)
    - Compute `contentHash = sha256Hex(normalizeForHash(markdown))`

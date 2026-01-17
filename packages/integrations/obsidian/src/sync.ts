@@ -46,16 +46,9 @@ export const obsidianRegisterResponseSchema = z.object({
 	connectionId: z.number().int().optional(),
 });
 
-export const obsidianScopeResponseSchema = z.object({
-	vaultId: nonEmptyString,
-	patterns: z.array(nonEmptyString),
-	updatedAt: z.string().datetime().optional(),
-});
-
 export type SyncItemUpsert = z.infer<typeof syncItemUpsertSchema>;
 export type SyncItemDelete = z.infer<typeof syncItemDeleteSchema>;
 export type SyncItem = z.infer<typeof syncItemSchema>;
 export type SyncBatchRequest = z.infer<typeof syncBatchRequestSchema>;
 export type SyncBatchResponse = z.infer<typeof syncBatchResponseSchema>;
 export type ObsidianRegisterResponse = z.infer<typeof obsidianRegisterResponseSchema>;
-export type ObsidianScopeResponse = z.infer<typeof obsidianScopeResponseSchema>;

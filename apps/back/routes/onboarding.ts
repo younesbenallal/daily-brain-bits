@@ -100,7 +100,10 @@ const status = baseRoute
 		await ensureMockDocuments(userId);
 		const elapsed = Date.now() - startedAt;
 
-		const [userRow] = await db.select({ showOnboarding: user.showOnboarding }).from(user).where(eq(user.id, userId)).limit(1);
+		const userRow = await db.query.user.findFirst({
+			where: eq(user.id, userId),
+			columns: { showOnboarding: true },
+		});
 
 		return {
 			ready: elapsed >= MOCK_EMAIL_BATCH_DELAY_MS,
