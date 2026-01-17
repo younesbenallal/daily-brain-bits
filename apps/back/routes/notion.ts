@@ -1,8 +1,10 @@
-import { account, db, integrationConnections, integrationScopeItems } from "@daily-brain-bits/db";
+import { account, db, integrationConnections, integrationScopeItems, syncState } from "@daily-brain-bits/db";
+import { createNotionClient, createNotionSyncAdapter } from "@daily-brain-bits/integrations-notion";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
+import { runSyncPipeline } from "../integrations/sync-pipeline";
 
 const notionDatabaseSchema = z.object({
 	id: z.string().min(1),
@@ -226,7 +228,6 @@ const searchDatabases = baseRoute
 		if (!connectionBundle) {
 			throw new ORPCError("NOT_FOUND", { message: "notion_not_connected" });
 		}
-		console.log("connectionBundle", connectionBundle);
 
 		const results = await searchNotionDatabases(connectionBundle.tokens.accessToken, input.query);
 		console.log("results", results);
@@ -320,10 +321,150 @@ const setDatabases = baseRoute
 		return { saved: input.databases.length };
 	});
 
+const syncNow = baseRoute
+	.input(z.object({}).optional())
+	.output(
+		z.object({
+			success: z.boolean(),
+			databasesSynced: z.number(),
+			totalDocumentsImported: z.number(),
+		}),
+	)
+	.handler(async ({ context }) => {
+		const userId = context.user?.id;
+		if (!userId) {
+			throw new ORPCError("Unauthorized");
+		}
+
+		console.log("[notion.sync] Starting Notion sync process", { userId });
+
+		const connectionBundle = await getActiveNotionConnection(userId);
+		if (!connectionBundle) {
+			throw new ORPCError("NOT_FOUND", { message: "notion_not_connected" });
+		}
+
+		const connectionId = connectionBundle.connection.id;
+
+		// Get enabled databases
+		const scopeItems = await db
+			.select({
+				scopeValue: integrationScopeItems.scopeValue,
+			})
+			.from(integrationScopeItems)
+			.where(
+				and(
+					eq(integrationScopeItems.connectionId, connectionId),
+					eq(integrationScopeItems.scopeType, "notion_database"),
+					eq(integrationScopeItems.enabled, true),
+				),
+			);
+
+		const databaseIds = scopeItems.map((item) => item.scopeValue);
+
+		if (databaseIds.length === 0) {
+			console.log("[notion.sync] No databases enabled for sync", { userId, connectionId });
+			return {
+				success: true,
+				databasesSynced: 0,
+				totalDocumentsImported: 0,
+			};
+		}
+
+		console.log("[notion.sync] Syncing databases", {
+			userId,
+			connectionId,
+			databaseCount: databaseIds.length,
+			databaseIds,
+		});
+
+		// Get sync state cursor
+		const state = await db.query.syncState.findFirst({
+			where: eq(syncState.connectionId, connectionId),
+			columns: { cursorJson: true },
+		});
+
+		const cursor = state?.cursorJson && typeof state.cursorJson === "object" ? (state.cursorJson as { since?: string }) : undefined;
+
+		// Create Notion client and adapter
+		const notion = createNotionClient(connectionBundle.tokens.accessToken);
+		const adapter = createNotionSyncAdapter({ notion });
+
+		const now = new Date();
+		let totalDocumentsImported = 0;
+
+		// Sync each database
+		for (const databaseId of databaseIds) {
+			console.log("[notion.sync] Syncing database", {
+				userId,
+				connectionId,
+				databaseId,
+			});
+
+			try {
+				const syncResult = await adapter.sync({ databaseId }, cursor ? { since: cursor.since ?? new Date().toISOString() } : undefined);
+
+				console.log("[notion.sync] Database sync completed", {
+					userId,
+					connectionId,
+					databaseId,
+					itemsFound: syncResult.items.length,
+					stats: syncResult.stats,
+				});
+
+				if (syncResult.items.length > 0) {
+					// Run sync pipeline to ingest items
+					const ingestResult = await runSyncPipeline({
+						connectionId,
+						userId,
+						items: syncResult.items,
+						receivedAt: now,
+						sourceKind: "notion",
+						nextCursor: syncResult.nextCursor,
+					});
+
+					totalDocumentsImported += ingestResult.accepted;
+
+					console.log("[notion.sync] Database ingestion completed", {
+						userId,
+						connectionId,
+						databaseId,
+						accepted: ingestResult.accepted,
+						rejected: ingestResult.rejected,
+						skipped: ingestResult.skipped,
+					});
+				}
+			} catch (error) {
+				console.error("[notion.sync] Database sync failed", {
+					userId,
+					connectionId,
+					databaseId,
+					error: error instanceof Error ? error.message : String(error),
+				});
+				throw error;
+			}
+		}
+
+		console.log("[notion.sync] Notion sync process completed", {
+			userId,
+			connectionId,
+			databasesSynced: databaseIds.length,
+			totalDocumentsImported,
+		});
+
+		return {
+			success: true,
+			databasesSynced: databaseIds.length,
+			totalDocumentsImported,
+		};
+	});
+
 export const notionRouter = {
 	status,
 	databases: {
 		search: searchDatabases,
 		set: setDatabases,
+	},
+	sync: {
+		now: syncNow,
 	},
 };

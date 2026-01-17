@@ -4,19 +4,20 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
 
 export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "pg", // or "mysql", "sqlite"
-  }),
-  account: {
-    accountLinking: {
-      enabled: true,
-      trustedProviders: ["notion"],
-    },
-  },
-  trustedOrigins: [process.env.FRONTEND_URL || "http://localhost:3000"],
-  emailAndPassword: {
-    enabled: true,
-  },
+	database: drizzleAdapter(db, {
+		provider: "pg", // or "mysql", "sqlite"
+	}),
+	account: {
+		accountLinking: {
+			enabled: true,
+			allowDifferentEmails: true,
+			trustedProviders: ["notion"],
+		},
+	},
+	trustedOrigins: [process.env.FRONTEND_URL || "http://localhost:3000"],
+	emailAndPassword: {
+		enabled: true,
+	},
 	plugins: [
 		apiKey({
 			enableMetadata: true,
@@ -26,6 +27,7 @@ export const auth = betterAuth({
 		account: {
 			create: {
 				after: async (account) => {
+					console.log("account create", account);
 					if (account.providerId !== "notion") {
 						return;
 					}
@@ -37,7 +39,7 @@ export const auth = betterAuth({
 							userId: account.userId,
 							kind: "notion",
 							status: "active",
-							displayName: "Notion workspace",
+							displayName: null,
 							accountExternalId: account.accountId,
 							configJson: null,
 							secretsJsonEncrypted: null,
@@ -48,7 +50,6 @@ export const auth = betterAuth({
 							target: [integrationConnections.userId, integrationConnections.kind, integrationConnections.accountExternalId],
 							set: {
 								status: "active",
-								displayName: "Notion workspace",
 								updatedAt: now,
 								lastSeenAt: now,
 							},
@@ -57,6 +58,7 @@ export const auth = betterAuth({
 			},
 			update: {
 				after: async (account) => {
+					console.log("account update", account);
 					if (account.providerId !== "notion") {
 						return;
 					}
@@ -68,7 +70,7 @@ export const auth = betterAuth({
 							userId: account.userId,
 							kind: "notion",
 							status: "active",
-							displayName: "Notion workspace",
+							displayName: null,
 							accountExternalId: account.accountId,
 							configJson: null,
 							secretsJsonEncrypted: null,
@@ -79,7 +81,6 @@ export const auth = betterAuth({
 							target: [integrationConnections.userId, integrationConnections.kind, integrationConnections.accountExternalId],
 							set: {
 								status: "active",
-								displayName: "Notion workspace",
 								updatedAt: now,
 								lastSeenAt: now,
 							},

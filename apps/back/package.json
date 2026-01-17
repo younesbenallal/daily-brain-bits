@@ -18,6 +18,7 @@
 		"@daily-brain-bits/auth": "workspace:*",
 		"@daily-brain-bits/core": "workspace:*",
 		"@daily-brain-bits/db": "workspace:*",
+		"@daily-brain-bits/integrations-notion": "workspace:*",
 		"@daily-brain-bits/integrations-obsidian": "workspace:*",
 		"@daily-brain-bits/types": "workspace:*",
 		"@orpc/server": "^1.13.1",

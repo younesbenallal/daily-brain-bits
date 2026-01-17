@@ -56,10 +56,12 @@ function ConfigureNotionPage() {
 		}),
 	);
 
+	const syncMutation = useMutation(orpc.notion.sync.now.mutationOptions());
+
 	const handleConnect = async () => {
 		await linkSocial({
 			provider: "notion",
-			callbackURL: "/onboarding/configure-notion",
+			callbackURL: `${window.location.origin}/onboarding/configure-notion`,
 		});
 	};
 
@@ -73,6 +75,8 @@ function ConfigureNotionPage() {
 	};
 
 	const selectedIds = new Set(selectedDatabases.map((item) => item.id));
+
+	console.log(statusData);
 
 	const statusLabel = connected ? (statusData?.workspaceName ? `Connected to ${statusData.workspaceName}` : "Connected to Notion") : "Not connected";
 	const canProceed = connected && isOnboardingStepComplete("configureNotion", { connected: true as const });
@@ -93,6 +97,18 @@ function ConfigureNotionPage() {
 						Connect to Notion
 					</Button>
 					<p className="text-sm text-muted-foreground">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
+					{connected && statusData?.workspaceName ? (
+						<div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-sm text-foreground">
+							{statusData.workspaceIcon ? (
+								statusData.workspaceIcon.startsWith("http") ? (
+									<img src={statusData.workspaceIcon} alt="" className="h-4 w-4 rounded-full object-cover" />
+								) : (
+									<span aria-hidden="true">{statusData.workspaceIcon}</span>
+								)
+							) : null}
+							<span>{statusData.workspaceName}</span>
+						</div>
+					) : null}
 				</div>
 
 				<div className="space-y-3">
@@ -165,6 +181,11 @@ function ConfigureNotionPage() {
 						type="button"
 						disabled={!canProceed}
 						onClick={() => {
+							// Trigger sync (fire and forget - don't wait for it)
+							if (selectedDatabases.length > 0) {
+								syncMutation.mutate({}, { onError: (error) => console.error("Failed to start sync:", error) });
+							}
+							// Navigate immediately to loading page which will poll for status
 							router.navigate({ to: "/onboarding/onboarding-loading" });
 						}}
 					>

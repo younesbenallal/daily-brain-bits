@@ -20,7 +20,7 @@ function OnboardingLoadingPage() {
 		...orpc.onboarding.status.queryOptions(),
 		refetchInterval: REFRESH_INTERVAL,
 	});
-	const statusData = statusQuery.data as { noteDigestReady?: boolean } | undefined;
+	const statusData = statusQuery.data;
 	const canProceed =
 		statusData?.noteDigestReady &&
 		isOnboardingStepComplete("loading", {

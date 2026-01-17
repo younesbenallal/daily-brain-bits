@@ -32,8 +32,11 @@ async function ensureSeedNoteDigest(userId: string) {
 	});
 
 	if (existing?.id) {
+		console.log("[noteDigest] Seed digest already exists for user", { userId, digestId: existing.id });
 		return;
 	}
+
+	console.log("[noteDigest] Starting seed noteDigest creation for user", { userId });
 
 	const seedDocuments = await db.query.documents.findMany({
 		where: and(eq(documents.userId, userId), isNull(documents.deletedAtSource)),
@@ -43,8 +46,14 @@ async function ensureSeedNoteDigest(userId: string) {
 	});
 
 	if (seedDocuments.length === 0) {
+		console.log("[noteDigest] No documents available for seed digest", { userId });
 		return;
 	}
+
+	console.log("[noteDigest] Creating seed digest with documents", {
+		userId,
+		documentCount: seedDocuments.length,
+	});
 
 	const now = new Date();
 	const [digest] = await db
@@ -57,6 +66,7 @@ async function ensureSeedNoteDigest(userId: string) {
 		.returning({ id: noteDigests.id });
 
 	if (!digest?.id) {
+		console.error("[noteDigest] Failed to create seed digest", { userId });
 		return;
 	}
 
@@ -68,9 +78,22 @@ async function ensureSeedNoteDigest(userId: string) {
 			contentHashAtSend: doc.contentHash,
 		})),
 	);
+
+	console.log("[noteDigest] Seed digest created successfully", {
+		userId,
+		digestId: digest.id,
+		itemCount: seedDocuments.length,
+	});
 }
 
 export async function runSyncPipeline(params: SyncPipelineParams): Promise<IngestResult> {
+	console.log("[sync] Starting sync pipeline", {
+		userId: params.userId,
+		connectionId: params.connectionId,
+		sourceKind: params.sourceKind,
+		itemCount: params.items.length,
+	});
+
 	const { filteredItems, rejected, itemResults } = await applyScopeFilter({
 		items: params.items,
 	});
@@ -81,6 +104,16 @@ export async function runSyncPipeline(params: SyncPipelineParams): Promise<Inges
 		items: filteredItems,
 		receivedAt: params.receivedAt,
 		nextCursor: params.nextCursor,
+	});
+
+	console.log("[sync] Sync pipeline completed", {
+		userId: params.userId,
+		connectionId: params.connectionId,
+		sourceKind: params.sourceKind,
+		accepted: ingestResult.accepted,
+		rejected: ingestResult.rejected + rejected,
+		skipped: ingestResult.skipped,
+		totalDocumentsImported: ingestResult.accepted,
 	});
 
 	if (ingestResult.accepted > 0) {
