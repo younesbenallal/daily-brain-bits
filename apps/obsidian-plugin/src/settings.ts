@@ -1,4 +1,5 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { type App, type Plugin, PluginSettingTab, Setting } from "obsidian";
+import type { Syncer } from "./syncer";
 
 export type DBBSettings = {
 	apiBaseUrl: string;
@@ -53,6 +54,7 @@ export function normalizeSettings(overrides?: Partial<DBBSettings>): DBBSettings
 export type SettingsOwner = Plugin & {
 	settings: DBBSettings;
 	saveSettings: () => Promise<void>;
+	syncer?: Syncer;
 };
 
 export class DBBSettingTab extends PluginSettingTab {
@@ -131,7 +133,9 @@ export class DBBSettingTab extends PluginSettingTab {
 				included.createEl("div", { text: "No matches yet." });
 			} else {
 				const list = included.createEl("ul");
-				preview.included.forEach((path) => list.createEl("li", { text: path }));
+				preview.included.forEach((path: string) => {
+					list.createEl("li", { text: path });
+				});
 			}
 
 			const excluded = previewContainer.createEl("div");
@@ -141,7 +145,9 @@ export class DBBSettingTab extends PluginSettingTab {
 				excluded.createEl("div", { text: "No exclusions yet." });
 			} else {
 				const list = excluded.createEl("ul");
-				preview.excluded.forEach((path) => list.createEl("li", { text: path }));
+				preview.excluded.forEach((path: string) => {
+					list.createEl("li", { text: path });
+				});
 			}
 		};
 

@@ -76,7 +76,7 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
 
 - `docs/integrations-architecture.md` — Shared sync contract and integration architecture.
 - `docs/integrations-notion.md` — Notion incremental database sync (cursor, rate limits, markdown).
-- `docs/integrations-obsidian.md` — Obsidian plugin push sync (batching, local index, glob scope).
+- `docs/integrations-obsidian.md` — Obsidian plugin push sync (batching, local index).
 
 Todo list:
 

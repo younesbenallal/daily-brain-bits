@@ -1,16 +1,14 @@
 import { auth } from "@daily-brain-bits/auth";
-import { apikey, db } from "@daily-brain-bits/db";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import * as notionRoutes from "./routes/notion";
 import * as obsidianRoutes from "./routes/obsidian";
 import { onboardingRouter } from "./routes/onboarding";
-import { createApiKeySession, hashApiKey } from "./utils/api-key";
+import { createApiKeySession } from "./utils/api-key";
 
-const ORPCRouter = {
+export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,
 	notion: notionRoutes.notionRouter,
 	onboarding: onboardingRouter,
@@ -44,13 +42,20 @@ const app = new Hono<{ Variables: RequestContext }>()
 		const apiKeyHeader = c.req.header("x-api-key") || c.req.header("authorization")?.replace("Bearer ", "");
 		if (apiKeyHeader) {
 			try {
-				const hashedKey = hashApiKey(apiKeyHeader);
-				const keyData = await db.query.apikey.findFirst({
-					where: eq(apikey.key, hashedKey),
+				const verifyResult = await auth.api.verifyApiKey({
+					body: { key: apiKeyHeader },
 				});
 
-				if (keyData) {
-					const { user, session } = createApiKeySession(keyData, apiKeyHeader);
+				if (verifyResult.valid && verifyResult.key) {
+					const keyData = verifyResult.key;
+					const { user, session } = createApiKeySession(
+						{
+							id: keyData.id,
+							userId: keyData.userId,
+							expiresAt: keyData.expiresAt ? new Date(keyData.expiresAt) : null,
+						},
+						apiKeyHeader,
+					);
 					c.set("user", user as typeof auth.$Infer.Session.user);
 					c.set("session", session as typeof auth.$Infer.Session.session);
 					return next();

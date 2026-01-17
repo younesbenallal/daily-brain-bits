@@ -13,7 +13,6 @@ export const auth = betterAuth({
 	},
 	plugins: [
 		apiKey({
-			enableSessionForAPIKeys: true,
 			enableMetadata: true,
 		}),
 	],

@@ -12,3 +12,10 @@ export const baseRoute = os.$context<RequestContext>().use(({ context, next }) =
 	}
 	return next();
 });
+
+export const apiKeyRoute = os.$context<RequestContext>().use(({ context, next }) => {
+	if (!context.user) {
+		throw new ORPCError("Unauthorized");
+	}
+	return next();
+});

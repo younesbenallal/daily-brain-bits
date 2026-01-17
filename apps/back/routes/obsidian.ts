@@ -1,14 +1,10 @@
 import { createHash } from "node:crypto";
 import { apikey, db, integrationConnections, obsidianVaults } from "@daily-brain-bits/db";
-import {
-	obsidianRegisterResponseSchema,
-	syncBatchRequestSchema,
-	syncBatchResponseSchema,
-} from "@daily-brain-bits/integrations-obsidian";
+import { obsidianRegisterResponseSchema, syncBatchRequestSchema, syncBatchResponseSchema } from "@daily-brain-bits/integrations-obsidian";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { baseRoute } from "../context";
+import { apiKeyRoute, baseRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
 
 const registerRequestSchema = z.object({
@@ -183,7 +179,7 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 	return { connectionId, displayName: created.displayName ?? "Obsidian Vault" };
 }
 
-const syncBatch = baseRoute
+const syncBatch = apiKeyRoute
 	.input(syncBatchRequestSchema)
 	.output(syncBatchResponseSchema)
 	.handler(async ({ context, input }) => {
@@ -192,13 +188,6 @@ const syncBatch = baseRoute
 			throw new ORPCError("Unauthorized");
 		}
 
-		console.log("[obsidian.sync] start", {
-			vaultId: input.vaultId,
-			vaultName: input.vaultName ?? null,
-			deviceId: input.deviceId,
-			itemCount: input.items.length,
-			sentAt: input.sentAt,
-		});
 		const { connectionId } = await ensureConnectionForVault({
 			userId,
 			vaultId: input.vaultId,
@@ -256,14 +245,6 @@ const syncBatch = baseRoute
 			})
 			.where(eq(obsidianVaults.vaultId, input.vaultId));
 
-		console.log("[obsidian.sync] done", {
-			vaultId: input.vaultId,
-			connectionId,
-			accepted: ingestResult.accepted,
-			rejected: ingestResult.rejected,
-			skipped: ingestResult.skipped,
-		});
-
 		return {
 			accepted: ingestResult.accepted,
 			rejected: ingestResult.rejected,
@@ -271,7 +252,7 @@ const syncBatch = baseRoute
 		};
 	});
 
-const status = baseRoute
+const status = apiKeyRoute
 	.input(z.object({}).optional())
 	.output(
 		z.object({
