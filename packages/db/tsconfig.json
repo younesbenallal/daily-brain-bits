@@ -1,8 +1,8 @@
 {
-  "extends": "@daily-brain-bits/typescript-config/base.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "."
-  },
-  "exclude": ["node_modules", "dist"]
+	"extends": "@daily-brain-bits/typescript-config/base.json",
+	"compilerOptions": {
+		"outDir": "dist",
+		"rootDir": "."
+	},
+	"exclude": ["node_modules", "dist"]
 }

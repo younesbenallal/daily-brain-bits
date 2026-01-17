@@ -40,7 +40,7 @@ Move Obsidian onboarding + sync initiation into the Obsidian plugin settings (to
   - Web onboarding shows GitHub install link + “Generate token” (API key), then instructs user to paste it into Obsidian plugin settings.
   - In Obsidian plugin settings, user sets glob and sees a local preview of included/excluded files.
   - User clicks “Sync now” (button) or runs `DBB: Sync now` (command).
-  - User returns to DBB web app; “Go to app” shows a loading screen until backend detects first sync (and later: first `emailBatch`).
+  - User returns to DBB web app; “Go to app” shows a loading screen until backend detects first sync (and later: first `emailBatch`). Screen should always explain what is happening and what to expect.
 - Notion flow:
   - User connects Notion, selects databases, hits “Go to app”.
   - Backend starts Notion sync; web app shows loading until first sync (and later: first `emailBatch`).

@@ -1,14 +1,14 @@
 {
-  "name": "@daily-brain-bits/auth",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./auth.ts"
-  },
-  "dependencies": {
-    "better-auth": "^1.4.10",
-    "zod": "^4.2.1",
-    "@daily-brain-bits/db": "workspace:*"
-  }
+	"name": "@daily-brain-bits/auth",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./auth.ts"
+	},
+	"dependencies": {
+		"better-auth": "^1.4.10",
+		"zod": "^4.2.1",
+		"@daily-brain-bits/db": "workspace:*"
+	}
 }

@@ -8,114 +8,114 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-display: "Crimson Pro", "Times New Roman", serif;
-  --font-body: "DM Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-ui: "Mona Sans", "DM Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-logo: "Young Serif", "Times New Roman", serif;
+	--font-display: "Crimson Pro", "Times New Roman", serif;
+	--font-body: "DM Sans", "Helvetica Neue", Arial, sans-serif;
+	--font-ui: "Mona Sans", "DM Sans", "Helvetica Neue", Arial, sans-serif;
+	--font-logo: "Young Serif", "Times New Roman", serif;
 
-  --sky-top: 213 100% 68%;
-  --sky-bottom: 214 100% 80%;
-  --app-gradient: linear-gradient(180deg, hsl(var(--sky-top)) 0%, hsl(var(--sky-bottom)) 100%);
+	--sky-top: 213 100% 68%;
+	--sky-bottom: 214 100% 80%;
+	--app-gradient: linear-gradient(180deg, hsl(var(--sky-top)) 0%, hsl(var(--sky-bottom)) 100%);
 
-  --background: 214 100% 98%;
-  --foreground: 222 20% 18%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 20% 18%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 20% 18%;
-  --primary: 214 85% 67%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 30% 96%;
-  --secondary-foreground: 222 20% 18%;
-  --muted: 210 30% 96%;
-  --muted-foreground: 220 12% 45%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 20% 18%;
-  --destructive: 0 74% 58%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 220 14% 92%;
-  --input: 220 14% 92%;
-  --ring: 214 85% 67%;
-  --radius: 0.75rem;
-  --shadow-soft: 0 28px 70px rgba(15, 23, 42, 0.12);
+	--background: 214 100% 98%;
+	--foreground: 222 20% 18%;
+	--card: 0 0% 100%;
+	--card-foreground: 222 20% 18%;
+	--popover: 0 0% 100%;
+	--popover-foreground: 222 20% 18%;
+	--primary: 214 85% 67%;
+	--primary-foreground: 210 40% 98%;
+	--secondary: 210 30% 96%;
+	--secondary-foreground: 222 20% 18%;
+	--muted: 210 30% 96%;
+	--muted-foreground: 220 12% 45%;
+	--accent: 210 40% 96%;
+	--accent-foreground: 222 20% 18%;
+	--destructive: 0 74% 58%;
+	--destructive-foreground: 210 40% 98%;
+	--border: 220 14% 92%;
+	--input: 220 14% 92%;
+	--ring: 214 85% 67%;
+	--radius: 0.75rem;
+	--shadow-soft: 0 28px 70px rgba(15, 23, 42, 0.12);
 }
 
 .dark {
-  --background: 222 24% 8%;
-  --foreground: 210 40% 98%;
-  --card: 222 24% 10%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222 24% 10%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 214 85% 70%;
-  --primary-foreground: 222 24% 10%;
-  --secondary: 220 16% 18%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 220 16% 18%;
-  --muted-foreground: 215 20% 70%;
-  --accent: 220 16% 18%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 220 16% 20%;
-  --input: 220 16% 20%;
-  --ring: 214 85% 70%;
-  --app-gradient: linear-gradient(180deg, hsl(214 50% 18%) 0%, hsl(214 40% 10%) 100%);
+	--background: 222 24% 8%;
+	--foreground: 210 40% 98%;
+	--card: 222 24% 10%;
+	--card-foreground: 210 40% 98%;
+	--popover: 222 24% 10%;
+	--popover-foreground: 210 40% 98%;
+	--primary: 214 85% 70%;
+	--primary-foreground: 222 24% 10%;
+	--secondary: 220 16% 18%;
+	--secondary-foreground: 210 40% 98%;
+	--muted: 220 16% 18%;
+	--muted-foreground: 215 20% 70%;
+	--accent: 220 16% 18%;
+	--accent-foreground: 210 40% 98%;
+	--destructive: 0 62.8% 30.6%;
+	--destructive-foreground: 210 40% 98%;
+	--border: 220 16% 20%;
+	--input: 220 16% 20%;
+	--ring: 214 85% 70%;
+	--app-gradient: linear-gradient(180deg, hsl(214 50% 18%) 0%, hsl(214 40% 10%) 100%);
 }
 
 @theme inline {
-  --font-display: var(--font-display);
-  --font-body: var(--font-body);
-  --font-ui: var(--font-ui);
-  --font-logo: var(--font-logo);
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --radius: var(--radius);
+	--font-display: var(--font-display);
+	--font-body: var(--font-body);
+	--font-ui: var(--font-ui);
+	--font-logo: var(--font-logo);
+	--color-background: hsl(var(--background));
+	--color-foreground: hsl(var(--foreground));
+	--color-card: hsl(var(--card));
+	--color-card-foreground: hsl(var(--card-foreground));
+	--color-popover: hsl(var(--popover));
+	--color-popover-foreground: hsl(var(--popover-foreground));
+	--color-primary: hsl(var(--primary));
+	--color-primary-foreground: hsl(var(--primary-foreground));
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-foreground: hsl(var(--secondary-foreground));
+	--color-muted: hsl(var(--muted));
+	--color-muted-foreground: hsl(var(--muted-foreground));
+	--color-accent: hsl(var(--accent));
+	--color-accent-foreground: hsl(var(--accent-foreground));
+	--color-destructive: hsl(var(--destructive));
+	--color-destructive-foreground: hsl(var(--destructive-foreground));
+	--color-border: hsl(var(--border));
+	--color-input: hsl(var(--input));
+	--color-ring: hsl(var(--ring));
+	--radius: var(--radius);
 }
 
 @layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-  body {
-    color: hsl(var(--foreground));
-    font-family: var(--font-body);
-    background: var(--app-gradient);
-    min-height: 100vh;
-  }
+	* {
+		border-color: hsl(var(--border));
+	}
+	body {
+		color: hsl(var(--foreground));
+		font-family: var(--font-body);
+		background: var(--app-gradient);
+		min-height: 100vh;
+	}
 }
 
 @layer utilities {
-  .font-display {
-    font-family: var(--font-display);
-  }
+	.font-display {
+		font-family: var(--font-display);
+	}
 
-  .font-body {
-    font-family: var(--font-body);
-  }
+	.font-body {
+		font-family: var(--font-body);
+	}
 
-  .font-ui {
-    font-family: var(--font-ui);
-  }
+	.font-ui {
+		font-family: var(--font-ui);
+	}
 
-  .font-logo {
-    font-family: var(--font-logo);
-  }
+	.font-logo {
+		font-family: var(--font-logo);
+	}
 }

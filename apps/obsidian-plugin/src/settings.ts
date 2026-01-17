@@ -1,185 +1,200 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 
 export type DBBSettings = {
-  apiBaseUrl: string;
-  pluginToken: string;
-  vaultId: string;
-  deviceId: string;
-  batchSize: number;
-  debounceMs: number;
-  maxBytesPerBatch: number;
+	apiBaseUrl: string;
+	pluginToken: string;
+	vaultId: string;
+	deviceId: string;
+	scopeGlob: string;
+	batchSize: number;
+	debounceMs: number;
+	maxBytesPerBatch: number;
 };
 
 export const DEFAULT_SETTINGS: DBBSettings = {
-  apiBaseUrl: "http://localhost:3001",
-  pluginToken: "",
-  vaultId: "",
-  deviceId: "",
-  batchSize: 50,
-  debounceMs: 2000,
-  maxBytesPerBatch: 2_000_000,
+	apiBaseUrl: "http://localhost:3001",
+	pluginToken: "",
+	vaultId: "",
+	deviceId: "",
+	scopeGlob: "",
+	batchSize: 50,
+	debounceMs: 2000,
+	maxBytesPerBatch: 2_000_000,
 };
 
 function clampNumber(value: number, fallback: number, min: number): number {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-  return Math.max(min, value);
+	if (!Number.isFinite(value)) {
+		return fallback;
+	}
+	return Math.max(min, value);
 }
 
-export function normalizeSettings(
-  overrides?: Partial<DBBSettings>
-): DBBSettings {
-  const merged = {
-    ...DEFAULT_SETTINGS,
-    ...overrides,
-  };
-  const batchSize = clampNumber(merged.batchSize, DEFAULT_SETTINGS.batchSize, 1);
-  const debounceMs = clampNumber(
-    merged.debounceMs,
-    DEFAULT_SETTINGS.debounceMs,
-    250
-  );
-  const maxBytesPerBatch = clampNumber(
-    merged.maxBytesPerBatch,
-    DEFAULT_SETTINGS.maxBytesPerBatch,
-    50_000
-  );
+export function normalizeSettings(overrides?: Partial<DBBSettings>): DBBSettings {
+	const merged = {
+		...DEFAULT_SETTINGS,
+		...overrides,
+	};
+	const batchSize = clampNumber(merged.batchSize, DEFAULT_SETTINGS.batchSize, 1);
+	const debounceMs = clampNumber(merged.debounceMs, DEFAULT_SETTINGS.debounceMs, 250);
+	const maxBytesPerBatch = clampNumber(merged.maxBytesPerBatch, DEFAULT_SETTINGS.maxBytesPerBatch, 50_000);
 
-  return {
-    apiBaseUrl: merged.apiBaseUrl,
-    pluginToken: merged.pluginToken,
-    vaultId: merged.vaultId,
-    deviceId: merged.deviceId,
-    batchSize,
-    debounceMs,
-    maxBytesPerBatch,
-  };
+	return {
+		apiBaseUrl: merged.apiBaseUrl,
+		pluginToken: merged.pluginToken,
+		vaultId: merged.vaultId,
+		deviceId: merged.deviceId,
+		scopeGlob: merged.scopeGlob,
+		batchSize,
+		debounceMs,
+		maxBytesPerBatch,
+	};
 }
 
 export type SettingsOwner = Plugin & {
-  settings: DBBSettings;
-  saveSettings: () => Promise<void>;
+	settings: DBBSettings;
+	saveSettings: () => Promise<void>;
 };
 
 export class DBBSettingTab extends PluginSettingTab {
-  private plugin: SettingsOwner;
+	private plugin: SettingsOwner;
 
-  constructor(app: App, plugin: SettingsOwner) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
+	constructor(app: App, plugin: SettingsOwner) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
 
-  display(): void {
-    const { containerEl } = this;
+	display(): void {
+		const { containerEl } = this;
 
-    containerEl.empty();
+		containerEl.empty();
 
-    new Setting(containerEl)
-      .setName("API base URL")
-      .setDesc("Backend base URL for sync requests.")
-      .addText((text) =>
-        text
-          .setPlaceholder("http://localhost:3001")
-          .setValue(this.plugin.settings.apiBaseUrl)
-          .onChange(async (value) => {
-            this.plugin.settings.apiBaseUrl = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
+		new Setting(containerEl)
+			.setName("API base URL")
+			.setDesc("Backend base URL for sync requests.")
+			.addText((text) =>
+				text
+					.setPlaceholder("http://localhost:3001")
+					.setValue(this.plugin.settings.apiBaseUrl)
+					.onChange(async (value) => {
+						this.plugin.settings.apiBaseUrl = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
 
-    new Setting(containerEl)
-      .setName("Plugin token")
-      .setDesc("Provided by the Daily Brain Bits backend.")
-      .addText((text) =>
-        text
-          .setPlaceholder("paste token")
-          .setValue(this.plugin.settings.pluginToken)
-          .onChange(async (value) => {
-            this.plugin.settings.pluginToken = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
+		new Setting(containerEl)
+			.setName("Plugin token")
+			.setDesc("Provided by the Daily Brain Bits backend.")
+			.addText((text) =>
+				text
+					.setPlaceholder("paste token")
+					.setValue(this.plugin.settings.pluginToken)
+					.onChange(async (value) => {
+						this.plugin.settings.pluginToken = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
 
-    new Setting(containerEl)
-      .setName("Vault ID")
-      .setDesc("Stable vault identifier used for sync.")
-      .addText((text) =>
-        text
-          .setPlaceholder("auto-generated")
-          .setValue(this.plugin.settings.vaultId)
-          .onChange(async (value) => {
-            this.plugin.settings.vaultId = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
+		new Setting(containerEl).setName("Scope").setDesc("Scope is shared with the Daily Brain Bits app.").setHeading();
 
-    new Setting(containerEl)
-      .setName("Device ID")
-      .setDesc("Unique device identifier for this install.")
-      .addText((text) =>
-        text
-          .setPlaceholder("auto-generated")
-          .setValue(this.plugin.settings.deviceId)
-          .onChange(async (value) => {
-            this.plugin.settings.deviceId = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
+		new Setting(containerEl)
+			.setName("Glob filter")
+			.setDesc("Pattern for notes to include (leave empty to sync everything).")
+			.addText((text) =>
+				text
+					.setPlaceholder("*(!Journaling)")
+					.setValue(this.plugin.settings.scopeGlob)
+					.onChange(async (value) => {
+						this.plugin.settings.scopeGlob = value.trim();
+						await this.plugin.saveSettings();
+						await this.plugin.syncer?.setScopeGlob(this.plugin.settings.scopeGlob);
+						updatePreview();
+					}),
+			);
 
-    new Setting(containerEl)
-      .setName("Scope")
-      .setDesc("Scope is configured in the backend and fetched automatically.")
-      .setHeading();
+		const previewContainer = containerEl.createDiv({ cls: "dbb-scope-preview" });
 
-    new Setting(containerEl).setName("Sync behavior").setHeading();
+		const updatePreview = () => {
+			const preview = this.plugin.syncer?.getScopePreview(5);
+			previewContainer.empty();
 
-    new Setting(containerEl)
-      .setName("Batch size")
-      .setDesc("Maximum number of items per sync request.")
-      .addText((text) =>
-        text
-          .setPlaceholder("50")
-          .setValue(String(this.plugin.settings.batchSize))
-          .onChange(async (value) => {
-            const parsed = Number.parseInt(value, 10);
-            this.plugin.settings.batchSize = Number.isNaN(parsed)
-              ? this.plugin.settings.batchSize
-              : parsed;
-            await this.plugin.saveSettings();
-          })
-      );
+			const title = previewContainer.createEl("strong", { text: "Preview" });
+			title.style.display = "block";
+			title.style.marginBottom = "6px";
 
-    new Setting(containerEl)
-      .setName("Debounce (ms)")
-      .setDesc("Wait this long after changes before syncing.")
-      .addText((text) =>
-        text
-          .setPlaceholder("2000")
-          .setValue(String(this.plugin.settings.debounceMs))
-          .onChange(async (value) => {
-            const parsed = Number.parseInt(value, 10);
-            this.plugin.settings.debounceMs = Number.isNaN(parsed)
-              ? this.plugin.settings.debounceMs
-              : parsed;
-            await this.plugin.saveSettings();
-          })
-      );
+			if (!preview) {
+				previewContainer.createEl("div", { text: "Connect the plugin to preview." });
+				return;
+			}
 
-    new Setting(containerEl)
-      .setName("Max bytes per batch")
-      .setDesc("Soft limit for request payload size.")
-      .addText((text) =>
-        text
-          .setPlaceholder("2000000")
-          .setValue(String(this.plugin.settings.maxBytesPerBatch))
-          .onChange(async (value) => {
-            const parsed = Number.parseInt(value, 10);
-            this.plugin.settings.maxBytesPerBatch = Number.isNaN(parsed)
-              ? this.plugin.settings.maxBytesPerBatch
-              : parsed;
-            await this.plugin.saveSettings();
-          })
-      );
-  }
+			const included = previewContainer.createEl("div");
+			included.createEl("div", { text: "Included:" });
+			if (preview.included.length === 0) {
+				included.createEl("div", { text: "No matches yet." });
+			} else {
+				const list = included.createEl("ul");
+				preview.included.forEach((path) => list.createEl("li", { text: path }));
+			}
+
+			const excluded = previewContainer.createEl("div");
+			excluded.style.marginTop = "6px";
+			excluded.createEl("div", { text: "Excluded:" });
+			if (preview.excluded.length === 0) {
+				excluded.createEl("div", { text: "No exclusions yet." });
+			} else {
+				const list = excluded.createEl("ul");
+				preview.excluded.forEach((path) => list.createEl("li", { text: path }));
+			}
+		};
+
+		updatePreview();
+
+		new Setting(containerEl).setName("Sync behavior").setHeading();
+
+		new Setting(containerEl)
+			.setName("Sync now")
+			.setDesc("Trigger a full sync with the current scope.")
+			.addButton((button) => button.setButtonText("Sync now").onClick(() => void this.plugin.syncer?.fullSync()));
+
+		new Setting(containerEl)
+			.setName("Batch size")
+			.setDesc("Maximum number of items per sync request.")
+			.addText((text) =>
+				text
+					.setPlaceholder("50")
+					.setValue(String(this.plugin.settings.batchSize))
+					.onChange(async (value) => {
+						const parsed = Number.parseInt(value, 10);
+						this.plugin.settings.batchSize = Number.isNaN(parsed) ? this.plugin.settings.batchSize : parsed;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Debounce (ms)")
+			.setDesc("Wait this long after changes before syncing.")
+			.addText((text) =>
+				text
+					.setPlaceholder("2000")
+					.setValue(String(this.plugin.settings.debounceMs))
+					.onChange(async (value) => {
+						const parsed = Number.parseInt(value, 10);
+						this.plugin.settings.debounceMs = Number.isNaN(parsed) ? this.plugin.settings.debounceMs : parsed;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("Max bytes per batch")
+			.setDesc("Soft limit for request payload size.")
+			.addText((text) =>
+				text
+					.setPlaceholder("2000000")
+					.setValue(String(this.plugin.settings.maxBytesPerBatch))
+					.onChange(async (value) => {
+						const parsed = Number.parseInt(value, 10);
+						this.plugin.settings.maxBytesPerBatch = Number.isNaN(parsed) ? this.plugin.settings.maxBytesPerBatch : parsed;
+						await this.plugin.saveSettings();
+					}),
+			);
+	}
 }

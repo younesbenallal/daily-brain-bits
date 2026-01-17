@@ -1,9 +1,9 @@
 {
-  "extends": "@daily-brain-bits/typescript-config/base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "."
-  },
-  "include": ["tables.ts", "index.ts"],
-  "exclude": ["node_modules", "dist"]
+	"extends": "@daily-brain-bits/typescript-config/base.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "."
+	},
+	"include": ["tables.ts", "index.ts"],
+	"exclude": ["node_modules", "dist"]
 }

@@ -1,27 +1,27 @@
 {
-  "name": "@daily-brain-bits/db",
-  "version": "0.0.0",
-  "private": true,
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "bun --env-file ../../apps/back/.env drizzle-kit push",
-    "db:push:prod": "bun --env-file ../../apps/back/.env.prod drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "type-check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "drizzle-orm": "^0.45.1",
-    "node-postgres": "^0.6.2",
-    "postgres": "^3.4.8",
-    "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "drizzle-kit": "^0.28.0",
-    "@daily-brain-bits/typescript-config": "workspace:*",
-    "typescript": "^5.6.0"
-  }
+	"name": "@daily-brain-bits/db",
+	"version": "0.0.0",
+	"private": true,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "drizzle-kit migrate",
+		"db:push": "bun --env-file ../../apps/back/.env drizzle-kit push",
+		"db:push:prod": "bun --env-file ../../apps/back/.env.prod drizzle-kit push",
+		"db:studio": "drizzle-kit studio",
+		"type-check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.45.1",
+		"node-postgres": "^0.6.2",
+		"postgres": "^3.4.8",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.28.0",
+		"@daily-brain-bits/typescript-config": "workspace:*",
+		"typescript": "^5.6.0"
+	}
 }

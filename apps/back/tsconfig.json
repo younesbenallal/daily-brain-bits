@@ -1,14 +1,14 @@
 {
-  "extends": "@daily-brain-bits/typescript-config/base.json",
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "tests", "scripts", "logs", "**/*.test.ts", "**/*.spec.ts"],
-  "compilerOptions": {
-    "noErrorTruncation": true,
-    "paths": {
-      "@/*": ["./*"]
-    },
-    "jsx": "react-jsx",
-    "lib": ["ES2022"],
-    "incremental": true
-  }
+	"extends": "@daily-brain-bits/typescript-config/base.json",
+	"include": ["**/*.ts", "**/*.tsx"],
+	"exclude": ["node_modules", "tests", "scripts", "logs", "**/*.test.ts", "**/*.spec.ts"],
+	"compilerOptions": {
+		"noErrorTruncation": true,
+		"paths": {
+			"@/*": ["./*"]
+		},
+		"jsx": "react-jsx",
+		"lib": ["ES2022"],
+		"incremental": true
+	}
 }

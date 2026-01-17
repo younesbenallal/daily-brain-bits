@@ -4,53 +4,53 @@ import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/(app)/onboarding/choose-source")({
-  component: ChooseSourcePage,
+	component: ChooseSourcePage,
 });
 
 function ChooseSourcePage() {
-  const router = useRouter();
-  return (
-    <OnboardingLayout>
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <h1 className="font-display text-3xl text-[#2d71c4]">Choose source</h1>
-          <p className="text-sm text-[#737373]">Give us a place to swallow your notes</p>
-        </div>
+	const router = useRouter();
+	return (
+		<OnboardingLayout>
+			<div className="space-y-6">
+				<div className="space-y-3">
+					<h1 className="font-display text-3xl text-[#2d71c4]">Choose source</h1>
+					<p className="text-sm text-[#737373]">Give us a place to swallow your notes</p>
+				</div>
 
-        <div className="flex flex-col items-center gap-4">
-          {[
-            { label: "Notion", id: "notion", Logo: Notion },
-            { label: "Obsidian", id: "obsidian", Logo: Obsidian },
-          ].map((item) => (
-            <Button
-              key={item.id}
-              variant="outline"
-              className="h-[59px] w-[150px] gap-3 bg-white text-[#404040] border-[#d4d4d4]"
-              type="button"
-              onClick={() => {
-                router.navigate({
-                  to: item.id === "notion" ? "/onboarding/configure-notion" : "/onboarding/configure-obsidian",
-                });
-              }}
-            >
-              <item.Logo className="h-5 w-5" />
-              {item.label}
-            </Button>
-          ))}
-        </div>
+				<div className="flex flex-col items-center gap-4">
+					{[
+						{ label: "Notion", id: "notion", Logo: Notion },
+						{ label: "Obsidian", id: "obsidian", Logo: Obsidian },
+					].map((item) => (
+						<Button
+							key={item.id}
+							variant="outline"
+							className="h-[59px] w-[150px] gap-3 bg-white text-[#404040] border-[#d4d4d4]"
+							type="button"
+							onClick={() => {
+								router.navigate({
+									to: item.id === "notion" ? "/onboarding/configure-notion" : "/onboarding/configure-obsidian",
+								});
+							}}
+						>
+							<item.Logo className="h-5 w-5" />
+							{item.label}
+						</Button>
+					))}
+				</div>
 
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            onClick={() => {
-              router.navigate({ to: "/dash" });
-            }}
-          >
-            Go to app
-            <span aria-hidden="true">→</span>
-          </Button>
-        </div>
-      </div>
-    </OnboardingLayout>
-  );
+				<div className="flex justify-end">
+					<Button
+						type="button"
+						onClick={() => {
+							router.navigate({ to: "/dash" });
+						}}
+					>
+						Go to app
+						<span aria-hidden="true">→</span>
+					</Button>
+				</div>
+			</div>
+		</OnboardingLayout>
+	);
 }

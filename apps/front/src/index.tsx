@@ -11,34 +11,34 @@ import { routeTree } from "./routeTree.gen";
 const queryClient = new QueryClient();
 
 export const router = createRouter({
-  routeTree,
-  context: {
-    // auth will initially be undefined
-    // We'll be passing down the auth state from within a React component
-    auth: undefined!,
-    queryClient,
-  },
+	routeTree,
+	context: {
+		// auth will initially be undefined
+		// We'll be passing down the auth state from within a React component
+		auth: undefined!,
+		queryClient,
+	},
 });
 
 function App() {
-  const { data: session, isPending } = useSession();
-  if (isPending) {
-    return <div>Loading...</div>;
-  }
+	const { data: session, isPending } = useSession();
+	if (isPending) {
+		return <div>Loading...</div>;
+	}
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} context={{ auth: session ?? undefined, queryClient }} />
-    </QueryClientProvider>
-  );
+	return (
+		<QueryClientProvider client={queryClient}>
+			<RouterProvider router={router} context={{ auth: session ?? undefined, queryClient }} />
+		</QueryClientProvider>
+	);
 }
 
 const rootElement = document.getElementById("root")!;
 if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+	const root = ReactDOM.createRoot(rootElement);
+	root.render(
+		<React.StrictMode>
+			<App />
+		</React.StrictMode>,
+	);
 }
