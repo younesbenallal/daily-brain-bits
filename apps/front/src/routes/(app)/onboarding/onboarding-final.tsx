@@ -1,7 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
+import { isOnboardingStepComplete } from "@/lib/onboarding/step-validation";
 import { orpc } from "@/lib/orpc-client";
 
 export const Route = createFileRoute("/(app)/onboarding/onboarding-final")({
@@ -9,7 +11,23 @@ export const Route = createFileRoute("/(app)/onboarding/onboarding-final")({
 });
 
 function OnboardingFinalPage() {
+	const router = useRouter();
 	const completeMutation = useMutation(orpc.onboarding.complete.mutationOptions());
+	const statusQuery = useQuery({
+		...orpc.onboarding.status.queryOptions(),
+		refetchInterval: 5_000,
+	});
+	const statusData = statusQuery.data as { noteDigestReady?: boolean } | undefined;
+	const canProceed = isOnboardingStepComplete("loading", {
+		noteDigestReady: statusData?.noteDigestReady ?? false,
+	});
+
+	useEffect(() => {
+		if (!canProceed && !statusQuery.isLoading) {
+			router.navigate({ to: "/onboarding/onboarding-loading" });
+		}
+	}, [canProceed, router, statusQuery.isLoading]);
+
 	return (
 		<OnboardingLayout
 			footer={

@@ -3,7 +3,7 @@
 	"name": "Daily Brain Bits",
 	"version": "0.0.0",
 	"minAppVersion": "1.0.0",
-	"description": "Sync your Obsidian vault with Daily Brain Bits for daily review emails.",
+	"description": "Sync your Obsidian vault with Daily Brain Bits for periodic note digests.",
 	"author": "Notionist",
 	"authorUrl": "https://notionist.app",
 	"isDesktopOnly": true

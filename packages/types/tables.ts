@@ -1,14 +1,13 @@
 import type {
 	documents,
-	emailBatches,
-	emailBatchStatus,
-	emailItems,
 	integrationConnections,
 	integrationKind,
 	integrationScopeItems,
 	integrationScopeType,
 	integrationStatus,
-	obsidianVaults,
+	noteDigestItems,
+	noteDigestStatus,
+	noteDigests,
 	reviewEvents,
 	reviewStates,
 	reviewStatus,
@@ -24,16 +23,13 @@ export type IntegrationScopeType = (typeof integrationScopeType.enumValues)[numb
 export type SyncRunKind = (typeof syncRunKind.enumValues)[number];
 export type SyncRunStatus = (typeof syncRunStatus.enumValues)[number];
 export type ReviewStatus = (typeof reviewStatus.enumValues)[number];
-export type EmailBatchStatus = (typeof emailBatchStatus.enumValues)[number];
+export type NoteDigestStatus = (typeof noteDigestStatus.enumValues)[number];
 
 export type IntegrationConnection = typeof integrationConnections.$inferSelect;
 export type IntegrationConnectionInsert = typeof integrationConnections.$inferInsert;
 
 export type IntegrationScopeItem = typeof integrationScopeItems.$inferSelect;
 export type IntegrationScopeItemInsert = typeof integrationScopeItems.$inferInsert;
-
-export type ObsidianVault = typeof obsidianVaults.$inferSelect;
-export type ObsidianVaultInsert = typeof obsidianVaults.$inferInsert;
 
 export type DocumentRow = typeof documents.$inferSelect;
 export type DocumentRowInsert = typeof documents.$inferInsert;
@@ -50,8 +46,8 @@ export type ReviewStateInsert = typeof reviewStates.$inferInsert;
 export type ReviewEvent = typeof reviewEvents.$inferSelect;
 export type ReviewEventInsert = typeof reviewEvents.$inferInsert;
 
-export type EmailBatch = typeof emailBatches.$inferSelect;
-export type EmailBatchInsert = typeof emailBatches.$inferInsert;
+export type NoteDigest = typeof noteDigests.$inferSelect;
+export type NoteDigestInsert = typeof noteDigests.$inferInsert;
 
-export type EmailItem = typeof emailItems.$inferSelect;
-export type EmailItemInsert = typeof emailItems.$inferInsert;
+export type NoteDigestItem = typeof noteDigestItems.$inferSelect;
+export type NoteDigestItemInsert = typeof noteDigestItems.$inferInsert;

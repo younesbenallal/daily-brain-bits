@@ -1,5 +1,6 @@
 import { CryptoHasher } from "bun";
-import { db, integrationConnections, obsidianVaults } from "@daily-brain-bits/db";
+import { db, integrationConnections } from "@daily-brain-bits/db";
+import { obsidianConnectionConfigSchema, serializeObsidianConnectionSecrets } from "@daily-brain-bits/integrations-obsidian";
 import { and, eq } from "drizzle-orm";
 
 function hashToken(token: string): string {
@@ -21,22 +22,32 @@ const displayName = process.env.DISPLAY_NAME ?? "Test Vault";
 const vaultId = process.env.VAULT_ID ?? crypto.randomUUID();
 const pluginToken = process.env.PLUGIN_TOKEN ?? crypto.randomUUID();
 
-const existingConnection = await db
-	.select({ id: integrationConnections.id })
-	.from(integrationConnections)
-	.where(
-		and(
-			eq(integrationConnections.userId, userId),
-			eq(integrationConnections.kind, "obsidian"),
-			eq(integrationConnections.accountExternalId, vaultId),
-		),
-	)
-	.limit(1);
+const existingConnection = await db.query.integrationConnections.findFirst({
+	where: and(
+		eq(integrationConnections.userId, userId),
+		eq(integrationConnections.kind, "obsidian"),
+		eq(integrationConnections.accountExternalId, vaultId),
+	),
+	columns: { id: true },
+});
 
 let connectionId: number;
+const config = obsidianConnectionConfigSchema.parse({ vaultId });
+const secretsJsonEncrypted = serializeObsidianConnectionSecrets({
+	pluginTokenHash: hashToken(pluginToken),
+});
 
-if (existingConnection.length > 0) {
-	connectionId = existingConnection[0].id;
+if (existingConnection) {
+	connectionId = existingConnection.id;
+	await db
+		.update(integrationConnections)
+		.set({
+			displayName,
+			configJson: config,
+			secretsJsonEncrypted,
+			updatedAt: new Date(),
+		})
+		.where(eq(integrationConnections.id, connectionId));
 } else {
 	const [created] = await db
 		.insert(integrationConnections)
@@ -46,8 +57,8 @@ if (existingConnection.length > 0) {
 			status: "active",
 			displayName,
 			accountExternalId: vaultId,
-			configJson: { vaultId },
-			secretsJsonEncrypted: null,
+			configJson: config,
+			secretsJsonEncrypted,
 		})
 		.returning({ id: integrationConnections.id });
 
@@ -57,26 +68,6 @@ if (existingConnection.length > 0) {
 
 	connectionId = created.id;
 }
-
-await db
-	.insert(obsidianVaults)
-	.values({
-		vaultId,
-		userId,
-		connectionId,
-		pluginTokenHash: hashToken(pluginToken),
-		deviceIdsJson: [],
-		settingsJson: {},
-	})
-	.onConflictDoUpdate({
-		target: obsidianVaults.vaultId,
-		set: {
-			userId,
-			connectionId,
-			pluginTokenHash: hashToken(pluginToken),
-			updatedAt: new Date(),
-		},
-	});
 
 console.log("Obsidian test setup complete.");
 console.log(`- User ID:        ${userId}`);

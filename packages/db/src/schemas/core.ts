@@ -48,22 +48,6 @@ export const integrationScopeItems = pgTable(
 	],
 );
 
-export const obsidianVaults = pgTable(
-	"obsidian_vaults",
-	{
-		vaultId: text("vault_id").primaryKey(),
-		userId: text("user_id").notNull(),
-		connectionId: integer("connection_id").references(() => integrationConnections.id, { onDelete: "cascade" }),
-		pluginTokenHash: text("plugin_token_hash"),
-		deviceIdsJson: jsonb("device_ids_json"),
-		settingsJson: jsonb("settings_json"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-		lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
-	},
-	(table) => [index("obsidian_vaults_user_idx").on(table.userId), index("obsidian_vaults_last_seen_idx").on(table.lastSeenAt)],
-);
-
 export const documents = pgTable(
 	"documents",
 	{
@@ -184,34 +168,34 @@ export const reviewEvents = pgTable(
 	],
 );
 
-export const emailBatchStatus = pgEnum("email_batch_status", ["scheduled", "sent", "failed", "skipped"]);
+export const noteDigestStatus = pgEnum("note_digest_status", ["scheduled", "sent", "failed", "skipped"]);
 
-export const emailBatches = pgTable(
-	"email_batches",
+export const noteDigests = pgTable(
+	"note_digests",
 	{
 		id: serial("id").primaryKey(),
 		userId: text("user_id").notNull(),
 		scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
 		sentAt: timestamp("sent_at", { withTimezone: true }),
-		status: emailBatchStatus("status").notNull(),
+		status: noteDigestStatus("status").notNull(),
 		payloadJson: jsonb("payload_json"),
 		errorJson: jsonb("error_json"),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		index("email_batches_user_scheduled_for_idx").on(table.userId, table.scheduledFor),
-		index("email_batches_status_scheduled_for_idx").on(table.status, table.scheduledFor),
+		index("note_digests_user_scheduled_for_idx").on(table.userId, table.scheduledFor),
+		index("note_digests_status_scheduled_for_idx").on(table.status, table.scheduledFor),
 	],
 );
 
-export const emailItems = pgTable(
-	"email_items",
+export const noteDigestItems = pgTable(
+	"note_digest_items",
 	{
 		id: serial("id").primaryKey(),
-		emailBatchId: integer("email_batch_id")
+		noteDigestId: integer("note_digest_id")
 			.notNull()
-			.references(() => emailBatches.id, { onDelete: "cascade" }),
+			.references(() => noteDigests.id, { onDelete: "cascade" }),
 		documentId: integer("document_id")
 			.notNull()
 			.references(() => documents.id, { onDelete: "cascade" }),
@@ -220,7 +204,7 @@ export const emailItems = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		uniqueIndex("email_items_batch_document_idx").on(table.emailBatchId, table.documentId),
-		index("email_items_batch_position_idx").on(table.emailBatchId, table.position),
+		uniqueIndex("note_digest_items_digest_document_idx").on(table.noteDigestId, table.documentId),
+		index("note_digest_items_digest_position_idx").on(table.noteDigestId, table.position),
 	],
 );

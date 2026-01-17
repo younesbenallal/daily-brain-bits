@@ -5,7 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
 
-const MOCK_EMAIL_BATCH_DELAY_MS = 30_000;
+const MOCK_NOTE_DIGEST_DELAY_MS = 30_000;
 const MOCK_NOTE_COUNT = 24;
 const mockStartByUser = new Map<string, number>();
 
@@ -39,12 +39,11 @@ function buildMockNote(index: number) {
 }
 
 async function ensureMockDocuments(userId: string) {
-	const [connection] = await db
-		.select({ id: integrationConnections.id })
-		.from(integrationConnections)
-		.where(eq(integrationConnections.userId, userId))
-		.orderBy(desc(integrationConnections.updatedAt))
-		.limit(1);
+	const connection = await db.query.integrationConnections.findFirst({
+		where: eq(integrationConnections.userId, userId),
+		columns: { id: true },
+		orderBy: [desc(integrationConnections.updatedAt)],
+	});
 
 	if (!connection?.id) {
 		return false;
@@ -83,6 +82,7 @@ const status = baseRoute
 	.output(
 		z.object({
 			ready: z.boolean(),
+			noteDigestReady: z.boolean(),
 			hasDocuments: z.boolean(),
 			showOnboarding: z.boolean(),
 		}),
@@ -99,6 +99,7 @@ const status = baseRoute
 		}
 		await ensureMockDocuments(userId);
 		const elapsed = Date.now() - startedAt;
+		const noteDigestReady = elapsed >= MOCK_NOTE_DIGEST_DELAY_MS;
 
 		const userRow = await db.query.user.findFirst({
 			where: eq(user.id, userId),
@@ -106,7 +107,8 @@ const status = baseRoute
 		});
 
 		return {
-			ready: elapsed >= MOCK_EMAIL_BATCH_DELAY_MS,
+			ready: noteDigestReady,
+			noteDigestReady,
 			hasDocuments: true,
 			showOnboarding: userRow?.showOnboarding ?? true,
 		};

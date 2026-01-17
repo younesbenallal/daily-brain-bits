@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
-import { Button } from "@/components/ui/button";
+import { isOnboardingStepComplete } from "@/lib/onboarding/step-validation";
 import { orpc } from "@/lib/orpc-client";
 
 const REFRESH_INTERVAL = 5_000;
@@ -20,7 +20,10 @@ function OnboardingLoadingPage() {
 		...orpc.onboarding.status.queryOptions(),
 		refetchInterval: REFRESH_INTERVAL,
 	});
-	const statusData = statusQuery.data as { ready?: boolean } | undefined;
+	const statusData = statusQuery.data as { noteDigestReady?: boolean } | undefined;
+	const canProceed = isOnboardingStepComplete("loading", {
+		noteDigestReady: statusData?.noteDigestReady ?? false,
+	});
 
 	useEffect(() => {
 		if (step === "loading-one") {
@@ -35,10 +38,10 @@ function OnboardingLoadingPage() {
 	}, [step]);
 
 	useEffect(() => {
-		if (statusData?.ready) {
+		if (canProceed) {
 			router.navigate({ to: "/onboarding/onboarding-final" });
 		}
-	}, [router, statusData?.ready]);
+	}, [canProceed, router]);
 
 	return (
 		<OnboardingLayout footer={<OnboardingFooter />}>
@@ -48,9 +51,7 @@ function OnboardingLoadingPage() {
 				<LoadingStepTwo />
 			) : (
 				<TutorialStep
-					onNext={() => {
-						router.navigate({ to: "/onboarding/onboarding-final" });
-					}}
+					noteDigestReady={statusData?.noteDigestReady ?? false}
 				/>
 			)}
 		</OnboardingLayout>
@@ -86,7 +87,7 @@ function LoadingStepTwo() {
 	);
 }
 
-function TutorialStep({ onNext }: { onNext: () => void }) {
+function TutorialStep({ noteDigestReady }: { noteDigestReady: boolean }) {
 	return (
 		<div className="space-y-6">
 			<div className="space-y-3">
@@ -100,13 +101,12 @@ function TutorialStep({ onNext }: { onNext: () => void }) {
 				</div>
 			</div>
 
-			<p className="text-sm text-[#737373]">Prioritized notes appear more often in your daily email, helping you review them faster.</p>
+			<p className="text-sm text-[#737373]">Prioritized notes appear more often in your note digest, helping you review them faster.</p>
 
 			<div className="flex justify-end">
-				<Button type="button" onClick={onNext}>
-					Next
-					<span aria-hidden="true">→</span>
-				</Button>
+				<span className="text-sm text-[#737373]">
+					{noteDigestReady ? "Finishing setup..." : "Hang tight while we prepare your first note digest."}
+				</span>
 			</div>
 		</div>
 	);

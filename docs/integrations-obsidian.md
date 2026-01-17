@@ -79,7 +79,8 @@ The plugin retries on transient failures:
   - Backend uniqueness is enforced by `(userId, connectionId, externalId)` in `documents`.
 - Tables (current MVP):
   - `integration_connections`: connection record for the vault (`kind: "obsidian"`, `accountExternalId = vaultId`)
-  - `obsidian_vaults`: vault metadata, token hash placeholder, last seen timestamps
+    - `configJson`: vault metadata (device IDs, settings)
+    - `secretsJsonEncrypted`: plugin token hash placeholder
   - `documents`: canonical note records (content stored in `contentCiphertext` fields for now)
   - `sync_state`: last sync timestamps (no cursor for Obsidian push)
 

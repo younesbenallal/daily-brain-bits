@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
-import { apikey, db, integrationConnections, obsidianVaults } from "@daily-brain-bits/db";
-import { obsidianRegisterResponseSchema, syncBatchRequestSchema, syncBatchResponseSchema } from "@daily-brain-bits/integrations-obsidian";
+import { apikey, db, integrationConnections } from "@daily-brain-bits/db";
+import {
+	obsidianConnectionConfigSchema,
+	obsidianRegisterResponseSchema,
+	parseObsidianConnectionConfig,
+	serializeObsidianConnectionSecrets,
+	syncBatchRequestSchema,
+	syncBatchResponseSchema,
+} from "@daily-brain-bits/integrations-obsidian";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -13,6 +20,14 @@ const registerRequestSchema = z.object({
 
 function hashToken(token: string): string {
 	return createHash("sha256").update(token).digest("hex");
+}
+
+function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; settings?: Record<string, unknown> }) {
+	return obsidianConnectionConfigSchema.parse({
+		vaultId: options.vaultId,
+		deviceIds: options.deviceIds ?? [],
+		settings: options.settings ?? {},
+	});
 }
 
 const register = baseRoute
@@ -32,6 +47,11 @@ const register = baseRoute
 		const pluginToken = crypto.randomUUID();
 		const apiBaseUrl = process.env.API_BASE_URL || "http://localhost:3001";
 
+		const config = buildObsidianConfig({ vaultId });
+		const secretsJsonEncrypted = serializeObsidianConnectionSecrets({
+			pluginTokenHash: hashToken(pluginToken),
+		});
+
 		const [connection] = await db
 			.insert(integrationConnections)
 			.values({
@@ -40,10 +60,8 @@ const register = baseRoute
 				status: "active",
 				displayName: input.displayName,
 				accountExternalId: vaultId,
-				configJson: {
-					vaultId,
-				},
-				secretsJsonEncrypted: null,
+				configJson: config,
+				secretsJsonEncrypted,
 			})
 			.returning({
 				id: integrationConnections.id,
@@ -55,15 +73,6 @@ const register = baseRoute
 				message: "failed_to_create_connection",
 			});
 		}
-
-		await db.insert(obsidianVaults).values({
-			vaultId,
-			userId,
-			connectionId,
-			pluginTokenHash: hashToken(pluginToken),
-			deviceIdsJson: [],
-			settingsJson: {},
-		});
 
 		console.log("[obsidian.register] created", {
 			userId,
@@ -81,66 +90,57 @@ const register = baseRoute
 
 async function ensureConnectionForVault(options: { userId: string; vaultId: string; displayName?: string }) {
 	const { userId, vaultId, displayName } = options;
-	const vaultRows = await db
-		.select({
-			vaultId: obsidianVaults.vaultId,
-			userId: obsidianVaults.userId,
-			connectionId: obsidianVaults.connectionId,
-		})
-		.from(obsidianVaults)
-		.where(eq(obsidianVaults.vaultId, vaultId))
-		.limit(1);
 
-	if (vaultRows.length > 0 && vaultRows[0]?.userId !== userId) {
-		throw new ORPCError("FORBIDDEN", {
-			message: "vault_in_use",
-		});
-	}
+	const connection = await db.query.integrationConnections.findFirst({
+		where: and(eq(integrationConnections.kind, "obsidian"), eq(integrationConnections.accountExternalId, vaultId)),
+		columns: {
+			id: true,
+			displayName: true,
+			userId: true,
+			configJson: true,
+		},
+	});
 
-	const connection = await db
-		.select({
-			id: integrationConnections.id,
-			displayName: integrationConnections.displayName,
-			userId: integrationConnections.userId,
-		})
-		.from(integrationConnections)
-		.where(and(eq(integrationConnections.kind, "obsidian"), eq(integrationConnections.accountExternalId, vaultId)))
-		.limit(1);
-
-	if (connection.length > 0) {
-		const existing = connection[0];
-		if (!existing) {
-			throw new ORPCError("INTERNAL_SERVER_ERROR", {
-				message: "failed_to_get_connection",
-			});
-		}
-		if (existing.userId && existing.userId !== userId) {
+	if (connection) {
+		if (connection.userId !== userId) {
 			throw new ORPCError("FORBIDDEN", {
 				message: "vault_in_use",
 			});
 		}
 
-		if (!vaultRows.length) {
-			await db.insert(obsidianVaults).values({
+		const existingConfig = parseObsidianConnectionConfig(connection.configJson);
+		let nextConfig = existingConfig;
+		let shouldUpdateConfig = false;
+
+		if (existingConfig.vaultId !== vaultId) {
+			nextConfig = obsidianConnectionConfigSchema.parse({
+				...existingConfig,
 				vaultId,
-				userId,
-				connectionId: existing.id,
-				deviceIdsJson: [],
-				settingsJson: {},
 			});
+			shouldUpdateConfig = true;
 		}
 
-		if (displayName && displayName !== existing.displayName) {
-			await db.update(integrationConnections).set({ displayName }).where(eq(integrationConnections.id, existing.id));
+		const updates: { displayName?: string; configJson?: typeof nextConfig; updatedAt?: Date } = {};
+		if (displayName && displayName !== connection.displayName) {
+			updates.displayName = displayName;
+		}
+		if (shouldUpdateConfig) {
+			updates.configJson = nextConfig;
+		}
+		if (Object.keys(updates).length > 0) {
+			updates.updatedAt = new Date();
+			await db.update(integrationConnections).set(updates).where(eq(integrationConnections.id, connection.id));
 		}
 
 		return {
-			connectionId: existing.id,
-			displayName: displayName ?? existing.displayName ?? "Obsidian Vault",
+			connectionId: connection.id,
+			displayName: displayName ?? connection.displayName ?? "Obsidian Vault",
+			config: nextConfig,
 		};
 	}
 
 	const now = new Date();
+	const config = buildObsidianConfig({ vaultId });
 	const [created] = await db
 		.insert(integrationConnections)
 		.values({
@@ -149,9 +149,7 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 			status: "active",
 			displayName: displayName ?? "Obsidian Vault",
 			accountExternalId: vaultId,
-			configJson: {
-				vaultId,
-			},
+			configJson: config,
 			secretsJsonEncrypted: null,
 			updatedAt: now,
 			lastSeenAt: now,
@@ -168,15 +166,7 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 		});
 	}
 
-	await db.insert(obsidianVaults).values({
-		vaultId,
-		userId,
-		connectionId,
-		deviceIdsJson: [],
-		settingsJson: {},
-	});
-
-	return { connectionId, displayName: created.displayName ?? "Obsidian Vault" };
+	return { connectionId, displayName: created.displayName ?? "Obsidian Vault", config };
 }
 
 const syncBatch = apiKeyRoute
@@ -188,7 +178,7 @@ const syncBatch = apiKeyRoute
 			throw new ORPCError("Unauthorized");
 		}
 
-		const { connectionId } = await ensureConnectionForVault({
+		const { connectionId, config } = await ensureConnectionForVault({
 			userId,
 			vaultId: input.vaultId,
 			displayName: input.vaultName,
@@ -210,40 +200,30 @@ const syncBatch = apiKeyRoute
 			defaultDeletedAtSource: input.sentAt,
 		});
 
-		await db
-			.update(integrationConnections)
-			.set({
-				lastSeenAt: now,
-			})
-			.where(eq(integrationConnections.id, connectionId));
+		let nextConfig = config;
+		let shouldUpdateConfig = false;
 
-		const vaultRows = await db
-			.select({
-				deviceIdsJson: obsidianVaults.deviceIdsJson,
-			})
-			.from(obsidianVaults)
-			.where(eq(obsidianVaults.vaultId, input.vaultId))
-			.limit(1);
-
-		if (input.deviceId && vaultRows.length > 0) {
-			const existing = Array.isArray(vaultRows[0]?.deviceIdsJson) ? vaultRows[0]?.deviceIdsJson : [];
-			const nextDeviceIds = Array.from(new Set([...existing, input.deviceId]));
-
-			await db
-				.update(obsidianVaults)
-				.set({
-					deviceIdsJson: nextDeviceIds,
-				})
-				.where(eq(obsidianVaults.vaultId, input.vaultId));
+		if (input.deviceId) {
+			const existingDeviceIds = Array.isArray(config.deviceIds) ? config.deviceIds : [];
+			if (!existingDeviceIds.includes(input.deviceId)) {
+				nextConfig = obsidianConnectionConfigSchema.parse({
+					...config,
+					vaultId: config.vaultId ?? input.vaultId,
+					deviceIds: [...existingDeviceIds, input.deviceId],
+				});
+				shouldUpdateConfig = true;
+			}
 		}
 
-		await db
-			.update(obsidianVaults)
-			.set({
-				lastSeenAt: now,
-				updatedAt: now,
-			})
-			.where(eq(obsidianVaults.vaultId, input.vaultId));
+		const updates: { lastSeenAt: Date; updatedAt?: Date; configJson?: typeof nextConfig } = {
+			lastSeenAt: now,
+		};
+		if (shouldUpdateConfig) {
+			updates.configJson = nextConfig;
+			updates.updatedAt = now;
+		}
+
+		await db.update(integrationConnections).set(updates).where(eq(integrationConnections.id, connectionId));
 
 		return {
 			accepted: ingestResult.accepted,
@@ -268,29 +248,27 @@ const status = apiKeyRoute
 			throw new ORPCError("Unauthorized");
 		}
 
-		const connections = await db
-			.select({
-				id: integrationConnections.id,
-				displayName: integrationConnections.displayName,
-				accountExternalId: integrationConnections.accountExternalId,
-			})
-			.from(integrationConnections)
-			.where(and(eq(integrationConnections.userId, userId), eq(integrationConnections.kind, "obsidian")))
-			.orderBy(desc(integrationConnections.updatedAt))
-			.limit(1);
+		const connection = await db.query.integrationConnections.findFirst({
+			where: and(eq(integrationConnections.userId, userId), eq(integrationConnections.kind, "obsidian")),
+			columns: {
+				id: true,
+				displayName: true,
+				accountExternalId: true,
+				lastSeenAt: true,
+			},
+			orderBy: [desc(integrationConnections.updatedAt)],
+		});
 
 		// Also check for API keys that indicate Obsidian connection attempts
-		const apiKeys = await db
-			.select({
-				id: apikey.id,
-				name: apikey.name,
-			})
-			.from(apikey)
-			.where(and(eq(apikey.userId, userId), eq(apikey.name, "Obsidian Plugin")))
-			.limit(1);
+		const apiKey = await db.query.apikey.findFirst({
+			where: and(eq(apikey.userId, userId), eq(apikey.name, "Obsidian Plugin")),
+			columns: {
+				id: true,
+				name: true,
+			},
+		});
 
-		const connection = connections[0];
-		const hasApiKey = apiKeys.length > 0;
+		const hasApiKey = Boolean(apiKey);
 
 		if (!connection && !hasApiKey) {
 			return {
@@ -318,19 +296,11 @@ const status = apiKeyRoute
 			});
 		}
 
-		const vaultRows = await db
-			.select({
-				lastSeenAt: obsidianVaults.lastSeenAt,
-			})
-			.from(obsidianVaults)
-			.where(eq(obsidianVaults.vaultId, connection.accountExternalId))
-			.limit(1);
-
 		return {
 			connected: true,
 			vaultId: connection.accountExternalId ?? null,
 			vaultName: connection.displayName ?? "Obsidian Vault",
-			lastSeenAt: vaultRows[0]?.lastSeenAt?.toISOString() ?? null,
+			lastSeenAt: connection.lastSeenAt?.toISOString() ?? null,
 		};
 	});
 

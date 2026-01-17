@@ -7,6 +7,7 @@ import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { Button } from "@/components/ui/button";
 import { Tags, TagsContent, TagsEmpty, TagsGroup, TagsInput, TagsItem, TagsList, TagsTrigger, TagsValue } from "@/components/ui/shadcn-io/tags";
 import { linkSocial } from "@/lib/auth-client";
+import { isOnboardingStepComplete } from "@/lib/onboarding/step-validation";
 import { orpc } from "@/lib/orpc-client";
 
 export const Route = createFileRoute("/(app)/onboarding/configure-notion")({
@@ -74,6 +75,7 @@ function ConfigureNotionPage() {
 	const selectedIds = new Set(selectedDatabases.map((item) => item.id));
 
 	const statusLabel = connected ? (statusData?.workspaceName ? `Connected to ${statusData.workspaceName}` : "Connected to Notion") : "Not connected";
+	const canProceed = isOnboardingStepComplete("configureNotion", { connected });
 
 	return (
 		<OnboardingLayout>
@@ -161,6 +163,7 @@ function ConfigureNotionPage() {
 				<div className="flex justify-end">
 					<Button
 						type="button"
+						disabled={!canProceed}
 						onClick={() => {
 							router.navigate({ to: "/onboarding/onboarding-loading" });
 						}}
@@ -169,6 +172,7 @@ function ConfigureNotionPage() {
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
+				{!canProceed ? <p className="text-sm text-[#737373]">Connect your Notion workspace to continue.</p> : null}
 			</div>
 		</OnboardingLayout>
 	);

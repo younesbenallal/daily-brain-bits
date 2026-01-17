@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
+import { isOnboardingStepComplete } from "@/lib/onboarding/step-validation";
 import { orpc } from "@/lib/orpc-client";
 
 const REFRESH_INTERVAL = 5_000;
@@ -99,6 +100,11 @@ function ConfigureObsidianPage() {
 
 	const vaultLabel = statusData?.vaultName ?? (statusData?.vaultId ? `Vault ${statusData.vaultId.slice(0, 8)}` : "Obsidian Vault");
 	const statusLabel = connected ? `Connected to ${vaultLabel}` : "Waiting for Obsidian to connect";
+	const canProceed = isOnboardingStepComplete("configureObsidian", {
+		connected,
+		vaultId: statusData?.vaultId ?? "",
+		lastSeenAt: statusData?.lastSeenAt ?? "",
+	});
 
 	const pluginInstallUrl = "https://github.com/younesbenallal/daily-brain-bits";
 	return (
@@ -169,6 +175,7 @@ function ConfigureObsidianPage() {
 				<div className="flex justify-end">
 					<Button
 						type="button"
+						disabled={!canProceed}
 						onClick={() => {
 							router.navigate({ to: "/onboarding/onboarding-loading" });
 						}}
@@ -177,6 +184,11 @@ function ConfigureObsidianPage() {
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
+				{!canProceed ? (
+					<p className="text-sm text-[#737373]">
+						Finish connecting the Obsidian plugin (token saved + first sync) to continue.
+					</p>
+				) : null}
 			</div>
 		</OnboardingLayout>
 	);
