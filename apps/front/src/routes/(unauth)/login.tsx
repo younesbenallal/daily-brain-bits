@@ -2,7 +2,7 @@ import { AppleLight, Google, Notion } from "@ridemountainpig/svgl-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signIn } from "@/lib/auth-client";
+import { getCallbackUrl, signIn } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/(unauth)/login")({
   component: LoginPage,
@@ -10,6 +10,10 @@ export const Route = createFileRoute("/(unauth)/login")({
 
 function LoginPage() {
   const router = useRouter();
+  const callbackPath = getCallbackUrl("/");
+  const callbackURL = callbackPath.startsWith("http")
+    ? callbackPath
+    : `${window.location.origin}${callbackPath}`;
 
   return (
     <form className="space-y-6">
@@ -51,7 +55,7 @@ function LoginPage() {
           variant="secondary"
           className="w-full justify-between px-4"
           type="button"
-          onClick={() => signIn.social({ provider: "google" })}
+          onClick={() => signIn.social({ provider: "google", callbackURL })}
         >
           <div className="flex items-center gap-3">
             <Google className="size-4" />
@@ -65,7 +69,7 @@ function LoginPage() {
           variant="secondary"
           className="w-full justify-between px-4"
           type="button"
-          onClick={() => signIn.social({ provider: "notion" })}
+          onClick={() => signIn.social({ provider: "notion", callbackURL })}
         >
           <div className="flex items-center gap-3">
             <Notion className="size-4" />
@@ -79,7 +83,7 @@ function LoginPage() {
           variant="secondary"
           className="w-full justify-between px-4"
           type="button"
-          onClick={() => signIn.social({ provider: "apple" })}
+          onClick={() => signIn.social({ provider: "apple", callbackURL })}
         >
           <div className="flex items-center gap-3">
             <AppleLight className="size-4" />
