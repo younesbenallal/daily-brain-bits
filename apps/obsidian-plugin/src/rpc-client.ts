@@ -1,9 +1,9 @@
 import type ORPCRouterType from "@daily-brain-bits/back";
+import type { SyncBatchResponse, SyncItem } from "@daily-brain-bits/integrations-obsidian";
 import { createORPCClient, toORPCError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
 import { Notice, requestUrl } from "obsidian";
-import type { SyncBatchResponse, SyncItem } from "@daily-brain-bits/integrations-obsidian";
 import { buildRpcUrl, toHeaderRecord } from "./sync-utils";
 
 const maxBackoffMs = 60_000;
@@ -76,12 +76,7 @@ export class RPCClient {
 		return createORPCClient<RouterClient<ORPCRouterType>>(link);
 	}
 
-	async sendBatch(
-		vaultId: string,
-		vaultName: string | undefined,
-		deviceId: string,
-		items: SyncItem[],
-	): Promise<SyncBatchResponse | null> {
+	async sendBatch(vaultId: string, vaultName: string | undefined, deviceId: string, items: SyncItem[]): Promise<SyncBatchResponse | null> {
 		if (items.length === 0) {
 			return null;
 		}
@@ -100,8 +95,11 @@ export class RPCClient {
 			return result as SyncBatchResponse;
 		} catch (error) {
 			const orpcError = toORPCError(error);
-			if (orpcError.status === 401) {
-				new Notice("Daily Brain Bits: token invalid. Reconnect.");
+
+			// Auth errors - stop retrying, user must fix token
+			if (orpcError.status === 401 || orpcError.status === 403 || orpcError.status === 500) {
+				new Notice("Daily Brain Bits: auth failed. Check your API token.");
+				this.backoffMs = maxBackoffMs; // Stop spamming by using max backoff
 				return null;
 			}
 
