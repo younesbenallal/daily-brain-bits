@@ -93,6 +93,29 @@
 	--color-input: hsl(var(--input));
 	--color-ring: hsl(var(--ring));
 	--radius: var(--radius);
+
+	--animate-cloud-drift: cloud-drift 25s ease-in-out infinite;
+	--animate-cloud-drift-reverse: cloud-drift-reverse 20s ease-in-out infinite;
+
+	@keyframes cloud-drift {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-50px);
+		}
+	}
+
+	@keyframes cloud-drift-reverse {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(50px);
+		}
+	}
 }
 
 @layer base {

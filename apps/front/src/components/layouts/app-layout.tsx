@@ -78,8 +78,16 @@ export function AppLayout({ children, maxWidth = "max-w-[450px]" }: AppLayoutPro
 			</main>
 
 			<div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-1/2 overflow-hidden">
-				<img src="/cloud.png" alt="" className="absolute -bottom-12 -left-32 w-[600px] opacity-80 dark:opacity-20 dark:brightness-50" />
-				<img src="/cloud.png" alt="" className="absolute -right-24 bottom-4 w-[550px] opacity-70 dark:opacity-15 dark:brightness-50" />{" "}
+				<img
+					src="/cloud.png"
+					alt=""
+					className="animate-cloud-drift absolute -bottom-12 -left-32 w-[600px] opacity-80 dark:opacity-20 dark:brightness-50"
+				/>
+				<img
+					src="/cloud.png"
+					alt=""
+					className="animate-cloud-drift-reverse absolute -right-24 bottom-4 w-[550px] opacity-70 dark:opacity-15 dark:brightness-50"
+				/>{" "}
 			</div>
 		</div>
 	);

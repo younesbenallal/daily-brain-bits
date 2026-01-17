@@ -75,7 +75,6 @@ function AppPage() {
 
 	const currentItem = items[currentIndex];
 	const contentBlocks = useMemo(() => parseContentBlocks(currentItem?.content ?? ""), [currentItem?.content]);
-	const digestDateLabel = formatDigestDate(digest?.scheduledFor ?? digest?.createdAt ?? null);
 	const noteTitle = currentItem?.title?.trim() || "Untitled note";
 	const canMoveBack = currentIndex > 0;
 	const canMoveForward = currentIndex < items.length - 1;
@@ -84,46 +83,6 @@ function AppPage() {
 		<AppLayout maxWidth="max-w-[600px]">
 			<div className="flex flex-col gap-10">
 				{/* Top Info & Navigation */}
-				<div className="flex items-center justify-between border-b border-border/40 pb-6">
-					<div className="space-y-1">
-						<div className="flex items-center gap-2">
-							<Sparkles className="h-3.5 w-3.5 text-primary" />
-							<span className="font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">Today’s Digest</span>
-						</div>
-						<p className="font-ui text-xs font-semibold text-muted-foreground/70">{digestDateLabel}</p>
-					</div>
-
-					{items.length > 0 && (
-						<div className="flex items-center gap-4">
-							<div className="text-right">
-								<p className="font-ui text-[10px] font-medium uppercase tracking-widest text-muted-foreground/50">Note</p>
-								<p className="font-ui text-[13px] font-bold text-foreground/80">
-									{currentIndex + 1} <span className="mx-0.5 text-muted-foreground/30">/</span> {items.length}
-								</p>
-							</div>
-							<div className="flex items-center gap-1">
-								<Button
-									variant="ghost"
-									size="icon"
-									className="h-8 w-8 rounded-full"
-									disabled={!canMoveBack}
-									onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
-								>
-									<ChevronLeft className="h-4 w-4" />
-								</Button>
-								<Button
-									variant="ghost"
-									size="icon"
-									className="h-8 w-8 rounded-full"
-									disabled={!canMoveForward}
-									onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, items.length - 1))}
-								>
-									<ChevronRight className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
-					)}
-				</div>
 
 				{digestQuery.isLoading ? (
 					<div className="space-y-8 animate-pulse">
@@ -200,15 +159,35 @@ function AppPage() {
 						<div className="relative">
 							<div className="flex items-center justify-between border-t border-border/50 pt-8">
 								<div className="flex items-center gap-3">
-									<div className="rounded-full border border-border/60 bg-white/50 p-1.5 shadow-sm">
-										<SourceIcon sourceKind={currentItem?.sourceKind ?? null} />
-									</div>
-									<div className="flex flex-col">
-										<p className="font-ui text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40">Source</p>
-										<p className="font-ui text-[13px] font-semibold text-muted-foreground/70">
-											{currentItem?.sourceName || (currentItem?.sourceKind === "obsidian" ? "Obsidian" : "Notion")}
-										</p>
-									</div>
+									{items.length > 0 && (
+										<div className="flex items-center gap-4">
+											<div className="text-center">
+												<div className="flex items-center gap-1">
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 rounded-full"
+														disabled={!canMoveBack}
+														onClick={() => setCurrentIndex((prev) => Math.max(prev - 1, 0))}
+													>
+														<ChevronLeft className="h-4 w-4" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 rounded-full"
+														disabled={!canMoveForward}
+														onClick={() => setCurrentIndex((prev) => Math.min(prev + 1, items.length - 1))}
+													>
+														<ChevronRight className="h-4 w-4" />
+													</Button>
+												</div>
+												<p className="font-ui text-[13px] font-bold text-foreground/80">
+													{currentIndex + 1} <span className="mx-0.5 text-muted-foreground/30">/</span> {items.length}
+												</p>
+											</div>
+										</div>
+									)}
 								</div>
 
 								<div className="flex items-center gap-2">

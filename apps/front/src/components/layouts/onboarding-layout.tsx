@@ -38,12 +38,12 @@ export function OnboardingLayout({ children, footer }: OnboardingLayoutProps) {
 			<img
 				src="/cloud.png"
 				alt=""
-				className="pointer-events-none absolute -bottom-10 -left-24 w-[500px] select-none opacity-80 dark:opacity-20 dark:brightness-50"
+				className="animate-cloud-drift pointer-events-none absolute -bottom-10 -left-24 w-[500px] select-none opacity-80 dark:opacity-20 dark:brightness-50"
 			/>
 			<img
 				src="/cloud.png"
 				alt=""
-				className="pointer-events-none absolute -bottom-20 -right-24 w-[530px] select-none opacity-80 dark:opacity-20 dark:brightness-50"
+				className="animate-cloud-drift-reverse pointer-events-none absolute -bottom-20 -right-24 w-[530px] select-none opacity-80 dark:opacity-20 dark:brightness-50"
 			/>
 
 			<main className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12">
