@@ -1,6 +1,18 @@
 import { db } from "@daily-brain-bits/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { apiKey } from "better-auth/plugins";
+
+function resolveApiKeyFromHeaders(headers: Headers): string | null {
+  const authorization = headers.get("authorization") ?? headers.get("Authorization");
+  if (authorization && authorization.startsWith("Bearer ")) {
+    const token = authorization.slice("Bearer ".length).trim();
+    return token.length > 0 ? token : null;
+  }
+  const direct = headers.get("x-api-key");
+  return direct && direct.trim().length > 0 ? direct.trim() : null;
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
@@ -9,6 +21,12 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  plugins: [
+    apiKey({
+      enableSessionForAPIKeys: true,
+      apiKeyGetter: (ctx) => resolveApiKeyFromHeaders(ctx.request.headers),
+    }),
+  ],
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
