@@ -9,7 +9,7 @@ export interface RouterContext {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
 	component: () => (
-		<div className="min-h-screen bg-background">
+		<div className="min-h-screen">
 			<Outlet />
 		</div>
 	),

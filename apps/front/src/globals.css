@@ -38,29 +38,34 @@
 	--ring: 214 85% 67%;
 	--radius: 0.75rem;
 	--shadow-soft: 0 28px 70px rgba(15, 23, 42, 0.12);
+	--shadow-crisp: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .dark {
-	--background: 222 24% 8%;
+	--sky-top: 230 60% 4%;
+	--sky-bottom: 230 50% 10%;
+	--app-gradient: linear-gradient(180deg, hsl(var(--sky-top)) 0%, hsl(var(--sky-bottom)) 100%);
+	--background: 230 60% 4%;
 	--foreground: 210 40% 98%;
-	--card: 222 24% 10%;
+	--card: 230 60% 6%;
 	--card-foreground: 210 40% 98%;
-	--popover: 222 24% 10%;
+	--popover: 230 60% 6%;
 	--popover-foreground: 210 40% 98%;
 	--primary: 214 85% 70%;
 	--primary-foreground: 222 24% 10%;
-	--secondary: 220 16% 18%;
+	--secondary: 230 30% 12%;
 	--secondary-foreground: 210 40% 98%;
-	--muted: 220 16% 18%;
-	--muted-foreground: 215 20% 70%;
-	--accent: 220 16% 18%;
+	--muted: 230 30% 12%;
+	--muted-foreground: 215 20% 60%;
+	--accent: 230 30% 12%;
 	--accent-foreground: 210 40% 98%;
 	--destructive: 0 62.8% 30.6%;
 	--destructive-foreground: 210 40% 98%;
-	--border: 220 16% 20%;
-	--input: 220 16% 20%;
+	--border: 230 40% 12%;
+	--input: 230 40% 12%;
 	--ring: 214 85% 70%;
-	--app-gradient: linear-gradient(180deg, hsl(214 50% 18%) 0%, hsl(214 40% 10%) 100%);
+	--shadow-soft: 0 40px 80px -20px rgba(0, 0, 0, 0.8);
+	--shadow-crisp: 0 0 0 1px hsl(230 40% 14%), 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
 @theme inline {
