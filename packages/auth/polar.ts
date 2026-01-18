@@ -86,31 +86,20 @@ const upsertCustomerFromPayload = async (payload: CustomerWebhookPayload) => {
 		if (!userId) {
 			// Last resort: try to find user by email if customer has an email
 			if (typeof customer.email === "string" && customer.email.length > 0) {
-				console.log("[polar.webhook] Trying to resolve userId by email:", customer.email);
 				const foundUser = await db.query.user.findFirst({
 					where: (usersTable, { eq }) => eq(usersTable.email, customer.email),
 				});
 				if (foundUser) {
 					userId = foundUser.id;
-					console.log("[polar.webhook] Found user by email:", userId);
-				} else {
-					console.log("[polar.webhook] No user found with email:", customer.email);
 				}
 			}
 		}
 		if (!userId) {
-			console.log("[polar.webhook] customer payload could not resolve userId", {
-				customerId,
-				externalId: customer.externalId,
-				metadata: customer.metadata,
-				email: customer.email,
-			});
 			return;
 		}
 
 		const now = new Date();
-		console.log("[polar.webhook] Inserting/updating billing customer:", { userId, customerId, email: customer.email });
-		const result = await db
+		await db
 			.insert(billingCustomers)
 			.values({
 				userId,
@@ -128,9 +117,7 @@ const upsertCustomerFromPayload = async (payload: CustomerWebhookPayload) => {
 					metadataJson: customer.metadata ?? null,
 					updatedAt: now,
 				},
-			})
-			.returning();
-		console.log("[polar.webhook] Successfully upserted billing customer:", result);
+			});
 	} catch (error) {
 		console.error("[polar.webhook] Error upserting customer:", error);
 		throw error;
@@ -160,32 +147,24 @@ const resolveUserIdForSubscription = async (subscription: SubscriptionWebhookPay
 	// before the customer event, or the customer was created without proper metadata.
 	// Try to find the customer by looking up the customer in Polar and then matching by email.
 	// Note: We can't directly get email from subscription payload, so we'd need to fetch from Polar API
-	// For now, return null and log the issue
-	console.log("[polar.webhook] Subscription customer not found in DB:", { customerId, subscriptionId: subscription.id });
+	// For now, return null
 	return null;
 };
 
 const upsertSubscriptionFromPayload = async (payload: SubscriptionWebhookPayload) => {
 	try {
-		console.log("[polar.webhook] upsertSubscriptionFromPayload called with:", JSON.stringify(payload, null, 2));
 		const subscription = getSubscriptionFromPayload(payload);
 		if (!subscription) {
-			console.log("[polar.webhook] subscription payload missing");
 			return;
 		}
 
 		const subscriptionId = subscription.id;
 		if (typeof subscriptionId !== "string") {
-			console.log("[polar.webhook] subscription id missing", subscription);
 			return;
 		}
 
 		const userId = await resolveUserIdForSubscription(subscription);
 		if (!userId) {
-			console.log("[polar.webhook] subscription payload could not resolve userId", {
-				subscriptionId,
-				customerId: subscription.customerId,
-			});
 			return;
 		}
 
@@ -195,14 +174,7 @@ const upsertSubscriptionFromPayload = async (payload: SubscriptionWebhookPayload
 		// Extract first price ID from prices array if available
 		const priceId = subscription.prices && subscription.prices.length > 0 && "id" in subscription.prices[0] ? subscription.prices[0].id : null;
 
-		console.log("[polar.webhook] Inserting/updating billing subscription:", {
-			subscriptionId,
-			userId,
-			customerId,
-			status,
-			priceId,
-		});
-		const result = await db
+		await db
 			.insert(billingSubscriptions)
 			.values({
 				id: subscriptionId,
@@ -236,9 +208,7 @@ const upsertSubscriptionFromPayload = async (payload: SubscriptionWebhookPayload
 					metadataJson: subscription.metadata ?? null,
 					updatedAt: now,
 				},
-			})
-			.returning();
-		console.log("[polar.webhook] Successfully upserted billing subscription:", result);
+			});
 	} catch (error) {
 		console.error("[polar.webhook] Error upserting subscription:", error);
 		throw error;
@@ -277,15 +247,12 @@ export const createPolarPlugin = () => {
 	];
 
 	if (process.env.POLAR_WEBHOOK_SECRET) {
-		console.log("[polar.webhook] Setting up webhooks with secret");
 		const webhookPlugin = webhooks({
 			secret: process.env.POLAR_WEBHOOK_SECRET,
 			onCustomerStateChanged: (payload) => {
-				console.log("[polar.webhook] onCustomerStateChanged", payload);
 				return upsertCustomerFromPayload(payload);
 			},
 			onPayload: async (payload) => {
-				console.log("[polar.webhook] onPayload", payload);
 				try {
 					if (isSubscriptionWebhook(payload)) {
 						return await upsertSubscriptionFromPayload(payload);
@@ -300,10 +267,8 @@ export const createPolarPlugin = () => {
 				}
 			},
 		});
-		// @ts-expect-error - TypeScript has issues inferring the union type for plugins array, but runtime works correctly
+		// @ts-expect-error
 		pluginUse.push(webhookPlugin);
-	} else {
-		console.log("[polar.webhook] POLAR_WEBHOOK_SECRET not set, webhooks disabled");
 	}
 
 	return polar({

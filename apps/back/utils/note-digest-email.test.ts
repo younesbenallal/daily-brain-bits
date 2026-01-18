@@ -56,10 +56,10 @@ describe("note-digest-email", () => {
 	});
 
 	it("buildExcerpt strips markdown and truncates long text", () => {
-		const longText = "# Title\n" + "a".repeat(300);
+		const longText = "# Title\n" + "a".repeat(900);
 		const excerpt = buildExcerpt(longText);
 		expect(excerpt).toContain("a");
-		expect(excerpt.length).toBeLessThanOrEqual(240);
+		expect(excerpt.length).toBeLessThanOrEqual(640);
 		expect(excerpt.endsWith("...")).toBe(true);
 	});
 

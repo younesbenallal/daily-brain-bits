@@ -14,6 +14,8 @@ export type DigestSnapshot = {
 	items: DigestEmailItem[];
 };
 
+const EXCERPT_MAX_LENGTH = 640;
+
 export function buildDigestEmail(params: {
 	frequency: DigestFrequency;
 	userName?: string | null;
@@ -32,10 +34,20 @@ export function buildDigestEmail(params: {
 			const sourceLabel = formatSourceLabel(item);
 			return `
 				<tr>
-					<td style="padding: var(--space-md) 0; border-bottom: 1px solid var(--border);">
-						<div style="font-size: var(--font-md); font-weight: 600; color: var(--text); margin-bottom: var(--space-xs);">${escapeHtml(item.title)}</div>
-						<div style="font-size: var(--font-sm); line-height: 1.5; color: var(--muted); margin-bottom: var(--space-sm);">${escapeHtml(item.excerpt)}</div>
-						${sourceLabel ? `<div style="font-size: var(--font-xs); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">${escapeHtml(sourceLabel)}</div>` : ""}
+					<td style="padding: 0 0 var(--space-md) 0;">
+						<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft);">
+							<tr>
+								<td style="padding: var(--space-md);">
+									<div style="font-family: var(--font-display); font-size: var(--font-md); font-weight: 600; color: var(--foreground); margin-bottom: var(--space-xs);">
+										${escapeHtml(item.title)}
+									</div>
+									<div style="font-size: var(--font-sm); line-height: 1.7; color: var(--muted-foreground); margin-bottom: var(--space-sm);">
+										${escapeHtml(item.excerpt)}
+									</div>
+									${sourceLabel ? `<div style="font-size: var(--font-xs); color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.12em;">${escapeHtml(sourceLabel)}</div>` : ""}
+								</td>
+							</tr>
+						</table>
 					</td>
 				</tr>
 			`;
@@ -50,41 +62,47 @@ export function buildDigestEmail(params: {
 		<title>${escapeHtml(subject)}</title>
 		<style>
 			:root {
-				--bg: #f7f4ee;
+				--app-gradient: linear-gradient(180deg, hsl(213 100% 68%) 0%, hsl(214 100% 80%) 100%);
+				--background: hsl(214 100% 98%);
+				--foreground: hsl(222 20% 18%);
+				--muted-foreground: hsl(220 12% 45%);
+				--primary: hsl(214 85% 67%);
+				--primary-foreground: hsl(210 40% 98%);
 				--card: #ffffff;
-				--text: #1f2933;
-				--muted: #6b7280;
-				--border: #e6e0d6;
-				--accent: #1f6feb;
-				--accent-text: #ffffff;
+				--border: hsl(220 14% 92%);
+				--shadow-soft: 0 28px 70px rgba(15, 23, 42, 0.12);
+				--font-display: "Crimson Pro", "Times New Roman", serif;
+				--font-body: "DM Sans", "Helvetica Neue", Arial, sans-serif;
+				--font-ui: "Mona Sans", "DM Sans", "Helvetica Neue", Arial, sans-serif;
 				--space-xl: 32px;
 				--space-lg: 24px;
 				--space-md: 16px;
-				--space-sm: 8px;
+				--space-sm: 10px;
 				--space-xs: 6px;
-				--radius-lg: 18px;
+				--radius-lg: 16px;
 				--radius-pill: 999px;
-				--font-lg: 26px;
+				--font-xl: 28px;
+				--font-lg: 20px;
 				--font-md: 16px;
-				--font-sm: 14px;
+				--font-sm: 15px;
 				--font-xs: 12px;
 			}
 		</style>
 	</head>
-	<body style="margin: 0; padding: 0; background: var(--bg); font-family: 'Georgia', 'Times New Roman', serif; color: var(--text);">
-		<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: var(--bg); padding: var(--space-xl) 0;">
+	<body style="margin: 0; padding: 0; background: var(--background); font-family: var(--font-body); color: var(--foreground);">
+		<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: var(--background); background-image: var(--app-gradient); padding: var(--space-xl) 0;">
 			<tr>
 				<td align="center">
-					<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-xl);">
+					<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-xl); box-shadow: var(--shadow-soft);">
 						<tr>
 							<td>
-								<div style="font-size: var(--font-xs); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: var(--space-sm);">
+								<div style="font-size: var(--font-xs); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-foreground); margin-bottom: var(--space-sm); font-family: var(--font-ui);">
 									${escapeHtml(frequencyLabel)} digest · ${escapeHtml(digestDate)}
 								</div>
-								<h1 style="margin: 0 0 var(--space-sm) 0; font-size: var(--font-lg); font-weight: 600; color: var(--text);">
+								<h1 style="margin: 0 0 var(--space-sm) 0; font-size: var(--font-xl); font-weight: 600; color: var(--foreground); font-family: var(--font-display);">
 									Hello ${escapeHtml(greetingName)},
 								</h1>
-								<p style="margin: 0 0 var(--space-lg) 0; font-size: var(--font-md); line-height: 1.6; color: var(--muted);">
+								<p style="margin: 0 0 var(--space-lg) 0; font-size: var(--font-md); line-height: 1.7; color: var(--muted-foreground);">
 									Here is your ${escapeHtml(frequencyLabel.toLowerCase())} selection of notes to revisit today.
 								</p>
 							</td>
@@ -98,13 +116,13 @@ export function buildDigestEmail(params: {
 						</tr>
 						<tr>
 							<td style="padding-top: var(--space-lg);">
-								<a href="${escapeAttribute(viewUrl)}" style="display: inline-block; padding: 12px 20px; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-text); text-decoration: none; font-size: var(--font-sm); font-weight: 600;">
+								<a href="${escapeAttribute(viewUrl)}" style="display: inline-block; padding: 12px 22px; border-radius: var(--radius-pill); background: var(--primary); color: var(--primary-foreground); text-decoration: none; font-size: var(--font-sm); font-weight: 600; font-family: var(--font-ui);">
 									View this digest in the app
 								</a>
 							</td>
 						</tr>
 						<tr>
-							<td style="padding-top: var(--space-lg); font-size: var(--font-xs); color: var(--muted);">
+							<td style="padding-top: var(--space-lg); font-size: var(--font-xs); color: var(--muted-foreground); font-family: var(--font-ui);">
 								Daily Brain Bits · Sent to help you retain what matters.
 							</td>
 						</tr>
@@ -140,7 +158,7 @@ export function buildExcerpt(content: string): string {
 	if (!plain) {
 		return "No preview available.";
 	}
-	return truncateText(plain, 240);
+	return truncateText(plain, EXCERPT_MAX_LENGTH);
 }
 
 function stripMarkdown(input: string): string {

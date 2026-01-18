@@ -47,7 +47,7 @@ function OnboardingFinalPage() {
 					<p className="text-sm text-muted-foreground">We've successfully synced your notes.</p>
 				</div>
 
-				<p className="text-sm text-muted-foreground">From now on, you will receive a daily note</p>
+				<p className="text-sm text-muted-foreground">From now on, you will receive your notes in your inbox.</p>
 
 				<div className="flex justify-end">
 					<Button
