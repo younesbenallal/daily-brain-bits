@@ -1,4 +1,5 @@
 import { billingCustomers, billingSubscriptions, db } from "@daily-brain-bits/db";
+import { eq } from "drizzle-orm";
 import { checkout, polar, portal, usage, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import type { WebhookCustomerCreatedPayload } from "@polar-sh/sdk/models/components/webhookcustomercreatedpayload";
@@ -87,7 +88,7 @@ const upsertCustomerFromPayload = async (payload: CustomerWebhookPayload) => {
 			// Last resort: try to find user by email if customer has an email
 			if (typeof customer.email === "string" && customer.email.length > 0) {
 				const foundUser = await db.query.user.findFirst({
-					where: (usersTable, { eq }) => eq(usersTable.email, customer.email),
+					where: (usersTable) => eq(usersTable.email, customer.email),
 				});
 				if (foundUser) {
 					userId = foundUser.id;
@@ -136,7 +137,7 @@ const resolveUserIdForSubscription = async (subscription: SubscriptionWebhookPay
 	}
 
 	const customer = await db.query.billingCustomers.findFirst({
-		where: (billingCustomersTable, { eq }) => eq(billingCustomersTable.polarCustomerId, customerId),
+		where: (billingCustomersTable) => eq(billingCustomersTable.polarCustomerId, customerId),
 	});
 
 	if (customer?.userId) {
@@ -172,7 +173,10 @@ const upsertSubscriptionFromPayload = async (payload: SubscriptionWebhookPayload
 		const now = new Date();
 		const status = subscription.status ?? "unknown";
 		// Extract first price ID from prices array if available
-		const priceId = subscription.prices && subscription.prices.length > 0 && subscription.prices[0] && "id" in subscription.prices[0] ? subscription.prices[0].id : null;
+		const priceId =
+			subscription.prices && subscription.prices.length > 0 && subscription.prices[0] && "id" in subscription.prices[0]
+				? subscription.prices[0].id
+				: null;
 
 		await db
 			.insert(billingSubscriptions)
