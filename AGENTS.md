@@ -77,6 +77,8 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
 - `docs/integrations-notion.md` — Notion incremental database sync (cursor, rate limits, markdown).
 - `docs/integrations-obsidian.md` — Obsidian plugin push sync (batching, local index).
 - `docs/note-digest-selection.md` — Note digest scoring + selection algorithm.
+- `docs/note-digest-email-delivery.md` — Digest email delivery pipeline via Resend.
+- `docs/billing-subscriptions.md` — Billing and subscription management via Polar.
 
 Todo list:
 

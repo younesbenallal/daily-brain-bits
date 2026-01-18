@@ -1,3 +1,4 @@
+import { env } from "./utils/env";
 import { auth } from "@daily-brain-bits/auth";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
@@ -23,12 +24,12 @@ type RequestContext = {
 	session: typeof auth.$Infer.Session.session | null;
 };
 
-const app = new Hono<{ Variables: RequestContext }>()
+	const app = new Hono<{ Variables: RequestContext }>()
 	//.use("*", logger({}))
 	.use(
 		"*",
 		cors({
-			origin: process.env.FRONTEND_URL || "http://localhost:3000",
+			origin: env.FRONTEND_URL,
 			credentials: true,
 		}),
 	)
@@ -77,7 +78,7 @@ const app = new Hono<{ Variables: RequestContext }>()
 		try {
 			return await next();
 		} catch (error) {
-			if (!process.env.NODE_ENV || process.env.NODE_ENV === "development") {
+			if (!env.NODE_ENV || env.NODE_ENV === "development") {
 				console.error(error);
 			}
 			// Log error with context information
@@ -125,7 +126,7 @@ const rpcHandler = new RPCHandler(ORPCRouter, {
 });
 
 // Mount oRPC routes
-const port = Number(process.env.PORT) || 3001;
+const port = env.PORT ?? 3001;
 
 export type AppType = typeof app;
 export type ORPCRouterType = typeof ORPCRouter;

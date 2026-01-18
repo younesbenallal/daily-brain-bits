@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RotateCw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { NoteContent } from "@/components/dash/dash-note-content";
+import { NoteProperties } from "@/components/dash/dash-note-properties";
 import { AppLayout } from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,16 +101,10 @@ function AppPage() {
 	);
 
 	const currentItem = items[currentIndex];
-	const normalizedContent = useMemo(
-		() => stripFrontmatter(currentItem?.content ?? "", currentItem?.sourceKind),
-		[currentItem?.content, currentItem?.sourceKind],
-	);
-	const contentBlocks = useMemo(() => parseContentBlocks(normalizedContent), [normalizedContent]);
-	const properties = useMemo(() => normalizeProperties(currentItem?.properties), [currentItem?.properties]);
-	const hasProperties = properties.length > 0;
 	const noteTitle = currentItem?.title?.trim() || "Untitled note";
 	const canMoveBack = currentIndex > 0;
 	const canMoveForward = currentIndex < items.length - 1;
+	const obsidianVaultName = currentItem?.sourceKind === "obsidian" ? (currentItem?.sourceName ?? "Obsidian Vault") : null;
 
 	return (
 		<AppLayout maxWidth="max-w-[600px]">
@@ -169,73 +165,9 @@ function AppPage() {
 									</DropdownMenu>
 								)}
 							</div>
-							{showProperties && currentItem && (
-								<section className="space-y-3 border border-muted  p-3 rounded-md">
-									<div className="flex items-center justify-between text-sm text-muted-foreground">
-										<span>Properties</span>
-										<span>{hasProperties ? `${properties.length} fields` : "None"}</span>
-									</div>
-									{hasProperties ? (
-										<div className="grid gap-3 sm:grid-cols-2">
-											{properties.map((property) => (
-												<div key={property.key} className="">
-													<div className="text-[11px] font-semibold uppercase text-muted-foreground">{property.key}</div>
-													<div className="mt-1 text-sm text-foreground">{property.value}</div>
-												</div>
-											))}
-										</div>
-									) : (
-										<p className="text-sm text-muted-foreground italic">No properties available for this note.</p>
-									)}
-								</section>
-							)}
+							{showProperties && currentItem && <NoteProperties properties={currentItem.properties} />}
 
-							<div className="max-h-[50vh] space-y-6 overflow-y-auto pr-4 font-body text-[16px] leading-relaxed text-muted-foreground/90 selection:bg-primary/10">
-								{contentBlocks.length > 0 ? (
-									contentBlocks.map((block, index) => {
-										const blockKey = `${block.type}-${index}`;
-										if (block.type === "heading") {
-											const sizeClass = block.level === 1 ? "text-2xl" : block.level === 2 ? "text-xl" : "text-lg";
-											return (
-												<h3 key={blockKey} className={cn("font-display font-semibold text-foreground mt-2", sizeClass)}>
-													{block.content}
-												</h3>
-											);
-										}
-										if (block.type === "quote") {
-											return (
-												<blockquote key={blockKey} className="border-l-3 border-primary/20 pl-5 italic text-foreground/70">
-													{block.content}
-												</blockquote>
-											);
-										}
-										if (block.type === "list") {
-											return (
-												<ul key={blockKey} className="space-y-3 pl-5">
-													{block.items.map((item, itemIndex) => (
-														<li key={`${blockKey}-${itemIndex}`} className="list-disc marker:text-primary/40">
-															{item}
-														</li>
-													))}
-												</ul>
-											);
-										}
-										if (block.type === "code") {
-											return (
-												<pre
-													key={blockKey}
-													className="overflow-x-auto rounded-xl border border-border/50 bg-muted/30 p-4 font-mono text-[13px] text-foreground/80"
-												>
-													{block.content}
-												</pre>
-											);
-										}
-										return <p key={blockKey}>{block.content}</p>;
-									})
-								) : (
-									<p className="italic opacity-60">This note has no readable content.</p>
-								)}
-							</div>
+							<NoteContent content={currentItem?.content ?? ""} sourceKind={currentItem?.sourceKind} vaultName={obsidianVaultName} />
 						</article>
 
 						{/* Footer Actions & Source */}
@@ -314,156 +246,4 @@ function AppPage() {
 			</div>
 		</AppLayout>
 	);
-}
-
-type ContentBlock =
-	| { type: "heading"; content: string; level: number }
-	| { type: "paragraph"; content: string }
-	| { type: "quote"; content: string }
-	| { type: "list"; items: string[] }
-	| { type: "code"; content: string };
-
-type PropertyEntry = {
-	key: string;
-	value: string;
-};
-
-function stripFrontmatter(content: string, sourceKind: "obsidian" | "notion" | null | undefined): string {
-	if (sourceKind !== "obsidian") {
-		return content;
-	}
-	const normalized = content.replace(/\r\n/g, "\n");
-	const lines = normalized.split("\n");
-	if (lines[0]?.trim() !== "---") {
-		return content;
-	}
-	let endIndex = -1;
-	for (let i = 1; i < lines.length; i += 1) {
-		const line = lines[i]?.trim();
-		if (line === "---" || line === "...") {
-			endIndex = i;
-			break;
-		}
-	}
-	if (endIndex === -1) {
-		return content;
-	}
-	const remaining = lines
-		.slice(endIndex + 1)
-		.join("\n")
-		.replace(/^\n+/, "");
-	return remaining;
-}
-
-function normalizeProperties(properties: Record<string, unknown> | null | undefined): PropertyEntry[] {
-	if (!properties) {
-		return [];
-	}
-	const entries = Object.entries(properties)
-		.map(([key, value]) => {
-			const normalized = formatPropertyValue(value);
-			if (!normalized) {
-				return null;
-			}
-			return { key, value: normalized };
-		})
-		.filter((entry): entry is PropertyEntry => Boolean(entry));
-
-	return entries.sort((a, b) => a.key.localeCompare(b.key));
-}
-
-function formatPropertyValue(value: unknown): string | null {
-	if (value === null || value === undefined) {
-		return null;
-	}
-	if (typeof value === "string") {
-		const trimmed = value.trim();
-		return trimmed.length > 0 ? trimmed : null;
-	}
-	if (typeof value === "number") {
-		return Number.isFinite(value) ? value.toString() : null;
-	}
-	if (typeof value === "boolean") {
-		return value ? "Yes" : "No";
-	}
-	if (Array.isArray(value)) {
-		const items = value.map((item) => formatPropertyValue(item)).filter((item): item is string => Boolean(item));
-		return items.length > 0 ? items.join(", ") : null;
-	}
-	if (typeof value === "object") {
-		try {
-			const serialized = JSON.stringify(value);
-			return serialized && serialized !== "{}" ? serialized : null;
-		} catch {
-			return null;
-		}
-	}
-	return null;
-}
-
-function parseContentBlocks(content: string): ContentBlock[] {
-	if (!content.trim()) {
-		return [];
-	}
-
-	const lines = content.replace(/\r\n/g, "\n").split("\n");
-	const blocks: ContentBlock[] = [];
-	let index = 0;
-
-	while (index < lines.length) {
-		const line = lines[index];
-
-		if (!line.trim()) {
-			index += 1;
-			continue;
-		}
-
-		if (line.startsWith("```")) {
-			const codeLines: string[] = [];
-			index += 1;
-			while (index < lines.length && !lines[index].startsWith("```")) {
-				codeLines.push(lines[index]);
-				index += 1;
-			}
-			index += 1;
-			blocks.push({ type: "code", content: codeLines.join("\n").trimEnd() });
-			continue;
-		}
-
-		if (/^#{1,6}\s/.test(line)) {
-			const level = line.match(/^#{1,6}/)?.[0].length ?? 1;
-			blocks.push({ type: "heading", level, content: line.replace(/^#{1,6}\s*/, "").trim() });
-			index += 1;
-			continue;
-		}
-
-		if (/^>\s?/.test(line)) {
-			const quoteLines: string[] = [];
-			while (index < lines.length && /^>\s?/.test(lines[index])) {
-				quoteLines.push(lines[index].replace(/^>\s?/, "").trim());
-				index += 1;
-			}
-			blocks.push({ type: "quote", content: quoteLines.join(" ") });
-			continue;
-		}
-
-		if (/^(-|\*|•)\s+/.test(line)) {
-			const items: string[] = [];
-			while (index < lines.length && /^(-|\*|•)\s+/.test(lines[index])) {
-				items.push(lines[index].replace(/^(-|\*|•)\s+/, "").trim());
-				index += 1;
-			}
-			blocks.push({ type: "list", items });
-			continue;
-		}
-
-		const paragraph: string[] = [];
-		while (index < lines.length && lines[index].trim()) {
-			paragraph.push(lines[index].trim());
-			index += 1;
-		}
-		blocks.push({ type: "paragraph", content: paragraph.join(" ") });
-	}
-
-	return blocks;
 }

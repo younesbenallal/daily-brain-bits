@@ -1,7 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Crimson+Pro&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Mona+Sans:ital,wght@0,200..900;1,200..900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Young+Serif&display=swap");
 
 @import "tailwindcss";
 
@@ -11,7 +10,6 @@
 	--font-display: "Crimson Pro", "Times New Roman", serif;
 	--font-body: "DM Sans", "Helvetica Neue", Arial, sans-serif;
 	--font-ui: "Mona Sans", "DM Sans", "Helvetica Neue", Arial, sans-serif;
-	--font-logo: "Young Serif", "Times New Roman", serif;
 
 	--sky-top: 213 100% 68%;
 	--sky-bottom: 214 100% 80%;

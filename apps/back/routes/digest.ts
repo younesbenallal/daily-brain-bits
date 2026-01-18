@@ -1,9 +1,11 @@
-import { generateNoteDigest } from "@daily-brain-bits/core";
 import { db, documents, integrationConnections, noteDigestItems, noteDigests, reviewStates, userSettings } from "@daily-brain-bits/db";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
+import { decodeDocumentContent } from "../utils/document-content";
+import { prepareDigestItems } from "../utils/digest-generation";
+import { upsertDigestWithItems } from "../utils/digest-storage";
 
 const MIN_PRIORITY_WEIGHT = 0.1;
 const MAX_PRIORITY_WEIGHT = 5;
@@ -18,17 +20,6 @@ type DocumentSnapshot = {
 	connectionId: number;
 	metadataJson: unknown | null;
 };
-
-function decodeContent(document: DocumentSnapshot | undefined): string {
-	if (!document || document.contentAlg !== "none") {
-		return "";
-	}
-	try {
-		return Buffer.from(document.contentCiphertext, "base64").toString("utf8");
-	} catch {
-		return "";
-	}
-}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -85,11 +76,19 @@ const today = baseRoute
 			throw new ORPCError("Unauthorized");
 		}
 
-		const digest = await db.query.noteDigests.findFirst({
-			where: eq(noteDigests.userId, userId),
-			columns: { id: true, scheduledFor: true, createdAt: true, status: true },
-			orderBy: [desc(noteDigests.createdAt)],
+		const sentDigest = await db.query.noteDigests.findFirst({
+			where: and(eq(noteDigests.userId, userId), eq(noteDigests.status, "sent")),
+			columns: { id: true, scheduledFor: true, createdAt: true, status: true, sentAt: true },
+			orderBy: [desc(noteDigests.sentAt), desc(noteDigests.createdAt)],
 		});
+
+		const digest =
+			sentDigest ??
+			(await db.query.noteDigests.findFirst({
+				where: eq(noteDigests.userId, userId),
+				columns: { id: true, scheduledFor: true, createdAt: true, status: true },
+				orderBy: [desc(noteDigests.createdAt)],
+			}));
 
 		if (!digest) {
 			return { digest: null };
@@ -163,7 +162,7 @@ const today = baseRoute
 				documentId: item.documentId,
 				position: item.position,
 				title: document?.title ?? null,
-				content: decodeContent(document),
+				content: decodeDocumentContent(document),
 				properties,
 				sourceKind: connection?.kind ?? null,
 				sourceName: connection?.displayName ?? null,
@@ -210,126 +209,54 @@ const regenerate = baseRoute
 			orderBy: [desc(noteDigests.createdAt)],
 		});
 
-		const documentRows = await db.query.documents.findMany({
-			where: and(eq(documents.userId, userId), isNull(documents.deletedAtSource)),
-			columns: { id: true, contentHash: true },
+		const digestPlan = await prepareDigestItems({
+			userId,
+			notesPerDigest,
+			now: new Date(),
 		});
-		console.log("[digest.regenerate] documents", { userId, count: documentRows.length });
+		console.log("[digest.regenerate] documents", { userId, hasDocuments: digestPlan.hasDocuments });
 
-		if (documentRows.length === 0) {
+		if (!digestPlan.hasDocuments) {
 			const now = new Date();
-			let digestId: number | null = existingDigest?.id ?? null;
-
-			if (digestId) {
-				await db.transaction(async (tx) => {
-					await tx.delete(noteDigestItems).where(eq(noteDigestItems.noteDigestId, digestId));
-					await tx
-						.update(noteDigests)
-						.set({ scheduledFor: now, sentAt: null, status: "scheduled", updatedAt: now })
-						.where(eq(noteDigests.id, digestId));
-				});
-			} else {
-				const [digest] = await db
-					.insert(noteDigests)
-					.values({
-						userId,
-						scheduledFor: now,
-						status: "scheduled",
-					})
-					.returning({ id: noteDigests.id });
-				digestId = digest?.id ?? null;
-			}
+			const digestId = await upsertDigestWithItems({
+				userId,
+				digestId: existingDigest?.id ?? null,
+				items: [],
+				status: "scheduled",
+				scheduledFor: now,
+				sentAt: null,
+			});
 
 			console.log("[digest.regenerate] no documents available", { userId, digestId });
 			return { digestId, itemCount: 0 };
 		}
-
-		const reviewRows = await db.query.reviewStates.findMany({
-			where: eq(reviewStates.userId, userId),
-			columns: {
-				documentId: true,
-				status: true,
-				nextDueAt: true,
-				lastSentAt: true,
-				priorityWeight: true,
-				deprioritizedUntil: true,
-			},
+		console.log("[digest.regenerate] plan", {
+			userId,
+			itemCount: digestPlan.itemCount,
 		});
-		console.log("[digest.regenerate] review states", { userId, count: reviewRows.length });
-
-		const reviewMap = new Map(reviewRows.map((row) => [row.documentId, row]));
-		const candidates = documentRows.map((doc) => {
-			const review = reviewMap.get(doc.id);
-			return {
-				documentId: doc.id,
-				status: review?.status ?? "new",
-				nextDueAt: review?.nextDueAt ?? null,
-				lastSentAt: review?.lastSentAt ?? null,
-				priorityWeight: review?.priorityWeight ?? null,
-				deprioritizedUntil: review?.deprioritizedUntil ?? null,
-			};
-		});
-
-		const plan = generateNoteDigest(candidates, {
-			batchSize: notesPerDigest,
-			now: new Date(),
-		});
-		console.log("[digest.regenerate] plan", { userId, itemCount: plan.items.length, skipped: plan.skipped.length });
-
 		const now = new Date();
-		const contentHashMap = new Map(documentRows.map((doc) => [doc.id, doc.contentHash]));
-		const digestItems = plan.items.map((item) => {
-			const contentHash = contentHashMap.get(item.documentId);
-			if (!contentHash) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "missing_document_hash" });
-			}
-			return {
-				documentId: item.documentId,
-				position: item.position,
-				contentHashAtSend: contentHash,
-			};
+		const digestItems = digestPlan.items;
+
+		const digestId = await upsertDigestWithItems({
+			userId,
+			digestId: existingDigest?.id ?? null,
+			items: digestItems,
+			status: "scheduled",
+			scheduledFor: now,
+			sentAt: null,
 		});
 
-		let digestId = existingDigest?.id ?? null;
-		await db.transaction(async (tx) => {
-			if (digestId) {
-				await tx.delete(noteDigestItems).where(eq(noteDigestItems.noteDigestId, digestId));
-				await tx
-					.update(noteDigests)
-					.set({ scheduledFor: now, sentAt: null, status: "scheduled", updatedAt: now })
-					.where(eq(noteDigests.id, digestId));
-			} else {
-				const [digest] = await tx
-					.insert(noteDigests)
-					.values({
-						userId,
-						scheduledFor: now,
-						status: "scheduled",
-					})
-					.returning({ id: noteDigests.id });
-				if (!digest?.id) {
-					throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "digest_create_failed" });
-				}
-				digestId = digest.id;
-			}
-
-			if (digestId && digestItems.length > 0) {
-				await tx.insert(noteDigestItems).values(
-					digestItems.map((item) => ({
-						noteDigestId: digestId as number,
-						...item,
-					})),
-				);
-			}
-		});
+		if (!digestId) {
+			throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "digest_create_failed" });
+		}
 
 		console.log("[digest.regenerate] replaced", {
 			userId,
 			digestId,
-			itemCount: plan.items.length,
+			itemCount: digestPlan.itemCount,
 		});
 
-		return { digestId, itemCount: plan.items.length };
+		return { digestId, itemCount: digestPlan.itemCount };
 	});
 
 const recommend = baseRoute

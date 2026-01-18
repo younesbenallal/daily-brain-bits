@@ -29,6 +29,8 @@ The Obsidian integration is a local-first sync: an Obsidian community plugin sca
 | `apps/back/src/integrations/sync-pipeline.ts` | Shared backend pipeline (conflict resolution + ingest). |
 | `packages/db/src/schema/index.ts` | Tables and enums (Drizzle schema). |
 | `packages/db/src/schema/models.ts` | Types inferred from the Drizzle schema (rows + inserts). |
+| `apps/front/src/lib/obsidian-content.ts` | Obsidian note content normalization (frontmatter + dataview stripping) and wiki link parsing. |
+| `apps/front/src/routes/(app)/dash.tsx` | Digest note rendering; applies Obsidian-specific parsing and deep-link rendering. |
 
 ## Main Flows
 
@@ -81,13 +83,33 @@ The plugin retries on transient failures:
   - `integration_connections`: connection record for the vault (`kind: "obsidian"`, `accountExternalId = vaultId`)
     - `configJson`: vault metadata (device IDs, settings)
     - `secretsJsonEncrypted`: plugin token hash placeholder
-  - `documents`: canonical note records (content stored in `contentCiphertext` fields for now)
-  - `sync_state`: last sync timestamps (no cursor for Obsidian push)
+- `documents`: canonical note records (content stored in `contentCiphertext` fields for now)
+- `sync_state`: last sync timestamps (no cursor for Obsidian push)
+
+## Frontend Note Rendering (Obsidian)
+
+When digest notes come from Obsidian, the frontend applies Obsidian-specific parsing rules before rendering:
+
+- Frontmatter blocks (`---`) are stripped from the visible content.
+- Dataview code fences (```dataview / ```dataviewjs) are removed entirely.
+- Wiki links (`[[...]]`) are rendered as deep links: `obsidian://open?vault=<vaultName>&file=<target>`.
+
+These rules are applied only when `sourceKind === "obsidian"` and use the connection `displayName` (vault name) returned with digest items.
 
 ## External Constraints
 
 - Obsidian can generate high-frequency local file events; batching + debounce is required.
 - `metadataCache` may lag immediately after edits; metadata extraction should tolerate missing cache entries.
+
+## Dependencies
+
+- Frontend: React + TanStack Router rendering for digest notes.
+- Obsidian URL scheme: relies on the `obsidian://` deep-link protocol to open the local vault.
+
+## Configuration
+
+- Vault display name is sourced from the Obsidian plugin’s `vaultName` and stored as `integration_connections.displayName`.
+- Deep links use `vaultName` and the wiki link target to open notes via `obsidian://open`.
 
 ## Testing / Verification
 
@@ -99,3 +121,12 @@ The plugin retries on transient failures:
 - Install/copy plugin output into a dev vault at `.obsidian/plugins/daily-brain-bits/` (with `manifest.json` + `dist/main.js`).
   - Configure settings (API base URL, vault/device IDs).
   - Run `DBB: Sync now` from the command palette and verify backend receives `/v1/integrations/obsidian/sync/batch`.
+
+### Frontend Parser Tests
+
+- `bun test apps/front/src/lib/obsidian-content.test.ts`
+
+## Future Work
+
+- Resolve wiki links to exact vault paths (including `#heading` and `^block` anchors).
+- Render embedded links (`![[...]]`) and additional Obsidian markdown constructs.
