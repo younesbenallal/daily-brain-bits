@@ -2,7 +2,7 @@
 
 ## Summary
 
-- Sends note digests via Resend on a daily/weekly/monthly cadence.
+- Generates daily digests for every user and sends emails via Resend on the user’s cadence.
 - Uses an idempotent send job that writes delivery metadata to `note_digests` and updates `review_states.last_sent_at`.
 
 ## Scope
@@ -19,6 +19,7 @@
 
 | Path | Responsibility |
 |------|----------------|
+| `apps/back/scripts/generate-daily-digests.ts` | Cron-style job to build a daily digest for every user. |
 | `apps/back/scripts/send-due-digests.ts` | Cron-style job to send due digests and update DB state. |
 | `apps/back/utils/digest-generation.ts` | Builds digest items using the note selection algorithm. |
 | `apps/back/utils/digest-schedule.ts` | Frequency resolution (daily/weekly/monthly) and due checks. |
@@ -31,17 +32,28 @@
 
 ## Main Flows
 
+### Generate daily digests
+
+1. For each user, check the most recent digest; if one already exists for today, skip.
+2. Generate a daily note selection and store it as `scheduled`.
+3. If no documents or no items are available, create a `skipped` digest with a reason.
+
 ### Send due digests
 
 1. Load users, settings, pro entitlements, and last sent digest timestamps.
 2. Resolve the effective frequency (free users are coerced to weekly) and stagger weekly/monthly sends by user hash to avoid same-day spikes.
 3. For each due user:
-   - Reuse a pending digest if present; otherwise generate a new digest plan and store items.
-   - If there are no items, mark the digest as `skipped`.
+   - Find today’s scheduled digest (or retry a failed one).
+   - If the digest has no items, mark it as `skipped`.
 4. Render HTML + text email from the stored digest snapshot.
 5. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
 6. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
 7. On failure: mark digest `failed` and store `error_json`.
+
+### Orchestrated run (recommended)
+
+1. `run-digest-cron.ts` runs daily: generate then send in a single process.
+2. This guarantees sends only happen after the daily digest generation has completed.
 
 ### Dashboard display
 
@@ -71,8 +83,12 @@
 - Run unit tests:
   - `bun test apps/back/utils/digest-schedule.test.ts`
   - `bun test apps/back/utils/note-digest-email.test.ts`
+- Generate daily digests locally:
+  - `bun --env-file apps/back/.env apps/back/scripts/generate-daily-digests.ts`
 - Run the job locally (dry run):
   - `DIGEST_EMAIL_DRY_RUN=true bun --env-file apps/back/.env apps/back/scripts/send-due-digests.ts`
+- Run the orchestrated daily cron:
+  - `bun --env-file apps/back/.env apps/back/scripts/run-digest-cron.ts`
 
 ## Configuration
 

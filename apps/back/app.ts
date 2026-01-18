@@ -1,15 +1,15 @@
-import { env } from "./utils/env";
 import { auth } from "@daily-brain-bits/auth";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { digestRouter } from "./routes/digest";
 import * as notionRoutes from "./routes/notion";
 import * as obsidianRoutes from "./routes/obsidian";
-import { digestRouter } from "./routes/digest";
 import { onboardingRouter } from "./routes/onboarding";
 import { settingsRouter } from "./routes/settings";
 import { createApiKeySession } from "./utils/api-key";
+import { env } from "./utils/env";
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,
@@ -24,7 +24,7 @@ type RequestContext = {
 	session: typeof auth.$Infer.Session.session | null;
 };
 
-	const app = new Hono<{ Variables: RequestContext }>()
+const app = new Hono<{ Variables: RequestContext }>()
 	//.use("*", logger({}))
 	.use(
 		"*",

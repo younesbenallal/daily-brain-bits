@@ -1,4 +1,5 @@
 import { boolean, doublePrecision, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { user } from "./auth";
 
 export const integrationKind = pgEnum("integration_kind", ["obsidian", "notion"]);
 
@@ -10,7 +11,9 @@ export const integrationConnections = pgTable(
 	"integration_connections",
 	{
 		id: serial("id").primaryKey(),
-		userId: text("user_id").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
 		kind: integrationKind("kind").notNull(),
 		status: integrationStatus("status").notNull(),
 		displayName: text("display_name"),
@@ -52,7 +55,9 @@ export const documents = pgTable(
 	"documents",
 	{
 		id: serial("id").primaryKey(),
-		userId: text("user_id").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
 		connectionId: integer("connection_id")
 			.notNull()
 			.references(() => integrationConnections.id, { onDelete: "cascade" }),
@@ -129,7 +134,9 @@ export const reviewStates = pgTable(
 		documentId: integer("document_id")
 			.primaryKey()
 			.references(() => documents.id, { onDelete: "cascade" }),
-		userId: text("user_id").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
 		status: reviewStatus("status").notNull(),
 		priorityWeight: doublePrecision("priority_weight"),
 		deprioritizedUntil: timestamp("deprioritized_until", {
@@ -154,7 +161,9 @@ export const reviewEvents = pgTable(
 	"review_events",
 	{
 		id: serial("id").primaryKey(),
-		userId: text("user_id").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
 		documentId: integer("document_id")
 			.notNull()
 			.references(() => documents.id, { onDelete: "cascade" }),
@@ -173,7 +182,9 @@ export const digestFrequency = pgEnum("digest_frequency", ["daily", "weekly", "m
 export const userSettings = pgTable(
 	"user_settings",
 	{
-		userId: text("user_id").primaryKey(),
+		userId: text("user_id")
+			.primaryKey()
+			.references(() => user.id, { onDelete: "cascade" }),
 		emailFrequency: digestFrequency("email_frequency").notNull().default("daily"),
 		notesPerDigest: integer("notes_per_digest").notNull().default(5),
 		quizEnabled: boolean("quiz_enabled").notNull().default(false),
@@ -186,7 +197,9 @@ export const userSettings = pgTable(
 export const billingCustomers = pgTable(
 	"billing_customers",
 	{
-		userId: text("user_id").primaryKey(),
+		userId: text("user_id")
+			.primaryKey()
+			.references(() => user.id, { onDelete: "cascade" }),
 		polarCustomerId: text("polar_customer_id").notNull(),
 		email: text("email"),
 		metadataJson: jsonb("metadata_json"),
@@ -200,7 +213,9 @@ export const billingSubscriptions = pgTable(
 	"billing_subscriptions",
 	{
 		id: text("id").primaryKey(),
-		userId: text("user_id").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
 		polarCustomerId: text("polar_customer_id"),
 		productId: text("product_id"),
 		priceId: text("price_id"),
@@ -227,7 +242,9 @@ export const noteDigests = pgTable(
 	"note_digests",
 	{
 		id: serial("id").primaryKey(),
-		userId: text("user_id").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
 		scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
 		sentAt: timestamp("sent_at", { withTimezone: true }),
 		status: noteDigestStatus("status").notNull(),

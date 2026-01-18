@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { isOnboardingStepComplete } from "@/lib/onboarding/step-validation";
 import { orpc } from "@/lib/orpc-client";
@@ -16,6 +16,8 @@ export const Route = createFileRoute("/(app)/onboarding/onboarding-loading")({
 function OnboardingLoadingPage() {
 	const router = useRouter();
 	const [step, setStep] = useState<"loading-one" | "loading-two" | "tutorial">("loading-one");
+	const { mutate: seedDigest } = useMutation(orpc.onboarding.seedDigest.mutationOptions());
+	const hasTriggeredSeedDigest = useRef(false);
 	const statusQuery = useQuery({
 		...orpc.onboarding.status.queryOptions(),
 		refetchInterval: REFRESH_INTERVAL,
@@ -38,6 +40,21 @@ function OnboardingLoadingPage() {
 		}
 		return undefined;
 	}, [step]);
+
+	useEffect(() => {
+		if (hasTriggeredSeedDigest.current) {
+			return;
+		}
+		if (!statusData?.hasDocuments) {
+			return;
+		}
+		if (statusData.noteDigestReady) {
+			return;
+		}
+
+		hasTriggeredSeedDigest.current = true;
+		seedDigest({}, { onError: (error) => console.error("Failed to start onboarding seed digest:", error) });
+	}, [seedDigest, statusData?.hasDocuments, statusData?.noteDigestReady]);
 
 	useEffect(() => {
 		if (canProceed) {

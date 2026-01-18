@@ -1,13 +1,11 @@
 import { billingSubscriptions, db, noteDigests, reviewStates } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { prepareDigestItems } from "../utils/digest-generation";
-import { type DigestFrequency, isDigestDue, resolveEffectiveFrequency } from "../utils/digest-schedule";
+import { type DigestFrequency, isDigestDue, isSameUtcDay, resolveEffectiveFrequency } from "../utils/digest-schedule";
 import { upsertDigestWithItems } from "../utils/digest-storage";
 import { env } from "../utils/env";
 import { buildDigestEmail, loadDigestSnapshot } from "../utils/note-digest-email";
 import { sendResendEmail } from "../utils/resend";
 
-const DEFAULT_NOTES_PER_DIGEST = 5;
 const DEFAULT_FREQUENCY: DigestFrequency = "daily";
 
 const DRY_RUN = env.DIGEST_EMAIL_DRY_RUN;
@@ -28,12 +26,12 @@ function buildIdempotencyKey(digestId: number): string {
 	return `note-digest-${digestId}`;
 }
 
-async function main() {
+export async function runSendDueDigests() {
 	const users = await db.query.user.findMany({
 		columns: { id: true, email: true, emailVerified: true, name: true },
 	});
 	const settingsRows = await db.query.userSettings.findMany({
-		columns: { userId: true, emailFrequency: true, notesPerDigest: true },
+		columns: { userId: true, emailFrequency: true },
 	});
 	const proSubscriptions = await db.query.billingSubscriptions.findMany({
 		where: inArray(billingSubscriptions.status, ["active", "trialing"]),
@@ -80,45 +78,20 @@ async function main() {
 
 		const pendingDigest = await db.query.noteDigests.findFirst({
 			where: and(eq(noteDigests.userId, candidate.id), inArray(noteDigests.status, ["scheduled", "failed"])),
-			columns: { id: true },
+			columns: { id: true, scheduledFor: true, createdAt: true },
 			orderBy: [desc(noteDigests.createdAt)],
 		});
 
-		let digestId = pendingDigest?.id ?? null;
-
-		if (!digestId) {
-			const plan = await prepareDigestItems({
-				userId: candidate.id,
-				notesPerDigest: settings?.notesPerDigest ?? DEFAULT_NOTES_PER_DIGEST,
-				now,
-			});
-
-			if (!plan.hasDocuments || plan.itemCount === 0) {
-				await upsertDigestWithItems({
-					userId: candidate.id,
-					items: [],
-					status: "skipped",
-					scheduledFor: now,
-					sentAt: null,
-					payloadJson: {
-						reason: plan.hasDocuments ? "empty_selection" : "no_documents",
-					},
-				});
-				continue;
-			}
-
-			digestId = await upsertDigestWithItems({
-				userId: candidate.id,
-				items: plan.items,
-				status: "scheduled",
-				scheduledFor: now,
-				sentAt: null,
-			});
-		}
-
-		if (!digestId) {
+		if (!pendingDigest?.id) {
 			continue;
 		}
+
+		const digestDate = pendingDigest.scheduledFor ?? pendingDigest.createdAt;
+		if (!digestDate || !isSameUtcDay(now, digestDate)) {
+			continue;
+		}
+
+		const digestId = pendingDigest.id;
 
 		const snapshot = await loadDigestSnapshot({ userId: candidate.id, digestId });
 		if (!snapshot || snapshot.items.length === 0) {
@@ -209,7 +182,9 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("[send-due-digests] failed", error);
-	process.exit(1);
-});
+if (import.meta.main) {
+	runSendDueDigests().catch((error) => {
+		console.error("[send-due-digests] failed", error);
+		process.exit(1);
+	});
+}

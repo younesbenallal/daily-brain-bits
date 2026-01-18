@@ -165,9 +165,7 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 				const contentFields = encodeContent(upsert.contentMarkdown);
 				const metadataJson = upsert.metadata ?? null;
 				const metadataRecord =
-					metadataJson && typeof metadataJson === "object" && !Array.isArray(metadataJson)
-						? (metadataJson as Record<string, unknown>)
-						: null;
+					metadataJson && typeof metadataJson === "object" && !Array.isArray(metadataJson) ? (metadataJson as Record<string, unknown>) : null;
 
 				console.log("[ingest] upsert metadata", {
 					connectionId,

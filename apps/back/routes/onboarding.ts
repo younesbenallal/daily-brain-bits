@@ -3,6 +3,7 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
+import { ensureSeedNoteDigest } from "../utils/seed-note-digest";
 
 const status = baseRoute
 	.input(z.object({}).optional())
@@ -67,5 +68,26 @@ const complete = baseRoute
 
 export const onboardingRouter = {
 	status,
+	seedDigest: baseRoute
+		.input(z.object({}).optional())
+		.output(
+			z.object({
+				created: z.boolean(),
+				digestId: z.number().nullable(),
+			}),
+		)
+		.handler(async ({ context }) => {
+			const userId = context.user?.id;
+			if (!userId) {
+				throw new ORPCError("Unauthorized");
+			}
+
+			const result = await ensureSeedNoteDigest(userId);
+
+			return {
+				created: result.created,
+				digestId: result.created ? result.digestId : null,
+			};
+		}),
 	complete,
 };

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { authClient, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 import { getCustomerState, getPlanSummary, normalizeList, resolveData } from "./settings-utils";
 import { StatusMessage, type StatusMessageState } from "./status-message";
 
@@ -30,7 +31,7 @@ export function BillingSettings() {
 	const hasOrders = orders.length > 0;
 
 	const checkoutMutation = useMutation({
-		mutationFn: async () => authClient.checkout({ slug: "pro" }),
+		mutationFn: async () => authClient.checkout({ slug: "Pro plan" }),
 		onError: (error) => {
 			setBillingStatus({
 				tone: "error",
@@ -70,12 +71,9 @@ export function BillingSettings() {
 								: "Upgrade to unlock daily emails, AI quizzes, and multiple sources."}
 						</p>
 					</div>
-					<button
+					<Button
 						type="button"
-						className={cn(
-							"rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity",
-							(planSummary.isPro ? portalMutation.isPending : checkoutMutation.isPending) && "opacity-60",
-						)}
+						className={cn((planSummary.isPro ? portalMutation.isPending : checkoutMutation.isPending) && "opacity-60")}
 						disabled={planSummary.isPro ? portalMutation.isPending : checkoutMutation.isPending}
 						onClick={() => {
 							setBillingStatus(null);
@@ -87,7 +85,7 @@ export function BillingSettings() {
 						}}
 					>
 						{planSummary.isPro ? "Manage Subscription" : "Upgrade to Pro"}
-					</button>
+					</Button>
 				</div>
 				<StatusMessage status={billingStatus} />
 			</div>
@@ -167,9 +165,7 @@ function formatOrderAmount(order: Record<string, unknown>) {
 		(order.amount_total as number | undefined) ??
 		(order.total as number | undefined);
 	const currency =
-		(order.currency as string | undefined) ??
-		(order.currency_code as string | undefined) ??
-		(order.currencyCode as string | undefined);
+		(order.currency as string | undefined) ?? (order.currency_code as string | undefined) ?? (order.currencyCode as string | undefined);
 
 	if (typeof rawAmount !== "number" || !currency) {
 		return rawAmount ? String(rawAmount) : "—";

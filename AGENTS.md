@@ -79,6 +79,7 @@ This repo is a monorepo containing the backend services + integrations + (for Ob
 - `docs/note-digest-selection.md` — Note digest scoring + selection algorithm.
 - `docs/note-digest-email-delivery.md` — Digest email delivery pipeline via Resend.
 - `docs/billing-subscriptions.md` — Billing and subscription management via Polar.
+- `docs/analytics-posthog.md` — PostHog analytics setup and event catalog.
 
 Todo list:
 

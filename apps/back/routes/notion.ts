@@ -400,47 +400,37 @@ const syncNow = baseRoute
 				databaseId,
 			});
 
-			try {
-				const syncResult = await adapter.sync({ databaseId }, cursor ? { since: cursor.since ?? new Date().toISOString() } : undefined);
+			const syncResult = await adapter.sync({ databaseId }, cursor ? { since: cursor.since ?? new Date().toISOString() } : undefined);
 
-				console.log("[notion.sync] Database sync completed", {
+			console.log("[notion.sync] Database sync completed", {
+				userId,
+				connectionId,
+				databaseId,
+				itemsFound: syncResult.items.length,
+				stats: syncResult.stats,
+			});
+
+			if (syncResult.items.length > 0) {
+				// Run sync pipeline to ingest items
+				const ingestResult = await runSyncPipeline({
+					connectionId,
+					userId,
+					items: syncResult.items,
+					receivedAt: now,
+					sourceKind: "notion",
+					nextCursor: syncResult.nextCursor,
+				});
+
+				totalDocumentsImported += ingestResult.accepted;
+
+				console.log("[notion.sync] Database ingestion completed", {
 					userId,
 					connectionId,
 					databaseId,
-					itemsFound: syncResult.items.length,
-					stats: syncResult.stats,
+					accepted: ingestResult.accepted,
+					rejected: ingestResult.rejected,
+					skipped: ingestResult.skipped,
 				});
-
-				if (syncResult.items.length > 0) {
-					// Run sync pipeline to ingest items
-					const ingestResult = await runSyncPipeline({
-						connectionId,
-						userId,
-						items: syncResult.items,
-						receivedAt: now,
-						sourceKind: "notion",
-						nextCursor: syncResult.nextCursor,
-					});
-
-					totalDocumentsImported += ingestResult.accepted;
-
-					console.log("[notion.sync] Database ingestion completed", {
-						userId,
-						connectionId,
-						databaseId,
-						accepted: ingestResult.accepted,
-						rejected: ingestResult.rejected,
-						skipped: ingestResult.skipped,
-					});
-				}
-			} catch (error) {
-				console.error("[notion.sync] Database sync failed", {
-					userId,
-					connectionId,
-					databaseId,
-					error: error instanceof Error ? error.message : String(error),
-				});
-				throw error;
 			}
 		}
 
@@ -449,6 +439,16 @@ const syncNow = baseRoute
 			connectionId,
 			databasesSynced: databaseIds.length,
 			totalDocumentsImported,
+		});
+
+		captureBackendEvent({
+			distinctId: userId,
+			event: "Notion sync completed",
+			properties: {
+				source_kind: "notion",
+				databases_synced: databaseIds.length,
+				documents_imported: totalDocumentsImported,
+			},
 		});
 
 		return {

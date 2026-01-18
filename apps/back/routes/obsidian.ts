@@ -12,6 +12,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { apiKeyRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
+import { captureBackendEvent } from "../utils/posthog-client";
 
 function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; settings?: Record<string, unknown> }) {
 	return obsidianConnectionConfigSchema.parse({
@@ -231,6 +232,18 @@ const syncBatch = apiKeyRoute
 			accepted: ingestResult.accepted,
 			rejected: ingestResult.rejected,
 			itemResultsCount: ingestResult.itemResults.length,
+		});
+
+		captureBackendEvent({
+			distinctId: userId,
+			event: "Obsidian sync batch completed",
+			properties: {
+				source_kind: "obsidian",
+				connection_id: connectionId,
+				item_count: input.items.length,
+				accepted: ingestResult.accepted,
+				rejected: ingestResult.rejected,
+			},
 		});
 
 		return {

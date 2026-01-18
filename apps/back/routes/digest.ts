@@ -3,9 +3,9 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
-import { decodeDocumentContent } from "../utils/document-content";
 import { prepareDigestItems } from "../utils/digest-generation";
 import { upsertDigestWithItems } from "../utils/digest-storage";
+import { decodeDocumentContent } from "../utils/document-content";
 
 const MIN_PRIORITY_WEIGHT = 0.1;
 const MAX_PRIORITY_WEIGHT = 5;

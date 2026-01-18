@@ -98,7 +98,6 @@ Required:
 
 Recommended:
 - `POLAR_PRO_PRODUCT_ID`
-- `POLAR_SUCCESS_URL`
 - `POLAR_SERVER` (set to `sandbox` when needed)
 - `FRONTEND_URL`
 
