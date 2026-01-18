@@ -132,21 +132,6 @@ const today = baseRoute
 			const document = documentMap.get(item.documentId);
 			const connection = document ? connectionMap.get(document.connectionId) : undefined;
 			const properties = extractDocumentProperties(document?.metadataJson);
-			const metadataRecord = asRecord(document?.metadataJson);
-
-			if (!properties) {
-				console.log("[digest.today] no properties", {
-					documentId: item.documentId,
-					sourceKind: connection?.kind ?? null,
-					metadataKeys: metadataRecord ? Object.keys(metadataRecord) : [],
-				});
-			} else {
-				console.log("[digest.today] properties", {
-					documentId: item.documentId,
-					sourceKind: connection?.kind ?? null,
-					propertyKeys: Object.keys(properties),
-				});
-			}
 
 			return {
 				id: item.id,
@@ -185,14 +170,11 @@ const regenerate = baseRoute
 			throw new ORPCError("Unauthorized");
 		}
 
-		console.log("[digest.regenerate] start", { userId });
-
 		const settings = await db.query.userSettings.findFirst({
 			where: eq(userSettings.userId, userId),
 			columns: { notesPerDigest: true },
 		});
 		const notesPerDigest = settings?.notesPerDigest ?? DEFAULT_NOTES_PER_DIGEST;
-		console.log("[digest.regenerate] settings", { userId, notesPerDigest });
 
 		const existingDigest = await db.query.noteDigests.findFirst({
 			where: eq(noteDigests.userId, userId),
@@ -205,7 +187,6 @@ const regenerate = baseRoute
 			notesPerDigest,
 			now: new Date(),
 		});
-		console.log("[digest.regenerate] documents", { userId, hasDocuments: digestPlan.hasDocuments });
 
 		if (!digestPlan.hasDocuments) {
 			const now = new Date();
@@ -218,13 +199,8 @@ const regenerate = baseRoute
 				sentAt: null,
 			});
 
-			console.log("[digest.regenerate] no documents available", { userId, digestId });
 			return { digestId, itemCount: 0 };
 		}
-		console.log("[digest.regenerate] plan", {
-			userId,
-			itemCount: digestPlan.itemCount,
-		});
 		const now = new Date();
 		const digestItems = digestPlan.items;
 
@@ -240,12 +216,6 @@ const regenerate = baseRoute
 		if (!digestId) {
 			throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "digest_create_failed" });
 		}
-
-		console.log("[digest.regenerate] replaced", {
-			userId,
-			digestId,
-			itemCount: digestPlan.itemCount,
-		});
 
 		return { digestId, itemCount: digestPlan.itemCount };
 	});
