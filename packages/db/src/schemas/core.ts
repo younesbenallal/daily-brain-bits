@@ -168,6 +168,59 @@ export const reviewEvents = pgTable(
 	],
 );
 
+export const digestFrequency = pgEnum("digest_frequency", ["daily", "weekly", "monthly"]);
+
+export const userSettings = pgTable(
+	"user_settings",
+	{
+		userId: text("user_id").primaryKey(),
+		emailFrequency: digestFrequency("email_frequency").notNull().default("daily"),
+		notesPerDigest: integer("notes_per_digest").notNull().default(5),
+		quizEnabled: boolean("quiz_enabled").notNull().default(false),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index("user_settings_email_frequency_idx").on(table.emailFrequency)],
+);
+
+export const billingCustomers = pgTable(
+	"billing_customers",
+	{
+		userId: text("user_id").primaryKey(),
+		polarCustomerId: text("polar_customer_id").notNull(),
+		email: text("email"),
+		metadataJson: jsonb("metadata_json"),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [uniqueIndex("billing_customers_polar_customer_id_idx").on(table.polarCustomerId)],
+);
+
+export const billingSubscriptions = pgTable(
+	"billing_subscriptions",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id").notNull(),
+		polarCustomerId: text("polar_customer_id"),
+		productId: text("product_id"),
+		priceId: text("price_id"),
+		status: text("status").notNull(),
+		currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+		currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+		cancelAtPeriodEnd: boolean("cancel_at_period_end"),
+		canceledAt: timestamp("canceled_at", { withTimezone: true }),
+		endedAt: timestamp("ended_at", { withTimezone: true }),
+		metadataJson: jsonb("metadata_json"),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("billing_subscriptions_user_id_idx").on(table.userId),
+		index("billing_subscriptions_status_idx").on(table.status),
+		index("billing_subscriptions_customer_idx").on(table.polarCustomerId),
+	],
+);
+
 export const noteDigestStatus = pgEnum("note_digest_status", ["scheduled", "sent", "failed", "skipped"]);
 
 export const noteDigests = pgTable(

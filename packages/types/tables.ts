@@ -5,6 +5,7 @@ import type {
 	integrationScopeItems,
 	integrationScopeType,
 	integrationStatus,
+	userSettings,
 	noteDigestItems,
 	noteDigestStatus,
 	noteDigests,
@@ -51,3 +52,6 @@ export type NoteDigestInsert = typeof noteDigests.$inferInsert;
 
 export type NoteDigestItem = typeof noteDigestItems.$inferSelect;
 export type NoteDigestItemInsert = typeof noteDigestItems.$inferInsert;
+
+export type UserSettings = typeof userSettings.$inferSelect;
+export type UserSettingsInsert = typeof userSettings.$inferInsert;

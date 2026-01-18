@@ -2,6 +2,13 @@ import { db, integrationConnections } from "@daily-brain-bits/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
+import { createPolarPlugin } from "./polar";
+
+const polarPlugin = createPolarPlugin();
+
+if (!polarPlugin && process.env.NODE_ENV === "production") {
+	throw new Error("POLAR_ACCESS_TOKEN is required to enable the Polar plugin in production.");
+}
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -22,6 +29,7 @@ export const auth = betterAuth({
 		apiKey({
 			enableMetadata: true,
 		}),
+		...(polarPlugin ? [polarPlugin] : []),
 	],
 	databaseHooks: {
 		account: {

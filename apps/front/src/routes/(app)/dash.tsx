@@ -1,10 +1,19 @@
-import { Obsidian } from "@ridemountainpig/svgl-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Loader2, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, MoreHorizontal, RotateCw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layouts/app-layout";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { orpc } from "@/lib/orpc-client";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +36,7 @@ function AppPage() {
 						position: number;
 						title: string | null;
 						content: string;
+						properties: Record<string, unknown> | null;
 						sourceKind: "obsidian" | "notion" | null;
 						sourceName: string | null;
 					}>;
@@ -37,6 +47,7 @@ function AppPage() {
 	const items = digest?.items ?? [];
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [feedback, setFeedback] = useState<string | null>(null);
+	const [showProperties, setShowProperties] = useState(false);
 
 	useEffect(() => {
 		setCurrentIndex(0);
@@ -72,9 +83,29 @@ function AppPage() {
 			},
 		}),
 	);
+	const regenerateMutation = useMutation(
+		orpc.digest.regenerate.mutationOptions({
+			onMutate: () => {
+				console.log("[dash] regenerate clicked");
+			},
+			onSuccess: (data) => {
+				console.log("[dash] regenerate success", data);
+				digestQuery.refetch();
+			},
+			onError: (error) => {
+				console.error("[dash] regenerate error", error);
+			},
+		}),
+	);
 
 	const currentItem = items[currentIndex];
-	const contentBlocks = useMemo(() => parseContentBlocks(currentItem?.content ?? ""), [currentItem?.content]);
+	const normalizedContent = useMemo(
+		() => stripFrontmatter(currentItem?.content ?? "", currentItem?.sourceKind),
+		[currentItem?.content, currentItem?.sourceKind],
+	);
+	const contentBlocks = useMemo(() => parseContentBlocks(normalizedContent), [normalizedContent]);
+	const properties = useMemo(() => normalizeProperties(currentItem?.properties), [currentItem?.properties]);
+	const hasProperties = properties.length > 0;
 	const noteTitle = currentItem?.title?.trim() || "Untitled note";
 	const canMoveBack = currentIndex > 0;
 	const canMoveForward = currentIndex < items.length - 1;
@@ -105,12 +136,64 @@ function AppPage() {
 					<>
 						{/* Main Note Content */}
 						<article className="flex flex-col gap-6">
-							<h1 className="font-display text-[32px] font-semibold leading-[1.15] text-primary">{noteTitle}</h1>
+							<div className="flex items-start justify-between gap-4">
+								<h1 className="flex-1 font-display text-[32px] font-semibold leading-[1.15] text-primary">{noteTitle}</h1>
+								{currentItem && (
+									<DropdownMenu>
+										<DropdownMenuTrigger>
+											<Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+												<MoreHorizontal className="h-4 w-4" />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuGroup>
+												<DropdownMenuLabel>Note view</DropdownMenuLabel>
+												<DropdownMenuSeparator />
+												<DropdownMenuCheckboxItem checked={showProperties} onCheckedChange={setShowProperties} className="gap-3">
+													Show properties
+												</DropdownMenuCheckboxItem>
+												<DropdownMenuSeparator />
+												<DropdownMenuItem
+													onClick={() => {
+														console.log("[dash] regenerate menu select");
+														regenerateMutation.mutate({});
+													}}
+													disabled={regenerateMutation.isPending}
+													className="cursor-pointer gap-3"
+												>
+													{regenerateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+													{regenerateMutation.isPending ? "Regenerating digest..." : "Regenerate digest"}
+												</DropdownMenuItem>
+											</DropdownMenuGroup>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								)}
+							</div>
+							{showProperties && currentItem && (
+								<section className="space-y-3 border border-muted  p-3 rounded-md">
+									<div className="flex items-center justify-between text-sm text-muted-foreground">
+										<span>Properties</span>
+										<span>{hasProperties ? `${properties.length} fields` : "None"}</span>
+									</div>
+									{hasProperties ? (
+										<div className="grid gap-3 sm:grid-cols-2">
+											{properties.map((property) => (
+												<div key={property.key} className="">
+													<div className="text-[11px] font-semibold uppercase text-muted-foreground">{property.key}</div>
+													<div className="mt-1 text-sm text-foreground">{property.value}</div>
+												</div>
+											))}
+										</div>
+									) : (
+										<p className="text-sm text-muted-foreground italic">No properties available for this note.</p>
+									)}
+								</section>
+							)}
 
 							<div className="max-h-[50vh] space-y-6 overflow-y-auto pr-4 font-body text-[16px] leading-relaxed text-muted-foreground/90 selection:bg-primary/10">
 								{contentBlocks.length > 0 ? (
 									contentBlocks.map((block, index) => {
-										const blockKey = `${block.type}-${block.content || (block.type === "list" ? block.items.join("") : index)}`;
+										const blockKey = `${block.type}-${index}`;
 										if (block.type === "heading") {
 											const sizeClass = block.level === 1 ? "text-2xl" : block.level === 2 ? "text-xl" : "text-lg";
 											return (
@@ -240,6 +323,84 @@ type ContentBlock =
 	| { type: "list"; items: string[] }
 	| { type: "code"; content: string };
 
+type PropertyEntry = {
+	key: string;
+	value: string;
+};
+
+function stripFrontmatter(content: string, sourceKind: "obsidian" | "notion" | null | undefined): string {
+	if (sourceKind !== "obsidian") {
+		return content;
+	}
+	const normalized = content.replace(/\r\n/g, "\n");
+	const lines = normalized.split("\n");
+	if (lines[0]?.trim() !== "---") {
+		return content;
+	}
+	let endIndex = -1;
+	for (let i = 1; i < lines.length; i += 1) {
+		const line = lines[i]?.trim();
+		if (line === "---" || line === "...") {
+			endIndex = i;
+			break;
+		}
+	}
+	if (endIndex === -1) {
+		return content;
+	}
+	const remaining = lines
+		.slice(endIndex + 1)
+		.join("\n")
+		.replace(/^\n+/, "");
+	return remaining;
+}
+
+function normalizeProperties(properties: Record<string, unknown> | null | undefined): PropertyEntry[] {
+	if (!properties) {
+		return [];
+	}
+	const entries = Object.entries(properties)
+		.map(([key, value]) => {
+			const normalized = formatPropertyValue(value);
+			if (!normalized) {
+				return null;
+			}
+			return { key, value: normalized };
+		})
+		.filter((entry): entry is PropertyEntry => Boolean(entry));
+
+	return entries.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function formatPropertyValue(value: unknown): string | null {
+	if (value === null || value === undefined) {
+		return null;
+	}
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		return trimmed.length > 0 ? trimmed : null;
+	}
+	if (typeof value === "number") {
+		return Number.isFinite(value) ? value.toString() : null;
+	}
+	if (typeof value === "boolean") {
+		return value ? "Yes" : "No";
+	}
+	if (Array.isArray(value)) {
+		const items = value.map((item) => formatPropertyValue(item)).filter((item): item is string => Boolean(item));
+		return items.length > 0 ? items.join(", ") : null;
+	}
+	if (typeof value === "object") {
+		try {
+			const serialized = JSON.stringify(value);
+			return serialized && serialized !== "{}" ? serialized : null;
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
 function parseContentBlocks(content: string): ContentBlock[] {
 	if (!content.trim()) {
 		return [];
@@ -305,31 +466,4 @@ function parseContentBlocks(content: string): ContentBlock[] {
 	}
 
 	return blocks;
-}
-
-function formatDigestDate(value: string | null) {
-	if (!value) {
-		return "Today";
-	}
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) {
-		return "Today";
-	}
-	return date.toLocaleDateString(undefined, {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-	});
-}
-
-function SourceIcon({ sourceKind }: { sourceKind: "obsidian" | "notion" | null }) {
-	if (sourceKind === "obsidian") return <Obsidian className="h-4 w-4" />;
-	if (sourceKind === "notion") {
-		return (
-			<svg role="img" aria-label="Notion" viewBox="0 0 24 24" className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg">
-				<path d="M4.459 4.208c.746.606 1.026.56 1.866.56L17.11 4.535c.793 0 .7.14.56.886l-1.353 8.35c-.14.933-.513 1.026-1.12.606l-9.141-6.11c-.42-.326-.42-.513-.42-1.026l.42-3.033zm.234 6.772c.42.327.513.7.42 1.213l-1.167 7.42c-.093.513.187.7.747.7h13.905c.653 0 .933-.28.933-.933v-12.78c0-.654-.28-.934-.933-.934h-2.146c-.654 0-.934.28-.934.934v8.818c0 .653-.28.933-.933.933H6.652c-.654 0-.934-.28-.934-.933V6.447c0-.654.28-.934.934-.934h1.726c.653 0 .933.28.933.934v4.533z" />
-			</svg>
-		);
-	}
-	return <Sparkles className="h-4 w-4 text-muted-foreground/40" />;
 }

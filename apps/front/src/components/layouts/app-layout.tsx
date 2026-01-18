@@ -23,7 +23,9 @@ export function AppLayout({ children, maxWidth = "max-w-[450px]" }: AppLayoutPro
 		<div className="relative flex min-h-screen flex-col overflow-hidden bg-linear-to-b from-[hsl(var(--sky-top))] to-[hsl(var(--sky-bottom))] text-foreground">
 			<header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
 				<div className="flex items-center gap-2">
-					<img src="/logo-transparent.svg" alt="Dbb" className="h-12 w-auto" />
+					<Link to="/dash">
+						<img src="/logo-transparent.svg" alt="Dbb" className="h-12 w-auto" />
+					</Link>
 				</div>
 				<DropdownMenu>
 					<DropdownMenuTrigger>

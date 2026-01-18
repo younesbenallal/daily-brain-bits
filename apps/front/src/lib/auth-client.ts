@@ -1,5 +1,6 @@
 import type { auth } from "@daily-brain-bits/auth";
 import { apiKeyClient, inferAdditionalFields } from "better-auth/client/plugins";
+import { polarClient } from "@polar-sh/better-auth/client";
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
@@ -11,7 +12,7 @@ export const authClient = createAuthClient({
 			}
 		},
 	},
-	plugins: [inferAdditionalFields<typeof auth>(), apiKeyClient()],
+	plugins: [inferAdditionalFields<typeof auth>(), apiKeyClient(), polarClient()],
 });
 
 export const { signIn, signUp, useSession, signOut, linkSocial } = authClient;

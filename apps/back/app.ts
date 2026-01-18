@@ -7,6 +7,7 @@ import * as notionRoutes from "./routes/notion";
 import * as obsidianRoutes from "./routes/obsidian";
 import { digestRouter } from "./routes/digest";
 import { onboardingRouter } from "./routes/onboarding";
+import { settingsRouter } from "./routes/settings";
 import { createApiKeySession } from "./utils/api-key";
 
 export const ORPCRouter = {
@@ -14,6 +15,7 @@ export const ORPCRouter = {
 	notion: notionRoutes.notionRouter,
 	digest: digestRouter,
 	onboarding: onboardingRouter,
+	settings: settingsRouter,
 };
 
 type RequestContext = {
