@@ -379,7 +379,7 @@ function parseEmailContentBlocks(content: string): EmailContentBlock[] {
 	while (index < lines.length) {
 		const line = lines[index];
 
-		if (!line.trim()) {
+		if (!line?.trim()) {
 			index += 1;
 			continue;
 		}
@@ -387,8 +387,8 @@ function parseEmailContentBlocks(content: string): EmailContentBlock[] {
 		if (line.startsWith("```")) {
 			const codeLines: string[] = [];
 			index += 1;
-			while (index < lines.length && !lines[index].startsWith("```")) {
-				codeLines.push(lines[index]);
+			while (index < lines.length && lines[index] && !lines[index]!.startsWith("```")) {
+				codeLines.push(lines[index]!);
 				index += 1;
 			}
 			index += 1;
@@ -397,7 +397,7 @@ function parseEmailContentBlocks(content: string): EmailContentBlock[] {
 		}
 
 		if (/^#{1,6}\s/.test(line)) {
-			const level = line.match(/^#{1,6}/)?.[0].length ?? 1;
+			const level = line.match(/^#{1,6}/)?.[0]?.length ?? 1;
 			blocks.push({ type: "heading", level, content: line.replace(/^#{1,6}\s*/, "").trim() });
 			index += 1;
 			continue;
@@ -405,8 +405,8 @@ function parseEmailContentBlocks(content: string): EmailContentBlock[] {
 
 		if (/^>\s?/.test(line)) {
 			const quoteLines: string[] = [];
-			while (index < lines.length && /^>\s?/.test(lines[index])) {
-				quoteLines.push(lines[index].replace(/^>\s?/, "").trim());
+			while (index < lines.length && lines[index] && /^>\s?/.test(lines[index]!)) {
+				quoteLines.push(lines[index]!.replace(/^>\s?/, "").trim());
 				index += 1;
 			}
 			blocks.push({ type: "quote", content: quoteLines.join("\n").trim() });
@@ -415,8 +415,8 @@ function parseEmailContentBlocks(content: string): EmailContentBlock[] {
 
 		if (/^(-|\*|•)\s+/.test(line)) {
 			const items: string[] = [];
-			while (index < lines.length && /^(-|\*|•)\s+/.test(lines[index])) {
-				items.push(lines[index].replace(/^(-|\*|•)\s+/, "").trim());
+			while (index < lines.length && lines[index] && /^(-|\*|•)\s+/.test(lines[index]!)) {
+				items.push(lines[index]!.replace(/^(-|\*|•)\s+/, "").trim());
 				index += 1;
 			}
 			blocks.push({ type: "list", items });
@@ -424,8 +424,8 @@ function parseEmailContentBlocks(content: string): EmailContentBlock[] {
 		}
 
 		const paragraph: string[] = [];
-		while (index < lines.length && lines[index].trim()) {
-			paragraph.push(lines[index].trim());
+		while (index < lines.length && lines[index]?.trim()) {
+			paragraph.push(lines[index]!.trim());
 			index += 1;
 		}
 		blocks.push({ type: "paragraph", content: paragraph.join(" ") });

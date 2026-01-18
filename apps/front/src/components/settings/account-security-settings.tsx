@@ -62,8 +62,10 @@ export function AccountSecuritySettings() {
 			if (setPasswordDraft !== confirmSetPassword) {
 				throw new Error("Passwords do not match.");
 			}
-			return authClient.setPassword({
+			return authClient.changePassword({
 				newPassword: setPasswordDraft,
+				currentPassword: "",
+				revokeOtherSessions: false,
 			});
 		},
 		onSuccess: () => {
@@ -100,33 +102,29 @@ export function AccountSecuritySettings() {
 						<div className="grid gap-3 md:grid-cols-2">
 							<div className="space-y-2">
 								<label className="text-sm font-medium">New password</label>
-									<input
-										type="password"
-										name="new-password"
-										autoComplete="new-password"
-										className="w-full rounded-lg border bg-background px-3 py-2"
-										value={nextPassword}
-										onChange={(event) => setNextPassword(event.target.value)}
-									/>
+								<input
+									type="password"
+									name="new-password"
+									autoComplete="new-password"
+									className="w-full rounded-lg border bg-background px-3 py-2"
+									value={nextPassword}
+									onChange={(event) => setNextPassword(event.target.value)}
+								/>
 							</div>
 							<div className="space-y-2">
 								<label className="text-sm font-medium">Confirm new password</label>
-									<input
-										type="password"
-										name="confirm-new-password"
-										autoComplete="new-password"
-										className="w-full rounded-lg border bg-background px-3 py-2"
-										value={confirmPassword}
-										onChange={(event) => setConfirmPassword(event.target.value)}
-									/>
+								<input
+									type="password"
+									name="confirm-new-password"
+									autoComplete="new-password"
+									className="w-full rounded-lg border bg-background px-3 py-2"
+									value={confirmPassword}
+									onChange={(event) => setConfirmPassword(event.target.value)}
+								/>
 							</div>
 						</div>
 						<label className="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								checked={revokeOtherSessions}
-								onChange={(event) => setRevokeOtherSessions(event.target.checked)}
-							/>
+							<input type="checkbox" checked={revokeOtherSessions} onChange={(event) => setRevokeOtherSessions(event.target.checked)} />
 							Sign out of other sessions
 						</label>
 						<div className="flex flex-wrap items-center gap-3">
@@ -149,31 +147,29 @@ export function AccountSecuritySettings() {
 					</>
 				) : (
 					<>
-						<p className="text-sm text-muted-foreground">
-							You signed up with a social provider. Add a password to enable email/password sign in.
-						</p>
+						<p className="text-sm text-muted-foreground">You signed up with a social provider. Add a password to enable email/password sign in.</p>
 						<div className="grid gap-3 md:grid-cols-2">
 							<div className="space-y-2">
 								<label className="text-sm font-medium">New password</label>
-							<input
-								type="password"
-								name="set-password"
-								autoComplete="new-password"
-								className="w-full rounded-lg border bg-background px-3 py-2"
-								value={setPasswordDraft}
-								onChange={(event) => setSetPasswordDraft(event.target.value)}
-							/>
+								<input
+									type="password"
+									name="set-password"
+									autoComplete="new-password"
+									className="w-full rounded-lg border bg-background px-3 py-2"
+									value={setPasswordDraft}
+									onChange={(event) => setSetPasswordDraft(event.target.value)}
+								/>
 							</div>
 							<div className="space-y-2">
 								<label className="text-sm font-medium">Confirm new password</label>
-							<input
-								type="password"
-								name="confirm-set-password"
-								autoComplete="new-password"
-								className="w-full rounded-lg border bg-background px-3 py-2"
-								value={confirmSetPassword}
-								onChange={(event) => setConfirmSetPassword(event.target.value)}
-							/>
+								<input
+									type="password"
+									name="confirm-set-password"
+									autoComplete="new-password"
+									className="w-full rounded-lg border bg-background px-3 py-2"
+									value={confirmSetPassword}
+									onChange={(event) => setConfirmSetPassword(event.target.value)}
+								/>
 							</div>
 						</div>
 						<div className="flex flex-wrap items-center gap-3">

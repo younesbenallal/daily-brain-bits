@@ -11,7 +11,11 @@ type ResendEmailPayload = {
 	replyTo?: string;
 	headers?: Record<string, string>;
 	tags?: Array<{ name: string; value: string }>;
-};
+} & (
+	| { react: ReactElement; text?: string; html?: string }
+	| { react?: undefined; text: string; html?: string }
+	| { react?: undefined; text?: string; html: string }
+);
 
 type ResendSendResult = {
 	id: string | null;

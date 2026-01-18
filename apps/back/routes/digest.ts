@@ -12,15 +12,6 @@ const MAX_PRIORITY_WEIGHT = 5;
 const PRIORITY_STEP = 0.5;
 const DEFAULT_NOTES_PER_DIGEST = 5;
 
-type DocumentSnapshot = {
-	id: number;
-	title: string | null;
-	contentCiphertext: string;
-	contentAlg: string;
-	connectionId: number;
-	metadataJson: unknown | null;
-};
-
 function asRecord(value: unknown): Record<string, unknown> | null {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
 		return null;

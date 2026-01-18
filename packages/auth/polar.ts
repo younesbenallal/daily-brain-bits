@@ -172,7 +172,7 @@ const upsertSubscriptionFromPayload = async (payload: SubscriptionWebhookPayload
 		const now = new Date();
 		const status = subscription.status ?? "unknown";
 		// Extract first price ID from prices array if available
-		const priceId = subscription.prices && subscription.prices.length > 0 && "id" in subscription.prices[0] ? subscription.prices[0].id : null;
+		const priceId = subscription.prices && subscription.prices.length > 0 && subscription.prices[0] && "id" in subscription.prices[0] ? subscription.prices[0].id : null;
 
 		await db
 			.insert(billingSubscriptions)

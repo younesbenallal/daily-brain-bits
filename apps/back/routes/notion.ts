@@ -5,6 +5,7 @@ import { and, desc, eq, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
+import { captureBackendEvent } from "../utils/posthog-client";
 
 const notionDatabaseSchema = z.object({
 	id: z.string().min(1),
