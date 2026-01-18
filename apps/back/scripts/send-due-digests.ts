@@ -13,13 +13,6 @@ const FROM_ADDRESS = env.RESEND_FROM;
 const REPLY_TO = env.RESEND_REPLY_TO;
 const FRONTEND_URL = env.FRONTEND_URL;
 
-type UserRow = {
-	id: string;
-	email: string | null;
-	emailVerified: boolean;
-	name: string | null;
-};
-
 const now = new Date();
 
 function buildIdempotencyKey(digestId: number): string {
@@ -27,6 +20,8 @@ function buildIdempotencyKey(digestId: number): string {
 }
 
 export async function runSendDueDigests() {
+	console.log("[send-due-digests] Starting digest email process...");
+
 	const users = await db.query.user.findMany({
 		columns: { id: true, email: true, emailVerified: true, name: true },
 	});
@@ -61,9 +56,13 @@ export async function runSendDueDigests() {
 		}
 	}
 
-	const candidates = users.filter((candidate) => candidate.email && candidate.emailVerified) as UserRow[];
+	const candidates = users.filter((candidate) => candidate.email && candidate.emailVerified);
+
+	console.log(`[send-due-digests] Processing ${candidates.length} eligible users...`);
 
 	for (const candidate of candidates) {
+		console.log(`[send-due-digests] Checking user ${candidate.id} (${candidate.email})`);
+
 		const settings = settingsMap.get(candidate.id);
 		const requestedFrequency = settings?.emailFrequency ?? DEFAULT_FREQUENCY;
 		const effectiveFrequency = resolveEffectiveFrequency({
@@ -73,6 +72,9 @@ export async function runSendDueDigests() {
 		const lastSentAt = lastSentMap.get(candidate.id) ?? null;
 
 		if (!isDigestDue({ now, lastSentAt, frequency: effectiveFrequency, userId: candidate.id })) {
+			console.log(
+				`[send-due-digests] Skipping user ${candidate.id} - not due yet (freq: ${effectiveFrequency}, last sent: ${lastSentAt?.toISOString()})`,
+			);
 			continue;
 		}
 
@@ -83,18 +85,24 @@ export async function runSendDueDigests() {
 		});
 
 		if (!pendingDigest?.id) {
+			console.log(`[send-due-digests] Skipping user ${candidate.id} - no pending digest found`);
 			continue;
 		}
 
 		const digestDate = pendingDigest.scheduledFor ?? pendingDigest.createdAt;
 		if (!digestDate || !isSameUtcDay(now, digestDate)) {
+			console.log(`[send-due-digests] Skipping user ${candidate.id} - digest not for today (scheduled: ${digestDate?.toISOString()})`);
 			continue;
 		}
 
+		console.log(`[send-due-digests] Processing digest ${pendingDigest.id} for user ${candidate.id}`);
+
 		const digestId = pendingDigest.id;
 
+		console.log(`[send-due-digests] Loading digest snapshot for user ${candidate.id}...`);
 		const snapshot = await loadDigestSnapshot({ userId: candidate.id, digestId });
 		if (!snapshot || snapshot.items.length === 0) {
+			console.log(`[send-due-digests] Skipping user ${candidate.id} - empty digest (${snapshot?.items.length ?? 0} items)`);
 			await upsertDigestWithItems({
 				userId: candidate.id,
 				digestId,
@@ -107,6 +115,8 @@ export async function runSendDueDigests() {
 			continue;
 		}
 
+		console.log(`[send-due-digests] Sending digest with ${snapshot.items.length} items to ${candidate.email}`);
+
 		const email = buildDigestEmail({
 			frequency: effectiveFrequency,
 			userName: candidate.name,
@@ -114,15 +124,16 @@ export async function runSendDueDigests() {
 			digest: snapshot,
 		});
 
-		const idempotencyKey = buildIdempotencyKey(digestId);
+		const idempotencyKey = process.env.FORCE_EMAIL === "true" ? `note-digest-${digestId}-${Date.now()}` : buildIdempotencyKey(digestId);
+		console.log(`[send-due-digests] Sending email to ${candidate.email}${DRY_RUN ? " (DRY RUN)" : ""}...`);
 		const { id: resendEmailId, error } = await sendResendEmail({
 			payload: {
 				from: FROM_ADDRESS,
-				to: candidate.email!,
+				to: candidate.email,
 				replyTo: REPLY_TO,
 				subject: email.subject,
-				html: email.html,
 				text: email.text,
+				react: email.react,
 				tags: [
 					{ name: "category", value: "note_digest" },
 					{ name: "frequency", value: effectiveFrequency },
@@ -133,6 +144,7 @@ export async function runSendDueDigests() {
 		});
 
 		if (error) {
+			console.log(`[send-due-digests] Failed to send email to ${candidate.email}: ${JSON.stringify(error)}`);
 			await upsertDigestWithItems({
 				userId: candidate.id,
 				digestId,
@@ -146,6 +158,7 @@ export async function runSendDueDigests() {
 			continue;
 		}
 
+		console.log(`[send-due-digests] Updating review states for ${snapshot.items.length} items...`);
 		await db
 			.insert(reviewStates)
 			.values(
@@ -165,6 +178,7 @@ export async function runSendDueDigests() {
 				},
 			});
 
+		console.log(`[send-due-digests] Marking digest ${digestId} as sent`);
 		await upsertDigestWithItems({
 			userId: candidate.id,
 			digestId,
@@ -179,12 +193,16 @@ export async function runSendDueDigests() {
 			},
 			errorJson: null,
 		});
+
+		console.log(`[send-due-digests] Successfully processed digest for user ${candidate.id}`);
 	}
+
+	console.log("[send-due-digests] Digest email process completed");
 }
 
 if (import.meta.main) {
 	runSendDueDigests().catch((error) => {
-		console.error("[send-due-digests] failed", error);
+		console.error("[send-due-digests] Process failed with error:", error);
 		process.exit(1);
 	});
 }

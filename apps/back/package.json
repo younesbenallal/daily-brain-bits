@@ -27,16 +27,21 @@
 		"@orpc/server": "^1.13.1",
 		"@polar-sh/better-auth": "^1.6.4",
 		"@polar-sh/sdk": "^0.42.2",
+		"@react-email/components": "^1.0.4",
+		"@react-email/render": "^2.0.2",
 		"better-auth": "^1.4.14",
 		"drizzle-orm": "^0.45.1",
 		"hono": "^4.6.0",
 		"posthog-node": "^5.21.1",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
 		"resend": "^4.0.0",
 		"zod": "^4.2.1"
 	},
 	"devDependencies": {
+		"@daily-brain-bits/typescript-config": "workspace:*",
 		"@types/bun": "latest",
-		"typescript": "^5.6.0",
-		"@daily-brain-bits/typescript-config": "workspace:*"
+		"@types/react": "^19.2.8",
+		"typescript": "^5.6.0"
 	}
 }

@@ -1,11 +1,13 @@
 import { PostHog } from "posthog-node";
 import { env } from "./env";
 
-const posthogClient = env.POSTHOG_API_KEY
-	? new PostHog(env.POSTHOG_API_KEY, {
-			host: env.POSTHOG_HOST ?? "https://app.posthog.com",
-		})
-	: null;
+const isProduction = env.NODE_ENV === "production";
+const posthogClient =
+	env.POSTHOG_API_KEY && isProduction
+		? new PostHog(env.POSTHOG_API_KEY, {
+				host: env.POSTHOG_HOST ?? "https://app.posthog.com",
+		  })
+		: null;
 
 export const captureBackendEvent = (options: {
 	distinctId: string;

@@ -1,7 +1,7 @@
 import { db, documents, integrationConnections, noteDigestItems, noteDigests } from "@daily-brain-bits/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { decodeDocumentContent } from "./document-content";
-import { buildDigestEmail, buildExcerpt, type DigestEmailItem, type DigestSnapshot } from "./note-digest-email-template";
+import { buildDigestEmail, buildEmailContent, type DigestEmailItem, type DigestSnapshot } from "./note-digest-email-template";
 
 export async function loadDigestSnapshot(params: { userId: string; digestId: number }): Promise<DigestSnapshot | null> {
 	const digest = await db.query.noteDigests.findFirst({
@@ -52,11 +52,13 @@ export async function loadDigestSnapshot(params: { userId: string; digestId: num
 		const connection = document ? connectionMap.get(document.connectionId) : undefined;
 		const content = decodeDocumentContent(document);
 		const title = document?.title?.trim() || "Untitled note";
+		const emailContent = buildEmailContent(content);
 
 		return {
 			documentId: item.documentId,
 			title,
-			excerpt: buildExcerpt(content),
+			excerpt: emailContent.excerpt,
+			blocks: emailContent.blocks,
 			sourceKind: connection?.kind ?? null,
 			sourceName: connection?.displayName ?? null,
 		};

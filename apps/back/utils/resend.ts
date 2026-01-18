@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import type { ReactElement } from "react";
 
 type ResendEmailPayload = {
 	from: string;
@@ -6,6 +7,7 @@ type ResendEmailPayload = {
 	subject: string;
 	text?: string;
 	html?: string;
+	react?: ReactElement;
 	replyTo?: string;
 	headers?: Record<string, string>;
 	tags?: Array<{ name: string; value: string }>;

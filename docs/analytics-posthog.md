@@ -9,10 +9,12 @@
 ### Frontend (Vite)
 - `VITE_POSTHOG_KEY` — PostHog project API key.
 - `VITE_POSTHOG_HOST` — PostHog ingestion host, default `https://app.posthog.com`.
+- PostHog is only activated when the frontend runs in production mode.
 
 ### Backend (Hono)
 - `POSTHOG_API_KEY` — PostHog project API key.
 - `POSTHOG_HOST` — PostHog ingestion host, default `https://app.posthog.com`.
+- PostHog is only activated when `NODE_ENV=production`.
 
 ## Event naming and properties
 - Event names use Sentence case (example: `Notion sync completed`).

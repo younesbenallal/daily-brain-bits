@@ -2,15 +2,17 @@ import posthog from "posthog-js";
 
 const posthogKey = import.meta.env.VITE_POSTHOG_KEY;
 const posthogHost = import.meta.env.VITE_POSTHOG_HOST ?? "https://app.posthog.com";
+const isProduction = import.meta.env.PROD;
+const shouldInitialize = Boolean(posthogKey) && isProduction;
 
 let hasInitialized = false;
 
 export const initPosthog = () => {
-	if (!posthogKey || hasInitialized) {
+	if (!shouldInitialize || hasInitialized) {
 		return;
 	}
 
-	posthog.init(posthogKey, {
+	posthog.init(posthogKey as string, {
 		api_host: posthogHost,
 		autocapture: false,
 		capture_pageview: false,
@@ -19,25 +21,27 @@ export const initPosthog = () => {
 	hasInitialized = true;
 };
 
-export const captureFrontendEvent = (event: string, properties?: Record<string, unknown>) => {
-	if (!posthogKey) {
-		return;
+const ensureInitialized = () => {
+	if (!shouldInitialize) {
+		return false;
 	}
-
 	if (!hasInitialized) {
 		initPosthog();
+	}
+	return hasInitialized;
+};
+
+export const captureFrontendEvent = (event: string, properties?: Record<string, unknown>) => {
+	if (!ensureInitialized()) {
+		return;
 	}
 
 	posthog.capture(event, properties);
 };
 
 export const identifyFrontendUser = (user: { id: string; email?: string | null }) => {
-	if (!posthogKey) {
+	if (!ensureInitialized()) {
 		return;
-	}
-
-	if (!hasInitialized) {
-		initPosthog();
 	}
 
 	posthog.identify(user.id, {
@@ -46,7 +50,7 @@ export const identifyFrontendUser = (user: { id: string; email?: string | null }
 };
 
 export const resetFrontendUser = () => {
-	if (!posthogKey) {
+	if (!ensureInitialized()) {
 		return;
 	}
 

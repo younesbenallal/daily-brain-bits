@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import React from "react";
+import { render } from "@react-email/render";
 import { buildDigestEmail, buildExcerpt } from "./note-digest-email-template";
 
 describe("note-digest-email", () => {
@@ -11,6 +13,7 @@ describe("note-digest-email", () => {
 					documentId: 11,
 					title: "Learning loops",
 					excerpt: "Short excerpt.",
+					blocks: [{ type: "paragraph" as const, content: "Short excerpt." }],
 					sourceKind: "notion" as const,
 					sourceName: "Study Notes",
 				},
@@ -25,12 +28,11 @@ describe("note-digest-email", () => {
 		});
 
 		expect(result.subject).toBe("Daily Brain Bits (1 note)");
-		expect(result.html).toContain("View this digest in the app");
-		expect(result.html).toContain("http://localhost:3000/dash");
+		expect(React.isValidElement(result.react)).toBe(true);
 		expect(result.text).toContain("http://localhost:3000/dash");
 	});
 
-	it("escapes HTML in titles", () => {
+	it("escapes HTML in titles", async () => {
 		const digest = {
 			digestId: 2,
 			createdAt: new Date("2024-01-05T10:00:00Z"),
@@ -39,6 +41,7 @@ describe("note-digest-email", () => {
 					documentId: 12,
 					title: "Risk <script>",
 					excerpt: "Safe text",
+					blocks: [{ type: "paragraph" as const, content: "Safe text" }],
 					sourceKind: "obsidian" as const,
 					sourceName: "Vault",
 				},
@@ -52,14 +55,53 @@ describe("note-digest-email", () => {
 			digest,
 		});
 
-		expect(result.html).toContain("Risk &lt;script&gt;");
+		const html = await render(result.react);
+		expect(html).toContain("Risk &lt;script&gt;");
+	});
+
+	it("linkifies URLs in content blocks", async () => {
+		const digest = {
+			digestId: 3,
+			createdAt: new Date("2024-01-05T10:00:00Z"),
+			items: [
+				{
+					documentId: 13,
+					title: "Links",
+					excerpt: "See https://example.com/docs for more.",
+					blocks: [{ type: "paragraph" as const, content: "See https://example.com/docs for more." }],
+					sourceKind: "notion" as const,
+					sourceName: "Notes",
+				},
+			],
+		};
+
+		const result = buildDigestEmail({
+			frequency: "daily",
+			userName: null,
+			frontendUrl: "http://localhost:3000",
+			digest,
+		});
+
+		const html = await render(result.react);
+		expect(html).toContain('href="https://example.com/docs"');
 	});
 
 	it("buildExcerpt strips markdown and truncates long text", () => {
-		const longText = "# Title\n" + "a".repeat(900);
+		const longText = `---
+tags: status/node
+---
+
+# Title
+Intro paragraph.
+
+Second paragraph with a [[Link|Label]].
+
+` + "a".repeat(950);
 		const excerpt = buildExcerpt(longText);
-		expect(excerpt).toContain("a");
-		expect(excerpt.length).toBeLessThanOrEqual(640);
+		expect(excerpt).toContain("Intro paragraph.");
+		expect(excerpt).toContain("Label");
+		expect(excerpt).not.toContain("tags:");
+		expect(excerpt.length).toBeLessThanOrEqual(900);
 		expect(excerpt.endsWith("...")).toBe(true);
 	});
 

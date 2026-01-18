@@ -24,8 +24,8 @@
 | `apps/back/utils/digest-generation.ts` | Builds digest items using the note selection algorithm. |
 | `apps/back/utils/digest-schedule.ts` | Frequency resolution (daily/weekly/monthly) and due checks. |
 | `apps/back/utils/digest-storage.ts` | Inserts or updates digest + items in a transaction. |
-| `apps/back/utils/note-digest-email.ts` | Loads digest snapshots and renders HTML/text emails. |
-| `apps/back/utils/note-digest-email-template.ts` | Pure email rendering utilities (HTML/text + excerpts). |
+| `apps/back/utils/note-digest-email.ts` | Loads digest snapshots and renders React Email + text payloads. |
+| `apps/back/utils/note-digest-email-template.tsx` | React Email template and excerpt helpers. |
 | `apps/back/utils/resend.ts` | Resend client wrapper with idempotency support. |
 | `apps/back/routes/digest.ts` | Serves the last sent digest to the app dashboard. |
 | `packages/db/src/schemas/core.ts` | `note_digests`, `note_digest_items`, `review_states` tables. |
@@ -45,7 +45,7 @@
 3. For each due user:
    - Find today’s scheduled digest (or retry a failed one).
    - If the digest has no items, mark it as `skipped`.
-4. Render HTML + text email from the stored digest snapshot.
+4. Render React Email + text email from the stored digest snapshot.
 5. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
 6. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
 7. On failure: mark digest `failed` and store `error_json`.
