@@ -1,4 +1,4 @@
-import app from "./app";
+import app from "./server";
 import { env } from "./utils/env";
 
 const port = env.PORT ?? 3001;
