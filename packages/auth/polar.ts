@@ -1,5 +1,4 @@
 import { billingCustomers, billingSubscriptions, db } from "@daily-brain-bits/db";
-import { eq } from "drizzle-orm";
 import { checkout, polar, portal, usage, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import type { WebhookCustomerCreatedPayload } from "@polar-sh/sdk/models/components/webhookcustomercreatedpayload";
@@ -12,6 +11,7 @@ import type { WebhookSubscriptionRevokedPayload } from "@polar-sh/sdk/models/com
 import type { WebhookSubscriptionUncanceledPayload } from "@polar-sh/sdk/models/components/webhooksubscriptionuncanceledpayload";
 import type { WebhookSubscriptionUpdatedPayload } from "@polar-sh/sdk/models/components/webhooksubscriptionupdatedpayload";
 import type { validateEvent } from "@polar-sh/sdk/webhooks";
+import { eq } from "drizzle-orm";
 
 type PolarWebhookPayload = ReturnType<typeof validateEvent>;
 

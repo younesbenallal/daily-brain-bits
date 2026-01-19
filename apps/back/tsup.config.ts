@@ -7,6 +7,9 @@ export default defineConfig({
 	platform: "node",
 	outDir: ".",
 	clean: false,
+	banner: {
+		js: 'import { createRequire } from "module";\nconst require = createRequire(import.meta.url);',
+	},
 	// Bundle workspace packages (they use workspace: protocol)
 	noExternal: [
 		"@daily-brain-bits/auth",
