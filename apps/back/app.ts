@@ -125,15 +125,8 @@ const rpcHandler = new RPCHandler(ORPCRouter, {
 	],
 });
 
-// Mount oRPC routes
-const port = env.PORT ?? 3001;
-
 export type AppType = typeof app;
 export type ORPCRouterType = typeof ORPCRouter;
 
-export default {
-	port,
-	fetch: app.fetch,
-};
-
-console.log(`Server running on port ${port}`);
+// Export Hono app for Vercel
+export default app;

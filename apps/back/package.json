@@ -8,9 +8,9 @@
 		".": "./index.ts"
 	},
 	"scripts": {
-		"dev": "bun run app.ts",
-		"build": "tsc",
-		"start": "bun run dist/app.js",
+		"dev": "bun run dev.ts",
+		"build": "tsc --noEmit",
+		"start": "bun run app.ts",
 		"digest-cron": "bun run scripts/run-digest-cron.ts",
 		"generate-daily-digests": "bun run scripts/generate-daily-digests.ts",
 		"send-due-digests": "bun run scripts/send-due-digests.ts",
@@ -42,6 +42,7 @@
 		"@daily-brain-bits/typescript-config": "workspace:*",
 		"@types/bun": "latest",
 		"@types/react": "^19.2.8",
+		"tsup": "^8.5.1",
 		"typescript": "^5.6.0"
 	}
 }
