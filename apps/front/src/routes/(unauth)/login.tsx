@@ -1,4 +1,4 @@
-import { AppleLight, Google, Notion } from "@ridemountainpig/svgl-react";
+import { Google, Notion } from "@ridemountainpig/svgl-react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,20 +72,6 @@ function LoginPage() {
 					<div className="flex items-center gap-3">
 						<Notion className="size-4" />
 						Login with Notion
-					</div>
-					<span className="text-muted-foreground" aria-hidden="true">
-						→
-					</span>
-				</Button>
-				<Button
-					variant="secondary"
-					className="w-full justify-between px-4"
-					type="button"
-					onClick={() => signIn.social({ provider: "apple", callbackURL })}
-				>
-					<div className="flex items-center gap-3">
-						<AppleLight className="size-4" />
-						Login with Apple
 					</div>
 					<span className="text-muted-foreground" aria-hidden="true">
 						→
