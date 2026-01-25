@@ -2,18 +2,21 @@
 
 ## Summary
 
-- Generates daily digests for every user and sends emails via Resend on the user’s cadence.
+- Generates daily digests for every user and sends emails via Resend on the user's cadence.
+- Supports **timezone-aware scheduling** with per-user preferred send times.
 - Uses an idempotent send job that writes delivery metadata to `note_digests` and updates `review_states.last_sent_at`.
+- Runs via **Trigger.dev schedule** (hourly) or manual script execution.
 
 ## Scope
 
-- In scope: digest scheduling, email rendering, Resend delivery, and delivery state updates.
-- Out of scope: AI quizzes, unsubscribe management, bounce processing, and user timezones.
+- In scope: digest scheduling, timezone-aware delivery, email rendering, Resend delivery, and delivery state updates.
+- Out of scope: AI quizzes, unsubscribe management, bounce processing.
 
 ## Nomenclature
 - `digest`: a stored batch of notes prepared for delivery.
 - `send job`: the script that selects due users, renders email payloads, and sends them.
 - `idempotency key`: deterministic key used by Resend to prevent duplicate sends.
+- `send window`: the 1-hour window when a user's preferred send hour matches the current local time.
 
 ## Main Files
 
@@ -21,36 +24,50 @@
 |------|----------------|
 | `apps/back/scripts/generate-daily-digests.ts` | Cron-style job to build a daily digest for every user. |
 | `apps/back/scripts/send-due-digests.ts` | Cron-style job to send due digests and update DB state. |
+| `apps/back/scripts/run-digest-cron.ts` | Orchestrated job: generate then send in sequence (manual fallback). |
+| `apps/trigger/src/tasks/digest-hourly.ts` | Trigger.dev hourly schedule for digest generation + send. |
 | `apps/back/utils/digest-generation.ts` | Builds digest items using the note selection algorithm. |
-| `apps/back/utils/digest-schedule.ts` | Frequency resolution (daily/weekly/monthly) and due checks. |
+| `apps/back/utils/digest-schedule.ts` | Frequency resolution, timezone conversion, and due checks. |
 | `apps/back/utils/digest-storage.ts` | Inserts or updates digest + items in a transaction. |
 | `apps/back/utils/note-digest-email.ts` | Loads digest snapshots and renders React Email + text payloads. |
 | `apps/back/utils/note-digest-email-template.tsx` | React Email template and excerpt helpers. |
 | `apps/back/utils/resend.ts` | Resend client wrapper with idempotency support. |
 | `apps/back/routes/digest.ts` | Serves the last sent digest to the app dashboard. |
-| `packages/db/src/schemas/core.ts` | `note_digests`, `note_digest_items`, `review_states` tables. |
+| `apps/back/routes/settings.ts` | User settings API including timezone and preferred send hour. |
+| `apps/back/scripts/send-test-digest-email.ts` | Sends a fake-data digest email without touching the DB. |
+| `packages/db/src/schemas/core.ts` | `note_digests`, `note_digest_items`, `review_states`, `user_settings` tables. |
+| `apps/trigger/trigger.config.ts` | Trigger.dev configuration and task discovery. |
 
 ## Main Flows
 
 ### Generate daily digests
 
-1. For each user, check the most recent digest; if one already exists for today, skip.
-2. Generate a daily note selection and store it as `scheduled`.
+1. For each user, check the most recent digest; if one already exists for their **local day**, skip.
+2. Generate a daily note selection and store it as `scheduled` with `scheduled_for` set to local midnight (UTC timestamp).
 3. If no documents or no items are available, create a `skipped` digest with a reason.
 
-### Send due digests
+### Send due digests (timezone-aware)
 
-1. Load users, settings, pro entitlements, and last sent digest timestamps.
-2. Resolve the effective frequency (free users are coerced to weekly) and stagger weekly/monthly sends by user hash to avoid same-day spikes.
-3. For each due user:
-   - Find today’s scheduled digest (or retry a failed one).
+1. Load users, settings (including timezone and preferred send hour), pro entitlements, and last sent digest timestamps.
+2. For each user, check if they are in their **send window**:
+   - Calculate the current hour in the user's timezone using `Intl.DateTimeFormat`.
+   - Compare against their `preferredSendHour` (default: 8 = 8am local time).
+3. Resolve the effective frequency (free users are coerced to weekly) and stagger weekly/monthly sends by user hash.
+4. For each due user:
+   - Find today's scheduled digest (using **local day** comparison, not UTC).
    - If the digest has no items, mark it as `skipped`.
-4. Render React Email + text email from the stored digest snapshot.
-5. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
-6. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
-7. On failure: mark digest `failed` and store `error_json`.
+5. Render React Email + text email from the stored digest snapshot.
+6. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
+7. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
+8. On failure: mark digest `failed` and store `error_json`.
 
-### Orchestrated run (recommended)
+### Trigger.dev schedule (recommended for production)
+
+1. `digest-hourly` runs every hour via Trigger.dev schedule.
+2. Generates daily digests (idempotent per-user per day).
+3. Sends due digests using timezone-aware checks.
+
+### Orchestrated run (for manual/testing)
 
 1. `run-digest-cron.ts` runs daily: generate then send in a single process.
 2. This guarantees sends only happen after the daily digest generation has completed.
@@ -60,12 +77,40 @@
 1. The `digest.today` route selects the most recent `sent` digest (fallback to latest for new users).
 2. The frontend dashboard displays that digest so it matches the email content.
 
+## Timezone Scheduling
+
+### How it works
+
+1. Each user has a `timezone` (IANA string, e.g., "America/New_York") and `preferredSendHour` (0-23).
+2. Trigger.dev schedule runs every hour at `:00`.
+3. For each invocation, we calculate which users have their local time matching their preferred hour.
+4. Users receive digests in the **morning of their local time**, not a fixed UTC time.
+
+### Key functions in `digest-schedule.ts`
+
+| Function | Purpose |
+|----------|---------|
+| `isDigestDueWithTimezone()` | Full due check with timezone support. |
+| `isInSendWindow()` | Check if current hour matches user's preferred hour. |
+| `getHourInTimezone()` | Get current hour (0-23) in a timezone. |
+| `isSameLocalDay()` | Compare dates in user's local timezone. |
+| `isValidTimezone()` | Validate IANA timezone string. |
+
+### DST handling
+
+The `Intl.DateTimeFormat` API handles Daylight Saving Time automatically. If a user sets 8am and DST shifts, they still receive their email at 8am local time.
+
 ## Data Model / DB
 
 - Tables/entities:
   - `note_digests` (status, scheduled_for, sent_at, payload_json, error_json)
   - `note_digest_items` (digest-to-document join, ordered by position)
   - `review_states` (per-document review history; `last_sent_at` updated on send)
+  - `user_settings` (email preferences including timezone and send time)
+- User settings fields:
+  - `timezone` (text, default: "UTC") — IANA timezone string
+  - `preferredSendHour` (integer, default: 8) — Hour in local time (0-23)
+  - `emailFrequency` (enum: daily/weekly/monthly)
 - Identifiers and uniqueness:
   - Digest send idempotency key is derived from `note_digests.id`.
   - `note_digest_items` is unique on `(note_digest_id, document_id)`.
@@ -77,6 +122,7 @@
 
 - Resend enforces idempotency by key and returns a provider email id.
 - Email rendering favors simple HTML to keep client compatibility.
+- Trigger.dev: per-task retries, queue control, and durable waits.
 
 ## Testing / Verification
 
@@ -87,8 +133,15 @@
   - `bun --env-file apps/back/.env apps/back/scripts/generate-daily-digests.ts`
 - Run the job locally (dry run):
   - `DIGEST_EMAIL_DRY_RUN=true bun --env-file apps/back/.env apps/back/scripts/send-due-digests.ts`
+- Send a fake-data test email (no DB access):
+  - `bun --env-file apps/back/.env apps/back/scripts/send-test-digest-email.ts --to you@example.com`
+- Send a fake-data test email (dry run):
+  - `bun apps/back/scripts/send-test-digest-email.ts --to you@example.com --dry-run`
 - Run the orchestrated daily cron:
   - `bun --env-file apps/back/.env apps/back/scripts/run-digest-cron.ts`
+### Trigger.dev tasks
+
+- Run tasks locally with the Trigger.dev CLI from `apps/trigger`.
 
 ## Configuration
 
@@ -96,11 +149,12 @@
 - `RESEND_FROM` (default: `digest@dbb.notionist.app`)
 - `RESEND_REPLY_TO` (optional)
 - `DIGEST_EMAIL_DRY_RUN` (optional, `true` to skip external send)
-- `FRONTEND_URL` (used for the “View in app” link)
+- `FRONTEND_URL` (used for the "View in app" link)
+- `TEST_EMAIL_TO` (optional, default recipient for the test email script)
 
 ## Future Work
 
-- Add timezone-aware scheduling and preferred send times.
 - Add unsubscribe and notification preferences.
 - Track opens/clicks, bounce handling, and retry/backoff limits.
 - Support richer email layout or branded themes.
+- A/B test send times to optimize engagement.

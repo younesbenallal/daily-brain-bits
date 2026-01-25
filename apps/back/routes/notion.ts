@@ -231,7 +231,6 @@ const searchDatabases = baseRoute
 		}
 
 		const results = await searchNotionDatabases(connectionBundle.tokens.accessToken, input.query);
-		console.log("results", results);
 		const databases = results
 			.filter((item) => typeof item.id === "string")
 			.map((item) => ({

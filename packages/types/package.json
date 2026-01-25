@@ -13,7 +13,7 @@
 		"typescript": "^5.6.0"
 	},
 	"dependencies": {
-		"zod": "^4.3.5"
+		"zod": "catalog:"
 	},
 	"exports": {
 		".": "./index.ts"

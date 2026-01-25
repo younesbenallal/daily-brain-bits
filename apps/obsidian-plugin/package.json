@@ -12,11 +12,11 @@
 	"dependencies": {
 		"@daily-brain-bits/core": "workspace:*",
 		"@daily-brain-bits/integrations-obsidian": "workspace:*",
-		"@orpc/client": "^1.13.4"
+		"@orpc/client": "catalog:"
 	},
 	"devDependencies": {
 		"@daily-brain-bits/back": "workspace:*",
-		"@orpc/server": "^1.13.4",
+		"@orpc/server": "catalog:",
 		"@types/node": "^20.19.30",
 		"obsidian": "^1.7.0",
 		"typescript": "^5.6.0"

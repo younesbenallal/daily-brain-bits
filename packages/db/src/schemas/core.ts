@@ -188,10 +188,15 @@ export const userSettings = pgTable(
 		emailFrequency: digestFrequency("email_frequency").notNull().default("daily"),
 		notesPerDigest: integer("notes_per_digest").notNull().default(5),
 		quizEnabled: boolean("quiz_enabled").notNull().default(false),
+		timezone: text("timezone").notNull().default("UTC"),
+		preferredSendHour: integer("preferred_send_hour").notNull().default(8),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("user_settings_email_frequency_idx").on(table.emailFrequency)],
+	(table) => [
+		index("user_settings_email_frequency_idx").on(table.emailFrequency),
+		index("user_settings_timezone_send_hour_idx").on(table.timezone, table.preferredSendHour),
+	],
 );
 
 export const billingCustomers = pgTable(

@@ -9,16 +9,16 @@
 	"scripts": {
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:push": "bun --env-file ../../apps/back/.env drizzle-kit push",
-		"db:push:prod": "bun --env-file ../../apps/back/.env.prod drizzle-kit push",
+		"db:push": "drizzle-kit push",
+		"db:push:prod": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"drizzle-orm": "^0.45.1",
+		"drizzle-orm": "catalog:",
 		"node-postgres": "^0.6.2",
 		"postgres": "^3.4.8",
-		"zod": "^3.23.8"
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"drizzle-kit": "^0.28.0",

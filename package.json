@@ -2,11 +2,19 @@
 	"name": "daily-brain-bits",
 	"version": "0.0.0",
 	"private": true,
-	"workspaces": [
-		"apps/*",
-		"packages/*",
-		"packages/integrations/*"
-	],
+	"workspaces": {
+		"packages": [
+			"apps/*",
+			"packages/*",
+			"packages/integrations/*"
+		],
+		"catalog": {
+			"zod": "^4.3.5",
+			"drizzle-orm": "^0.45.1",
+			"@orpc/client": "^1.13.4",
+			"@orpc/server": "^1.13.4"
+		}
+	},
 	"scripts": {
 		"dev": "turbo run dev",
 		"build": "turbo run build",
@@ -28,6 +36,6 @@
 		"bun": ">=1.0.0"
 	},
 	"dependencies": {
-		"zod": "^4.3.5"
+		"zod": "catalog:"
 	}
 }

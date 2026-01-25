@@ -1,0 +1,169 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${APP_DB_NAME:-dbb}
+      POSTGRES_USER: ${APP_DB_USER:-dbb}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-dbb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - app-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USER:-dbb} -d ${APP_DB_NAME:-dbb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  db-init:
+    build:
+      context: .
+      dockerfile: docker/back-app.dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    env_file:
+      - docker/app.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://dbb:dbb@db:5432/dbb}
+    command: ["bun", "run", "db:push"]
+
+  back:
+    build:
+      context: .
+      dockerfile: docker/back-app.dockerfile
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    env_file:
+      - docker/app.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://dbb:dbb@db:5432/dbb}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:3001}
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-self-hosted}
+      TRIGGER_API_URL: ${TRIGGER_API_URL:-http://trigger-webapp:3030}
+    ports:
+      - "3001:3001"
+    networks:
+      - app
+      - trigger
+
+  front:
+    build:
+      context: .
+      dockerfile: docker/front-app.dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+    ports:
+      - "3000:80"
+    networks:
+      - app
+
+  trigger-webapp:
+    image: ghcr.io/triggerdotdev/trigger.dev:${TRIGGER_IMAGE_TAG:-v3}
+    restart: unless-stopped
+    env_file:
+      - docker/trigger.env
+    environment:
+      LOGIN_ORIGIN: ${TRIGGER_PROTOCOL:-http}://${TRIGGER_DOMAIN:-localhost:3040}
+      APP_ORIGIN: ${TRIGGER_PROTOCOL:-http}://${TRIGGER_DOMAIN:-localhost:3040}
+      DEV_OTEL_EXPORTER_OTLP_ENDPOINT: ${TRIGGER_PROTOCOL:-http}://${TRIGGER_DOMAIN:-localhost:3040}/otel
+      ELECTRIC_ORIGIN: http://trigger-electric:3000
+    ports:
+      - "3040:3030"
+    depends_on:
+      - trigger-postgres
+      - trigger-redis
+    networks:
+      - trigger
+
+  trigger-postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG:-16}
+    restart: unless-stopped
+    volumes:
+      - trigger-postgres-data:/var/lib/postgresql/data/
+    env_file:
+      - docker/trigger.env
+    ports:
+      - "5433:5432"
+    command:
+      - -c
+      - wal_level=logical
+    networks:
+      - trigger
+
+  trigger-redis:
+    image: redis:${REDIS_IMAGE_TAG:-7}
+    restart: unless-stopped
+    volumes:
+      - trigger-redis-data:/data
+    ports:
+      - "6389:6379"
+    networks:
+      - trigger
+
+  trigger-docker-provider:
+    image: ghcr.io/triggerdotdev/provider/docker:${TRIGGER_IMAGE_TAG:-v3}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: root
+    env_file:
+      - docker/trigger.env
+    environment:
+      PLATFORM_HOST: trigger-webapp
+      PLATFORM_WS_PORT: 3030
+      SECURE_CONNECTION: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${TRIGGER_PROTOCOL:-http}://${TRIGGER_DOMAIN:-localhost:3040}/otel
+      PLATFORM_SECRET: ${PROVIDER_SECRET:-provider-secret}
+    depends_on:
+      - trigger-webapp
+    ports:
+      - "9021:9020"
+    networks:
+      - trigger
+
+  trigger-coordinator:
+    image: ghcr.io/triggerdotdev/coordinator:${TRIGGER_IMAGE_TAG:-v3}
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    user: root
+    env_file:
+      - docker/trigger.env
+    environment:
+      PLATFORM_HOST: trigger-webapp
+      PLATFORM_WS_PORT: 3030
+      SECURE_CONNECTION: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${TRIGGER_PROTOCOL:-http}://${TRIGGER_DOMAIN:-localhost:3040}/otel
+      PLATFORM_SECRET: ${COORDINATOR_SECRET:-coordinator-secret}
+    depends_on:
+      - trigger-webapp
+    ports:
+      - "9020:9020"
+    networks:
+      - trigger
+
+  trigger-electric:
+    image: electricsql/electric:${ELECTRIC_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${TRIGGER_DATABASE_URL:-postgresql://trigger:trigger@trigger-postgres:5432/trigger}?sslmode=disable
+    depends_on:
+      - trigger-postgres
+    ports:
+      - "3061:3000"
+    networks:
+      - trigger
+
+volumes:
+  app-db-data:
+  trigger-postgres-data:
+  trigger-redis-data:
+
+networks:
+  app:
+  trigger:

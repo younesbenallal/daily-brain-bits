@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { authClient, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
-import { getCustomerState, getPlanSummary, normalizeList, resolveData } from "./settings-utils";
+import { getCustomerState, getPlanSummary, normalizeList, resolveData, useSettingsCapabilities } from "./settings-utils";
 import { StatusMessage, type StatusMessageState } from "./status-message";
 
 const orderListQuery = { page: 1, limit: 5 };
@@ -12,17 +12,19 @@ export function BillingSettings() {
 	const sessionQuery = useSession();
 	const user = sessionQuery.data?.user;
 	const [billingStatus, setBillingStatus] = useState<StatusMessageState>(null);
+	const { capabilities } = useSettingsCapabilities();
+	const billingEnabled = capabilities?.billingEnabled ?? true;
 
 	const customerStateQuery = useQuery({
 		queryKey: ["billing", "customer-state"],
 		queryFn: () => authClient.customer.state(),
-		enabled: Boolean(user),
+		enabled: Boolean(user) && billingEnabled,
 	});
 
 	const ordersQuery = useQuery({
 		queryKey: ["billing", "orders"],
 		queryFn: () => authClient.customer.orders.list({ query: orderListQuery }),
-		enabled: Boolean(user),
+		enabled: Boolean(user) && billingEnabled,
 	});
 
 	const customerState = getCustomerState(customerStateQuery.data);
@@ -56,6 +58,15 @@ export function BillingSettings() {
 		}
 		return new Intl.DateTimeFormat(undefined, { dateStyle: "long" }).format(planSummary.nextBillingDate);
 	}, [planSummary.nextBillingDate]);
+
+	if (!billingEnabled) {
+		return (
+			<div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+				<h3 className="font-semibold text-primary">Self-hosted plan</h3>
+				<p className="mt-1 text-sm text-primary/80">Billing is disabled in self-hosted mode. All features are enabled.</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">

@@ -1,7 +1,13 @@
-import { billingSubscriptions, db, noteDigests, reviewStates } from "@daily-brain-bits/db";
+import { db, noteDigests, reviewStates } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { type DigestFrequency, isDigestDue, isSameUtcDay, resolveEffectiveFrequency } from "../utils/digest-schedule";
+import {
+	type DigestFrequency,
+	isDigestDueWithTimezone,
+	isSameLocalDay,
+	resolveEffectiveFrequency,
+} from "../utils/digest-schedule";
 import { upsertDigestWithItems } from "../utils/digest-storage";
+import { getProUsers } from "../utils/entitlements";
 import { env } from "../utils/env";
 import { buildDigestEmail, loadDigestSnapshot } from "../utils/note-digest-email";
 import { sendResendEmail } from "../utils/resend";
@@ -26,12 +32,9 @@ export async function runSendDueDigests() {
 		columns: { id: true, email: true, emailVerified: true, name: true },
 	});
 	const settingsRows = await db.query.userSettings.findMany({
-		columns: { userId: true, emailFrequency: true },
+		columns: { userId: true, emailFrequency: true, timezone: true, preferredSendHour: true },
 	});
-	const proSubscriptions = await db.query.billingSubscriptions.findMany({
-		where: inArray(billingSubscriptions.status, ["active", "trialing"]),
-		columns: { userId: true },
-	});
+	const proUsers = await getProUsers(users.map((user) => user.id));
 	const sentDigests = await db.query.noteDigests.findMany({
 		where: eq(noteDigests.status, "sent"),
 		columns: { userId: true, sentAt: true, createdAt: true },
@@ -40,11 +43,10 @@ export async function runSendDueDigests() {
 
 	console.info("[send-due-digests] found %d users", users.length);
 	console.info("[send-due-digests] found %d settings", settingsRows.length);
-	console.info("[send-due-digests] found %d pro subscriptions", proSubscriptions.length);
+	console.info("[send-due-digests] resolved %d pro users", proUsers.size);
 	console.info("[send-due-digests] found %d sent digests", sentDigests.length);
 
 	const settingsMap = new Map(settingsRows.map((row) => [row.userId, row]));
-	const proUsers = new Set(proSubscriptions.map((row) => row.userId));
 	const lastSentMap = new Map<string, Date>();
 
 	for (const digest of sentDigests) {
@@ -65,15 +67,17 @@ export async function runSendDueDigests() {
 
 		const settings = settingsMap.get(candidate.id);
 		const requestedFrequency = settings?.emailFrequency ?? DEFAULT_FREQUENCY;
+		const timezone = settings?.timezone ?? "UTC";
+		const preferredSendHour = settings?.preferredSendHour ?? 8;
 		const effectiveFrequency = resolveEffectiveFrequency({
 			requested: requestedFrequency,
 			isPro: proUsers.has(candidate.id),
 		});
 		const lastSentAt = lastSentMap.get(candidate.id) ?? null;
 
-		if (!isDigestDue({ now, lastSentAt, frequency: effectiveFrequency, userId: candidate.id })) {
+		if (!isDigestDueWithTimezone({ now, lastSentAt, frequency: effectiveFrequency, userId: candidate.id, timezone, preferredSendHour })) {
 			console.log(
-				`[send-due-digests] Skipping user ${candidate.id} - not due yet (freq: ${effectiveFrequency}, last sent: ${lastSentAt?.toISOString()})`,
+				`[send-due-digests] Skipping user ${candidate.id} - not due yet (freq: ${effectiveFrequency}, tz: ${timezone}, hour: ${preferredSendHour}, last sent: ${lastSentAt?.toISOString()})`,
 			);
 			continue;
 		}
@@ -90,8 +94,8 @@ export async function runSendDueDigests() {
 		}
 
 		const digestDate = pendingDigest.scheduledFor ?? pendingDigest.createdAt;
-		if (!digestDate || !isSameUtcDay(now, digestDate)) {
-			console.log(`[send-due-digests] Skipping user ${candidate.id} - digest not for today (scheduled: ${digestDate?.toISOString()})`);
+		if (!digestDate || !isSameLocalDay(now, digestDate, timezone)) {
+			console.log(`[send-due-digests] Skipping user ${candidate.id} - digest not for today in ${timezone} (scheduled: ${digestDate?.toISOString()})`);
 			continue;
 		}
 

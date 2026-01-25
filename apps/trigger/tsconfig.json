@@ -1,0 +1,9 @@
+{
+	"extends": "@daily-brain-bits/typescript-config/base.json",
+	"include": ["src/**/*.ts", "trigger.config.ts"],
+	"compilerOptions": {
+		"noErrorTruncation": true,
+		"lib": ["ES2022"],
+		"incremental": true
+	}
+}

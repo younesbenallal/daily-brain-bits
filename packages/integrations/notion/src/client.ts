@@ -22,22 +22,25 @@ export function createNotionRequest(options: NotionRetryOptions = {}): <T>(fn: R
 	const maxDelayMs = options.maxDelayMs ?? 10_000;
 
 	return async function request<T>(fn: RequestFn<T>): Promise<T> {
-		let attempt = 0;
+		let rateLimitedRetries = 0;
 
-		while (true) {
+		while (rateLimitedRetries <= maxRetries) {
 			await limiter();
 			try {
 				return await fn();
 			} catch (error: unknown) {
 				if (isNotionClientError(error)) {
 					if (error.code === APIErrorCode.RateLimited) {
-						attempt += 1;
-						if (attempt > maxRetries) {
+						if (rateLimitedRetries >= maxRetries) {
 							throw error;
 						}
 
 						const retryAfterMs = parseRetryAfterMs(error);
-						const backoffMs = Math.min(maxDelayMs, retryAfterMs ?? baseDelayMs * 2 ** (attempt - 1));
+						rateLimitedRetries += 1;
+						const backoffMs = Math.min(
+							maxDelayMs,
+							retryAfterMs ?? baseDelayMs * 2 ** (rateLimitedRetries - 1),
+						);
 
 						await sleep(backoffMs);
 						continue;
@@ -46,6 +49,8 @@ export function createNotionRequest(options: NotionRetryOptions = {}): <T>(fn: R
 				throw error;
 			}
 		}
+
+		throw new Error("Unreachable: Notion request retry loop exited");
 	};
 }
 

@@ -1,13 +1,91 @@
-import { db, integrationConnections } from "@daily-brain-bits/db";
+import { db, emailSequenceStates, integrationConnections } from "@daily-brain-bits/db";
+import { configure, tasks } from "@trigger.dev/sdk/v3";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
+import { and, eq } from "drizzle-orm";
 import { createPolarPlugin } from "./polar";
 
 const polarPlugin = createPolarPlugin();
+const billingEnabled = process.env.DEPLOYMENT_MODE !== "self-hosted";
 
-if (!polarPlugin && process.env.NODE_ENV === "production") {
+if (!polarPlugin && billingEnabled && process.env.NODE_ENV === "production") {
 	throw new Error("POLAR_ACCESS_TOKEN is required to enable the Polar plugin in production.");
+}
+
+async function enterOnboardingSequence(userId: string) {
+	const now = new Date();
+	await db
+		.insert(emailSequenceStates)
+		.values({
+			userId,
+			sequenceName: "onboarding",
+			currentStep: 1,
+			status: "active",
+			enteredAt: now,
+		})
+		.onConflictDoNothing();
+
+	await db
+		.update(emailSequenceStates)
+		.set({
+			status: "exited",
+			exitReason: "connected",
+			completedAt: now,
+		})
+		.where(and(eq(emailSequenceStates.userId, userId), eq(emailSequenceStates.sequenceName, "welcome"), eq(emailSequenceStates.status, "active")));
+
+	await triggerSequenceRun({
+		userId,
+		sequenceName: "onboarding",
+	});
+}
+
+let triggerConfigured = false;
+
+function isEmailSequencesEnabled(): boolean {
+	if (!process.env.EMAIL_SEQUENCES_ENABLED) {
+		return true;
+	}
+	return process.env.EMAIL_SEQUENCES_ENABLED.toLowerCase() !== "false";
+}
+
+function ensureTriggerConfigured(): boolean {
+	if (triggerConfigured) {
+		return true;
+	}
+	const secretKey = process.env.TRIGGER_SECRET_KEY;
+	if (!secretKey) {
+		return false;
+	}
+
+	configure({
+		secretKey,
+		baseURL: process.env.TRIGGER_API_URL || undefined,
+	});
+	triggerConfigured = true;
+	return true;
+}
+
+async function triggerSequenceRun(params: { userId: string; sequenceName: "welcome" | "onboarding" | "upgrade" }) {
+	if (!isEmailSequencesEnabled()) {
+		return;
+	}
+	if (!ensureTriggerConfigured()) {
+		console.warn("[email-sequences] trigger skipped: TRIGGER_SECRET_KEY not configured");
+		return;
+	}
+
+	await tasks.trigger(
+		"email-sequence-runner",
+		{
+			userId: params.userId,
+			sequenceName: params.sequenceName,
+		},
+		{
+			idempotencyKey: `sequence-run-${params.sequenceName}-${params.userId}`,
+		},
+	);
 }
 
 export const auth = betterAuth({
@@ -32,10 +110,32 @@ export const auth = betterAuth({
 		...(polarPlugin ? [polarPlugin] : []),
 	],
 	databaseHooks: {
+		user: {
+			create: {
+				after: async (userRecord) => {
+					const now = new Date();
+					await db
+						.insert(emailSequenceStates)
+						.values({
+							userId: userRecord.id,
+							sequenceName: "welcome",
+							currentStep: 1,
+							status: "active",
+							enteredAt: now,
+						})
+						.onConflictDoNothing();
+
+					await triggerSequenceRun({
+						userId: userRecord.id,
+						sequenceName: "welcome",
+					});
+				},
+			},
+		},
 		account: {
 			create: {
 				after: async (account) => {
-					console.log("account create", account);
+					// allow to create integration when login with notion
 					if (account.providerId !== "notion") {
 						return;
 					}
@@ -62,11 +162,13 @@ export const auth = betterAuth({
 								lastSeenAt: now,
 							},
 						});
+
+					await enterOnboardingSequence(account.userId);
 				},
 			},
 			update: {
 				after: async (account) => {
-					console.log("account update", account);
+					// same
 					if (account.providerId !== "notion") {
 						return;
 					}
@@ -93,6 +195,8 @@ export const auth = betterAuth({
 								lastSeenAt: now,
 							},
 						});
+
+					await enterOnboardingSequence(account.userId);
 				},
 			},
 		},
@@ -108,17 +212,21 @@ export const auth = betterAuth({
 		},
 	},
 	socialProviders: {
-		google: {
-			clientId: process.env.GOOGLE_CLIENT_ID as string,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-		},
-		apple: {
-			clientId: process.env.APPLE_CLIENT_ID as string,
-			clientSecret: process.env.APPLE_CLIENT_SECRET as string,
-		},
-		notion: {
-			clientId: process.env.NOTION_CLIENT_ID as string,
-			clientSecret: process.env.NOTION_CLIENT_SECRET as string,
-		},
+		...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+			? {
+					google: {
+						clientId: process.env.GOOGLE_CLIENT_ID,
+						clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+					},
+				}
+			: {}),
+		...(process.env.NOTION_CLIENT_ID && process.env.NOTION_CLIENT_SECRET
+			? {
+					notion: {
+						clientId: process.env.NOTION_CLIENT_ID,
+						clientSecret: process.env.NOTION_CLIENT_SECRET,
+					},
+				}
+			: {}),
 	},
 });

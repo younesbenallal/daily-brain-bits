@@ -5,7 +5,11 @@
 	"type": "module",
 	"main": "./index.js",
 	"exports": {
-		".": "./index.js"
+		".": "./index.js",
+		"./scripts/generate-daily-digests": "./scripts/generate-daily-digests.ts",
+		"./scripts/send-due-digests": "./scripts/send-due-digests.ts",
+		"./utils/email-sequence-runner": "./utils/email-sequence-runner.ts",
+		"./utils/env": "./utils/env.ts"
 	},
 	"scripts": {
 		"dev": "bun run dev.ts",
@@ -14,6 +18,7 @@
 		"digest-cron": "bun run scripts/run-digest-cron.ts",
 		"generate-daily-digests": "bun run scripts/generate-daily-digests.ts",
 		"send-due-digests": "bun run scripts/send-due-digests.ts",
+		"send-test-digest-email": "bun run scripts/send-test-digest-email.ts",
 		"type-check": "tsc --noEmit --incremental",
 		"clean": "rm -rf dist"
 	},
@@ -24,19 +29,20 @@
 		"@daily-brain-bits/integrations-notion": "workspace:*",
 		"@daily-brain-bits/integrations-obsidian": "workspace:*",
 		"@daily-brain-bits/types": "workspace:*",
-		"@orpc/server": "^1.13.1",
+		"@orpc/server": "catalog:",
 		"@polar-sh/better-auth": "^1.6.4",
 		"@polar-sh/sdk": "^0.42.2",
 		"@react-email/components": "^1.0.4",
 		"@react-email/render": "^2.0.2",
+		"@trigger.dev/sdk": "^3.0.0",
 		"better-auth": "^1.4.14",
-		"drizzle-orm": "^0.45.1",
+		"drizzle-orm": "catalog:",
 		"hono": "^4.6.0",
 		"posthog-node": "^5.21.1",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
 		"resend": "^4.0.0",
-		"zod": "^4.2.1"
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@daily-brain-bits/typescript-config": "workspace:*",

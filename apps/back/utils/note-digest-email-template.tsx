@@ -1,5 +1,6 @@
-import { Body, Container, Head, Heading, Html, Link, Preview, Section, Text } from "@react-email/components";
+import { Body, Container, Head, Heading, Html, Link, Preview, Section, Tailwind, Text } from "@react-email/components";
 import * as React from "react";
+import { emailBodyStyle, emailBrand, emailTailwindConfig } from "./email-brand";
 import type { DigestFrequency } from "./digest-schedule";
 
 export type EmailContentBlock =
@@ -81,37 +82,58 @@ View this digest in the app: ${viewUrl}
 export function NoteDigestEmail(props: DigestEmailProps & { previewText: string }) {
 	return (
 		<Html lang="en">
-			<Head>
-				<style>{themeStyle}</style>
-			</Head>
-			<Preview>{props.previewText}</Preview>
-			<Body style={styles.body}>
-				<Container style={styles.container}>
-					<Text style={styles.eyebrow}>
-						{props.frequencyLabel} digest · {props.digestDate}
-					</Text>
-					<Heading style={styles.heading}>Hello {props.greetingName},</Heading>
-					<Text style={styles.intro}>Here is your {props.frequencyLabel.toLowerCase()} selection of notes to revisit today.</Text>
-					<Section style={styles.notesWrapper}>
-						{props.items.map((item) => {
-							const sourceLabel = formatSourceLabel(item);
-							return (
-								<Section key={item.documentId} style={styles.noteCard}>
-									<Text style={styles.noteTitle}>{item.title}</Text>
-									{renderEmailContentBlocks(item.blocks, { keyPrefix: String(item.documentId) })}
-									{sourceLabel ? <Text style={styles.noteSource}>{sourceLabel}</Text> : null}
-								</Section>
-							);
-						})}
+			<Tailwind config={emailTailwindConfig}>
+				<Head />
+				<Preview>{props.previewText}</Preview>
+				<Body className="font-body m-0 text-brand-foreground" style={emailBodyStyle}>
+					<Section className="py-10">
+						<Container className="max-w-[600px] mx-auto px-5">
+							<Text className="text-xs text-brand-muted font-ui m-0 mb-3">
+								{props.frequencyLabel} digest · {props.digestDate}
+							</Text>
+							<Heading className="text-[30px] leading-[1.15] font-semibold font-display text-brand-foreground m-0 mb-3">
+								Hello {props.greetingName},
+							</Heading>
+							<Text className="text-[15px] leading-7 text-brand-muted m-0 mb-6">
+								Here is your {props.frequencyLabel.toLowerCase()} selection of notes to revisit today.
+							</Text>
+							<Section className="mb-7">
+								{props.items.map((item) => {
+									const sourceLabel = formatSourceLabel(item);
+									return (
+										<Section
+											key={item.documentId}
+											className="bg-brand-card border border-solid border-brand-border rounded-3xl p-6 mb-6"
+											style={{ boxShadow: "var(--email-card-shadow)" }}
+										>
+											<Text className="text-[22px] font-semibold font-display text-brand-foreground m-0 mb-2">
+												{item.title}
+											</Text>
+											{renderEmailContentBlocks(item.blocks, { keyPrefix: String(item.documentId) })}
+											{sourceLabel ? (
+												<Text className="text-xs text-brand-muted font-ui m-0 mt-3">
+													{sourceLabel}
+												</Text>
+											) : null}
+										</Section>
+									);
+								})}
+							</Section>
+							<Section className="mb-7">
+								<Link
+									href={props.viewUrl}
+									className="inline-block px-7 py-3.5 rounded-full bg-brand-primary text-brand-primary-foreground no-underline text-sm font-semibold font-ui shadow-[var(--email-button-shadow)]"
+								>
+									View this digest in the app
+								</Link>
+							</Section>
+							<Text className="text-xs text-brand-muted font-ui m-0">
+								Daily Brain Bits · Sent to help you retain what matters.
+							</Text>
+						</Container>
 					</Section>
-					<Section style={styles.ctaWrapper}>
-						<Link href={props.viewUrl} style={styles.ctaButton}>
-							View this digest in the app
-						</Link>
-					</Section>
-					<Text style={styles.footer}>Daily Brain Bits · Sent to help you retain what matters.</Text>
-				</Container>
-			</Body>
+				</Body>
+			</Tailwind>
 		</Html>
 	);
 }
@@ -119,165 +141,6 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 export function buildExcerpt(content: string): string {
 	return buildEmailContent(content).excerpt;
 }
-
-const themeStyle = `
-:root {
-  --app-gradient: linear-gradient(180deg, hsl(213 100% 68%) 0%, hsl(214 100% 80%) 100%);
-  --background: hsl(214 100% 98%);
-  --foreground: hsl(222 20% 18%);
-  --muted-foreground: hsl(220 12% 45%);
-  --primary: hsl(214 85% 67%);
-  --primary-foreground: hsl(210 40% 98%);
-  --card: #ffffff;
-  --border: hsl(220 14% 92%);
-  --shadow-soft: 0 28px 70px rgba(15, 23, 42, 0.12);
-  --font-display: "Crimson Pro", "Times New Roman", serif;
-  --font-body: "DM Sans", "Helvetica Neue", Arial, sans-serif;
-  --font-ui: "Mona Sans", "DM Sans", "Helvetica Neue", Arial, sans-serif;
-  --space-xl: 32px;
-  --space-lg: 24px;
-  --space-md: 16px;
-  --space-sm: 12px;
-  --space-xs: 6px;
-  --radius-lg: 16px;
-  --radius-pill: 999px;
-  --font-xl: 28px;
-  --font-lg: 20px;
-  --font-md: 16px;
-  --font-sm: 15px;
-  --font-xs: 12px;
-}
-`;
-
-const styles = {
-	body: {
-		backgroundColor: "var(--background)",
-		backgroundImage: "var(--app-gradient)",
-		fontFamily: "var(--font-body, 'DM Sans', 'Helvetica Neue', Arial, sans-serif)",
-		margin: "0",
-		padding: "var(--space-xl) 0",
-		color: "var(--foreground)",
-	},
-	container: {
-		maxWidth: "600px",
-	},
-	eyebrow: {
-		fontSize: "var(--font-xs)",
-		color: "var(--muted-foreground)",
-		margin: "0 0 var(--space-sm) 0",
-		fontFamily: "var(--font-ui, 'Mona Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif)",
-	},
-	heading: {
-		fontSize: "var(--font-xl)",
-		fontWeight: "600",
-		margin: "0 0 var(--space-sm) 0",
-		color: "var(--foreground)",
-		fontFamily: "var(--font-display, 'Crimson Pro', 'Times New Roman', serif)",
-	},
-	intro: {
-		fontSize: "var(--font-md)",
-		lineHeight: "1.7",
-		margin: "0 0 var(--space-lg) 0",
-		color: "var(--muted-foreground)",
-	},
-	notesWrapper: {
-		margin: "0 0 var(--space-lg) 0",
-	},
-	noteCard: {
-		backgroundColor: "var(--card)",
-		border: "1px solid var(--border)",
-		borderRadius: "var(--radius-lg)",
-		boxShadow: "var(--shadow-soft)",
-		padding: "var(--space-md)",
-		marginBottom: "var(--space-md)",
-	},
-	noteTitle: {
-		fontSize: "var(--font-lg)",
-		fontWeight: "600",
-		margin: "0 0 var(--space-xs) 0",
-		color: "var(--foreground)",
-		fontFamily: "var(--font-display, 'Crimson Pro', 'Times New Roman', serif)",
-	},
-	noteParagraph: {
-		fontSize: "var(--font-sm)",
-		lineHeight: "1.7",
-		margin: "0 0 var(--space-sm) 0",
-		color: "var(--muted-foreground)",
-		wordBreak: "break-word",
-		overflowWrap: "anywhere",
-	},
-	noteHeading: {
-		fontSize: "var(--font-md)",
-		fontWeight: "700",
-		margin: "0 0 var(--space-xs) 0",
-		color: "var(--foreground)",
-		fontFamily: "var(--font-display, 'Crimson Pro', 'Times New Roman', serif)",
-	},
-	noteQuote: {
-		fontSize: "var(--font-sm)",
-		lineHeight: "1.7",
-		margin: "0 0 var(--space-sm) 0",
-		color: "var(--muted-foreground)",
-		borderLeft: "3px solid var(--border)",
-		paddingLeft: "12px",
-		fontStyle: "italic",
-	},
-	noteCode: {
-		fontSize: "13px",
-		lineHeight: "1.6",
-		margin: "0 0 var(--space-sm) 0",
-		color: "var(--foreground)",
-		backgroundColor: "rgba(255,255,255,0.6)",
-		border: "1px solid var(--border)",
-		borderRadius: "12px",
-		padding: "12px",
-		fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-		whiteSpace: "pre-wrap",
-		wordBreak: "break-word",
-		overflowWrap: "anywhere",
-	},
-	noteListItem: {
-		fontSize: "var(--font-sm)",
-		lineHeight: "1.7",
-		margin: "0 0 6px 0",
-		color: "var(--muted-foreground)",
-		wordBreak: "break-word",
-		overflowWrap: "anywhere",
-	},
-	inlineLink: {
-		color: "var(--primary)",
-		textDecoration: "underline",
-		textUnderlineOffset: "3px",
-	},
-	noteSource: {
-		fontSize: "var(--font-xs)",
-		textTransform: "uppercase",
-		letterSpacing: "0.12em",
-		margin: "0",
-		color: "var(--muted-foreground)",
-		fontFamily: "var(--font-ui, 'Mona Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif)",
-	},
-	ctaWrapper: {
-		margin: "0 0 var(--space-lg) 0",
-	},
-	ctaButton: {
-		display: "inline-block",
-		padding: "12px 22px",
-		borderRadius: "var(--radius-pill)",
-		backgroundColor: "var(--primary)",
-		color: "var(--primary-foreground)",
-		textDecoration: "none",
-		fontSize: "var(--font-sm)",
-		fontWeight: "600",
-		fontFamily: "var(--font-ui, 'Mona Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif)",
-	},
-	footer: {
-		fontSize: "var(--font-xs)",
-		color: "var(--muted-foreground)",
-		margin: "0",
-		fontFamily: "var(--font-ui, 'Mona Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif)",
-	},
-} satisfies Record<string, React.CSSProperties>;
 
 function buildPreviewText(frequencyLabel: string, items: DigestEmailItem[]): string {
 	if (items.length === 0) {
@@ -494,21 +357,33 @@ function renderEmailContentBlocks(blocks: EmailContentBlock[], options: { keyPre
 		const key = `${options.keyPrefix}-b-${index}`;
 		if (block.type === "heading") {
 			return (
-				<Text key={key} style={styles.noteHeading}>
+				<Text key={key} className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-1">
 					{renderTextWithLinks(block.content)}
 				</Text>
 			);
 		}
 		if (block.type === "quote") {
 			return (
-				<Text key={key} style={styles.noteQuote}>
+				<Text
+					key={key}
+					className="text-[14px] leading-7 text-brand-muted m-0 mb-3 pl-3 italic"
+					style={{ borderLeft: `3px solid ${emailBrand.colors.border}` }}
+				>
 					{renderTextWithLinks(block.content)}
 				</Text>
 			);
 		}
 		if (block.type === "code") {
 			return (
-				<Text key={key} style={styles.noteCode}>
+				<Text
+					key={key}
+					className="text-[13px] leading-6 text-brand-foreground m-0 mb-3 p-3 rounded-xl border border-solid border-brand-border"
+					style={{
+						fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+						backgroundColor: "var(--email-code-bg)",
+						whiteSpace: "pre-wrap",
+					}}
+				>
 					{block.content}
 				</Text>
 			);
@@ -517,7 +392,7 @@ function renderEmailContentBlocks(blocks: EmailContentBlock[], options: { keyPre
 			return (
 				<Section key={key}>
 					{block.items.map((item, itemIndex) => (
-						<Text key={`${key}-i-${itemIndex}`} style={styles.noteListItem}>
+						<Text key={`${key}-i-${itemIndex}`} className="text-[14px] leading-7 text-brand-muted m-0 mb-1">
 							{"• "}
 							{renderTextWithLinks(item)}
 						</Text>
@@ -526,7 +401,7 @@ function renderEmailContentBlocks(blocks: EmailContentBlock[], options: { keyPre
 			);
 		}
 		return (
-			<Text key={key} style={styles.noteParagraph}>
+			<Text key={key} className="text-[14px] leading-7 text-brand-muted m-0 mb-3">
 				{renderTextWithLinks(block.content)}
 			</Text>
 		);
@@ -537,7 +412,7 @@ function renderTextWithLinks(text: string) {
 	const urlRegex = /(https?:\/\/[^\s)]+)(\)?)/g;
 	const parts: Array<string | React.ReactElement> = [];
 	let lastIndex = 0;
-	let match: RegExpExecArray | null;
+	let match: RegExpExecArray | null = null;
 
 	while ((match = urlRegex.exec(text)) !== null) {
 		const matchIndex = match.index;
@@ -549,7 +424,7 @@ function renderTextWithLinks(text: string) {
 		}
 
 		parts.push(
-			<Link key={`${url}-${matchIndex}`} href={url} style={styles.inlineLink}>
+			<Link key={`${url}-${matchIndex}`} href={url} className="text-brand-primary underline underline-offset-2">
 				{url}
 			</Link>,
 		);

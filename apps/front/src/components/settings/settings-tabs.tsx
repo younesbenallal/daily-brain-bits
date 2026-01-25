@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { SettingsTab } from "./settings-constants";
-import { settingsTabs } from "./settings-constants";
 import { cn } from "@/lib/utils";
 
-export function SettingsTabs({ activeTab }: { activeTab: SettingsTab }) {
+export function SettingsTabs({ activeTab, tabs }: { activeTab: SettingsTab; tabs: SettingsTab[] }) {
 	return (
 		<div className="flex gap-1 border-b border-border pb-px">
-			{settingsTabs.map((tab) => (
+			{tabs.map((tab) => (
 				<Link
 					key={tab}
 					to="/settings"

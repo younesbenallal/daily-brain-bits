@@ -1,25 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc-client";
 import { cn } from "@/lib/utils";
-import { getCustomerState, getPlanSummary } from "./settings-utils";
+import { useSettingsCapabilities } from "./settings-utils";
 import { StatusMessage, type StatusMessageState } from "./status-message";
 
 export function AppSettings() {
 	const queryClient = useQueryClient();
-	const sessionQuery = useSession();
-	const user = sessionQuery.data?.user;
 	const settingsQueryOptions = orpc.settings.get.queryOptions();
 	const settingsQuery = useQuery(settingsQueryOptions);
 	const settingsData = settingsQuery.data?.settings;
-	const customerStateQuery = useQuery({
-		queryKey: ["billing", "customer-state"],
-		queryFn: () => authClient.customer.state(),
-		enabled: Boolean(user),
-	});
-	const planSummary = getPlanSummary(getCustomerState(customerStateQuery.data));
-	const isPro = planSummary.isPro;
+	const { capabilities } = useSettingsCapabilities();
+	const isPro = capabilities?.isPro ?? true;
+	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const frequencyOptions = useMemo(
 		() =>
 			[
@@ -79,7 +73,7 @@ export function AppSettings() {
 
 	return (
 		<div className="space-y-6">
-			{!isPro ? (
+			{billingEnabled && !isPro ? (
 				<div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
 					<div className="flex flex-wrap items-center justify-between gap-3">
 						<div>

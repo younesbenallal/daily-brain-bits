@@ -22,7 +22,7 @@ export function AccountOauthSettings() {
 		() =>
 			[
 				{ id: "google", name: "Google", description: "Sign in faster with your Google account." },
-				{ id: "apple", name: "Apple", description: "Keep sign in private with Apple." },
+				{ id: "notion", name: "Notion", description: "Sign in faster with your Notion account." },
 			] as const,
 		[],
 	);
@@ -41,8 +41,7 @@ export function AccountOauthSettings() {
 	}, [accounts]);
 
 	const unlinkMutation = useMutation({
-		mutationFn: async ({ providerId, accountId }: { providerId: string; accountId?: string }) =>
-			authClient.unlinkAccount({ providerId, accountId }),
+		mutationFn: async ({ providerId, accountId }: { providerId: string; accountId?: string }) => authClient.unlinkAccount({ providerId, accountId }),
 		onSuccess: () => {
 			setOauthStatus({ tone: "success", message: "Connection removed." });
 			void queryClient.invalidateQueries({ queryKey: ["auth", "accounts"] });
@@ -67,9 +66,7 @@ export function AccountOauthSettings() {
 					return (
 						<div key={provider.id} className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
 							<div className="flex items-center gap-3">
-								<div className="flex h-8 w-8 items-center justify-center rounded bg-muted font-semibold uppercase">
-									{provider.name.slice(0, 1)}
-								</div>
+								<div className="flex h-8 w-8 items-center justify-center rounded bg-muted font-semibold uppercase">{provider.name.slice(0, 1)}</div>
 								<div>
 									<div className="font-medium">{provider.name}</div>
 									<div className="text-xs text-muted-foreground">{provider.description}</div>

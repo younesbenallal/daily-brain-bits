@@ -1,7 +1,7 @@
 import { db, noteDigests } from "@daily-brain-bits/db";
 import { desc, eq } from "drizzle-orm";
 import { prepareDigestItems } from "../utils/digest-generation";
-import { isSameUtcDay } from "../utils/digest-schedule";
+import { getStartOfLocalDay, isSameLocalDay } from "../utils/digest-schedule";
 import { upsertDigestWithItems } from "../utils/digest-storage";
 import { env } from "../utils/env";
 
@@ -15,7 +15,7 @@ export async function runGenerateDailyDigests() {
 		columns: { id: true },
 	});
 	const settingsRows = await db.query.userSettings.findMany({
-		columns: { userId: true, notesPerDigest: true },
+		columns: { userId: true, notesPerDigest: true, timezone: true },
 	});
 	const settingsMap = new Map(settingsRows.map((row) => [row.userId, row]));
 
@@ -28,12 +28,14 @@ export async function runGenerateDailyDigests() {
 			orderBy: [desc(noteDigests.createdAt)],
 		});
 
+		const timezone = settingsMap.get(candidate.id)?.timezone ?? "UTC";
 		const digestDate = latestDigest?.scheduledFor ?? latestDigest?.createdAt ?? null;
-		if (digestDate && isSameUtcDay(now, digestDate)) {
+		if (digestDate && isSameLocalDay(now, digestDate, timezone)) {
 			continue;
 		}
 
 		const notesPerDigest = settingsMap.get(candidate.id)?.notesPerDigest ?? DEFAULT_NOTES_PER_DIGEST;
+		const scheduledFor = getStartOfLocalDay(now, timezone);
 		const plan = await prepareDigestItems({
 			userId: candidate.id,
 			notesPerDigest,
@@ -45,7 +47,7 @@ export async function runGenerateDailyDigests() {
 				userId: candidate.id,
 				items: [],
 				status: "skipped",
-				scheduledFor: now,
+				scheduledFor,
 				sentAt: null,
 				payloadJson: {
 					reason: plan.hasDocuments ? "empty_selection" : "no_documents",
@@ -59,7 +61,7 @@ export async function runGenerateDailyDigests() {
 			userId: candidate.id,
 			items: plan.items,
 			status: "scheduled",
-			scheduledFor: now,
+			scheduledFor,
 			sentAt: null,
 			payloadJson: { createdBy: "daily_cron" },
 		});

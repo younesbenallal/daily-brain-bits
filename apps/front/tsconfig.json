@@ -1,4 +1,5 @@
 {
+	"extends": "@daily-brain-bits/typescript-config/react-library.json",
 	"compilerOptions": {
 		"skipLibCheck": true,
 		"module": "ESNext",

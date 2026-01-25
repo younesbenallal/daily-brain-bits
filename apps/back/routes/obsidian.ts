@@ -13,6 +13,7 @@ import { z } from "zod";
 import { apiKeyRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
 import { captureBackendEvent } from "../utils/posthog-client";
+import { enterOnboardingSequence } from "../utils/trigger-client";
 
 function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; settings?: Record<string, unknown> }) {
 	return obsidianConnectionConfigSchema.parse({
@@ -74,6 +75,8 @@ const connect = apiKeyRoute
 			connectionId,
 			displayName,
 		});
+
+		await enterOnboardingSequence(userId);
 
 		return {
 			connected: true,
@@ -184,6 +187,8 @@ const syncBatch = apiKeyRoute
 			vaultId: input.vaultId,
 			displayName: input.vaultName,
 		});
+
+		await enterOnboardingSequence(userId);
 
 		if (!connectionId) {
 			throw new ORPCError("INTERNAL_SERVER_ERROR", {

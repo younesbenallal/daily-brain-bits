@@ -26,6 +26,7 @@ Notes:
   - Email delivery (SMTP/provider)
   - LLM keys (for quizzes) if enabled
 - Support expectations: community/self-support vs. managed support for hosted Pro.
+- Enable self-hosted mode with `DEPLOYMENT_MODE=self-hosted` (all users are treated as Pro).
 
 ## Technical Architecture
 
@@ -100,6 +101,9 @@ Recommended:
 - `POLAR_PRO_PRODUCT_ID`
 - `POLAR_SERVER` (set to `sandbox` when needed)
 - `FRONTEND_URL`
+
+Self-hosting:
+- `DEPLOYMENT_MODE=self-hosted` disables Polar and unlocks Pro features.
 
 ## Tests Implemented
 

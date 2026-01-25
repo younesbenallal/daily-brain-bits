@@ -1,3 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc-client";
+
 export function normalizeList<T>(value: unknown): T[] {
 	if (Array.isArray(value)) {
 		return value as T[];
@@ -10,6 +13,18 @@ export function normalizeList<T>(value: unknown): T[] {
 		}
 	}
 	return [];
+}
+
+export function useSettingsCapabilities() {
+	const query = useQuery(orpc.settings.capabilities.queryOptions());
+	const capabilities = query.data?.capabilities ?? null;
+
+	return {
+		query,
+		capabilities,
+		billingEnabled: capabilities?.billingEnabled ?? true,
+		isPro: capabilities?.isPro ?? true,
+	};
 }
 
 export function resolveData<T>(value: unknown): T | null {

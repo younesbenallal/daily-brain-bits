@@ -7,6 +7,7 @@ import { digestRouter } from "./routes/digest";
 import * as notionRoutes from "./routes/notion";
 import * as obsidianRoutes from "./routes/obsidian";
 import { onboardingRouter } from "./routes/onboarding";
+import { handleResendWebhook } from "./routes/resend-webhook";
 import { settingsRouter } from "./routes/settings";
 import { createApiKeySession } from "./utils/api-key";
 import { env } from "./utils/env";
@@ -33,6 +34,7 @@ const app = new Hono<{ Variables: RequestContext }>()
 			credentials: true,
 		}),
 	)
+	.post("/webhooks/resend", handleResendWebhook)
 	.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 	.use("*", async (c, next) => {
 		// First try regular session authentication

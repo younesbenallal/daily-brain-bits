@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { getFrequencyIntervalMs, isDigestDue, resolveEffectiveFrequency } from "./digest-schedule";
+import { getFrequencyIntervalMs, getStartOfLocalDay, isDigestDue, resolveEffectiveFrequency } from "./digest-schedule";
 
 describe("digest-schedule", () => {
 	it("defaults to due when no previous send exists", () => {
@@ -60,6 +60,12 @@ describe("digest-schedule", () => {
 		expect(isDigestDue({ now, lastSentAt, frequency: "daily", userId })).toBe(false);
 		const nextDay = new Date("2024-01-13T18:00:00Z");
 		expect(isDigestDue({ now: nextDay, lastSentAt, frequency: "daily", userId })).toBe(true);
+	});
+
+	it("returns local midnight in UTC for a timezone", () => {
+		const now = new Date("2024-01-15T18:00:00Z");
+		const midnight = getStartOfLocalDay(now, "America/Los_Angeles");
+		expect(midnight.toISOString()).toBe("2024-01-15T08:00:00.000Z");
 	});
 });
 

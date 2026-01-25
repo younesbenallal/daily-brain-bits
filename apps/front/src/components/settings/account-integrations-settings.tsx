@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { authClient, useSession } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc-client";
 import { cn } from "@/lib/utils";
-import { getCustomerState, getPlanSummary } from "./settings-utils";
+import { useSettingsCapabilities } from "./settings-utils";
 import { StatusMessage, type StatusMessageState } from "./status-message";
 
 export function AccountIntegrationsSettings() {
@@ -14,13 +14,9 @@ export function AccountIntegrationsSettings() {
 	const notionStatusQuery = useQuery({ ...notionStatusQueryOptions, enabled: Boolean(user) });
 	const obsidianStatusQueryOptions = useMemo(() => orpc.obsidian.status.queryOptions(), []);
 	const obsidianStatusQuery = useQuery({ ...obsidianStatusQueryOptions, enabled: Boolean(user) });
-	const customerStateQuery = useQuery({
-		queryKey: ["billing", "customer-state"],
-		queryFn: () => authClient.customer.state(),
-		enabled: Boolean(user),
-	});
-	const planSummary = getPlanSummary(getCustomerState(customerStateQuery.data));
-	const isPro = planSummary.isPro;
+	const { capabilities } = useSettingsCapabilities();
+	const isPro = capabilities?.isPro ?? true;
+	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const [upgradeStatus, setUpgradeStatus] = useState<StatusMessageState>(null);
 
 	const upgradeMutation = useMutation({
@@ -41,7 +37,7 @@ export function AccountIntegrationsSettings() {
 		<div className="space-y-4">
 			<h3 className="text-lg font-medium">Integrations</h3>
 			<p className="text-sm text-muted-foreground">Manage the knowledge sources that power your daily digest.</p>
-			{!isPro ? (
+			{billingEnabled && !isPro ? (
 				<div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
 					<div className="flex flex-wrap items-center justify-between gap-3">
 						<div>

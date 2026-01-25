@@ -220,6 +220,10 @@ const upsertSubscriptionFromPayload = async (payload: SubscriptionWebhookPayload
 };
 
 export const createPolarPlugin = () => {
+	if (process.env.DEPLOYMENT_MODE === "self-hosted") {
+		return null;
+	}
+
 	const accessToken = process.env.POLAR_ACCESS_TOKEN;
 	if (!accessToken) {
 		return null;
