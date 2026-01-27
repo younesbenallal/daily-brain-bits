@@ -79,8 +79,8 @@ export function AppSettings() {
 				<div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
 					<div className="flex flex-wrap items-center justify-between gap-3">
 						<div>
-							<p className="text-sm font-medium text-primary">Upgrade to Pro to unlock daily digests, AI quizzes, and multiple sources.</p>
-							<p className="text-xs text-primary/80">Free users get weekly or monthly emails and one knowledge source.</p>
+							<p className="text-sm font-medium text-primary">Go Pro: daily digests, AI-powered quizzes, and connect unlimited sources.</p>
+							<p className="text-xs text-primary/80">Review your notes 7x faster with daily delivery. Cancel anytime.</p>
 						</div>
 						<button
 							type="button"

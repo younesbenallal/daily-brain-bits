@@ -93,8 +93,8 @@ function OnboardingFooter() {
 function LoadingStepOne() {
 	return (
 		<div className="space-y-4">
-			<h1 className="font-display text-3xl text-foreground">Preparing your digest…</h1>
-			<p className="text-sm text-muted-foreground">Getting your notes ready for the first sync.</p>
+			<h1 className="font-display text-3xl text-foreground">Building your first digest…</h1>
+			<p className="text-sm text-muted-foreground">We're scanning your notes and selecting the ones most worth revisiting.</p>
 		</div>
 	);
 }
@@ -102,8 +102,8 @@ function LoadingStepOne() {
 function LoadingStepTwo() {
 	return (
 		<div className="space-y-4 text-center">
-			<h1 className="font-display text-3xl text-foreground">While we sync, here’s a quick tour</h1>
-			<p className="text-sm text-muted-foreground">This takes a moment. You can still explore the basics.</p>
+			<h1 className="font-display text-3xl text-foreground">Quick tip while we sync</h1>
+			<p className="text-sm text-muted-foreground">This usually takes 10–30 seconds. Here's how to get the most out of your digests.</p>
 		</div>
 	);
 }
@@ -120,8 +120,10 @@ function TutorialStep({
 	return (
 		<div className="space-y-6">
 			<div className="space-y-3">
-				<h1 className="font-display text-3xl text-primary">How to prioritize a note</h1>
-				<p className="text-sm text-muted-foreground">Use the priority tag to surface what matters most.</p>
+				<h1 className="font-display text-3xl text-primary">Prioritize what matters most</h1>
+				<p className="text-sm text-muted-foreground">
+					Add a "priority" tag in Notion or Obsidian to any note you want to see more often. We'll surface it sooner.
+				</p>
 			</div>
 
 			<div className="flex justify-center">

@@ -10,14 +10,14 @@ export const Route = createFileRoute("/(app)/onboarding/choose-source")({
 function ChooseSourcePage() {
 	const router = useRouter();
 	return (
-		<OnboardingLayout>
-			<div className="space-y-6">
-				<div className="space-y-3">
-					<h1 className="font-display text-3xl text-primary">Connect your notes</h1>
-					<p className="text-sm text-muted-foreground">
-						Choose where your notes live. You can change this later in Settings.
-					</p>
-				</div>
+			<OnboardingLayout>
+				<div className="space-y-6">
+					<div className="space-y-3">
+						<h1 className="font-display text-3xl text-primary">Where does your second brain live?</h1>
+						<p className="text-sm text-muted-foreground">
+							We\'ll pull insights from the notes you\'ve already captured—no re-organizing needed.
+						</p>
+					</div>
 
 				<div className="flex flex-col gap-3">
 					{[

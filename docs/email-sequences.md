@@ -4,7 +4,7 @@
 
 This document defines three core email sequences for Daily Brain Bits (DBB):
 
-1. **Welcome Sequence** - Signup → Connect integration
+1. **Welcome Sequence** - Signup (no integration after 1 hour) → Connect integration
 2. **Onboarding Sequence** - Connected → First digest → Engaged user
 3. **Upgrade to Pro Sequence** - Engaged free user → Paid conversion
 
@@ -21,12 +21,14 @@ All emails use React Email with the existing brand styling from `note-digest-ema
 - Each sequence uses a dedicated run per user (`email-sequence-runner`) and re-checks exit conditions before sending.
 - Upgrade sequences are discovered on a scheduled task (`upgrade-sequence-discover`).
 - Set `EMAIL_SEQUENCES_ENABLED=false` to disable all sequence sends (self-host safe).
+- **No emails are sent at signup.** The welcome sequence starts only if the user has **no integration connected after 1 hour**.
+- **Digest sends are scheduled by the user cron**, which starts immediately when the first integration connects. If the user connects right away, their **first email is the first digest**.
 
 ---
 
 ## Sequence 1: Welcome Sequence
 
-**Trigger**: User signs up (email verified)
+**Trigger**: 1 hour after signup (only if no integration connected)
 **Goal**: Get user to connect their first integration (Notion or Obsidian)
 **Exit condition**: User connects an integration OR 14 days pass
 **Length**: 4 emails over 7 days
@@ -35,7 +37,7 @@ All emails use React Email with the existing brand styling from `note-digest-ema
 
 | Email | Timing | Purpose |
 |-------|--------|---------|
-| 1 | Immediate | Welcome + connect CTA |
+| 1 | 1 hour after signup | Welcome + connect CTA |
 | 2 | Day 2 | Value reminder + which source |
 | 3 | Day 4 | Address hesitation |
 | 4 | Day 7 | Final nudge |
@@ -44,7 +46,7 @@ All emails use React Email with the existing brand styling from `note-digest-ema
 
 ### Email 1: Welcome to Daily Brain Bits
 
-**Send**: Immediately after signup
+**Send**: 1 hour after signup (skip if already connected)
 **Subject**: Welcome to Daily Brain Bits — let's connect your notes
 **Preview**: Your first step: connect Notion or Obsidian
 
@@ -65,11 +67,14 @@ Choose where your notes live:
 
 This takes about 2 minutes. Once connected, we'll start preparing your first digest.
 
+If you ran into any issues connecting, email me at {{founderEmail}} and I'll help.
+
 Talk soon,
 The DBB Team
 ```
 
 **CTA**: Two buttons → `/onboarding/choose-source`
+**Variables**: `{{founderEmail}}` (personal contact email)
 
 ---
 
@@ -171,92 +176,23 @@ If DBB isn't right for you, no hard feelings. You can unsubscribe below.
 
 ## Sequence 2: Onboarding Sequence
 
-**Trigger**: User connects first integration successfully
-**Goal**: Get user to aha moment (first digest) and establish habit
+**Trigger**: First digest sent (after the first integration connects)
+**Goal**: Reinforce the first digest and establish a habit
 **Exit condition**: User upgrades to Pro OR sequence completes
-**Length**: 6 emails over 14 days
+**Length**: 4 emails over 14 days
 
 ### Overview
 
 | Email | Timing | Purpose |
 |-------|--------|---------|
-| 1 | Immediate | Connection confirmed + what's next |
-| 2 | Day 1 | First digest preview / anticipation |
-| 3 | Post-first-digest | Aha moment reinforcement |
-| 4 | Day 5 | Configure preferences |
-| 5 | Day 9 | Social proof |
-| 6 | Day 14 | Check-in |
+| 1 | Post-first-digest | Aha moment reinforcement |
+| 2 | Day 5 | Configure preferences |
+| 3 | Day 9 | Social proof |
+| 4 | Day 14 | Check-in |
 
 ---
 
-### Email 1: You're connected!
-
-**Send**: Immediately after integration connects
-**Subject**: Your {{sourceName}} notes are syncing
-**Preview**: First digest coming soon
-
-**Body**:
-
-```
-Hello {{firstName}},
-
-Great news — your {{sourceName}} is now connected to Daily Brain Bits.
-
-**What happens next:**
-
-1. We're syncing your notes (this may take a few minutes)
-2. Our algorithm will select your first batch of notes
-3. You'll receive your first digest {{digestTiming}}
-
-**While you wait**, you can configure your preferences:
-
-[Set your digest preferences]
-
-Your notes are in good hands.
-
-— The DBB Team
-```
-
-**Variables**:
-- `{{sourceName}}`: "Notion" or "Obsidian"
-- `{{digestTiming}}`: Based on their frequency setting, e.g., "tomorrow morning" or "this week"
-
-**CTA**: Button → `/onboarding/preferences`
-
----
-
-### Email 2: Your first digest is coming
-
-**Send**: Day 1 (skip if first digest already sent)
-**Subject**: Your first Brain Bits digest is almost ready
-**Preview**: Here's what to expect
-
-**Body**:
-
-```
-Hello {{firstName}},
-
-Your first Daily Brain Bits digest is being prepared. Here's what to expect:
-
-**What you'll receive:**
-- {{noteCount}} notes selected from your {{sourceName}}
-- Chosen based on relevance, age, and review history
-- Formatted for quick reading and recall
-
-**Pro tip**: When you receive your digest, don't just skim it. Take 2 minutes to actually read the notes. That's how the magic happens — rediscovering your own ideas.
-
-Your first digest will arrive {{digestTiming}}.
-
-— The DBB Team
-```
-
-**Variables**:
-- `{{noteCount}}`: 3-5 (or whatever the default is)
-- `{{digestTiming}}`: Based on frequency/schedule
-
----
-
-### Email 3: How was your first digest?
+### Email 1: How was your first digest?
 
 **Send**: 2-4 hours after first digest is sent
 **Subject**: Did you spot a forgotten gem?
@@ -288,7 +224,7 @@ We'd love to hear what you think. Just reply to this email.
 
 ---
 
-### Email 4: Make it yours
+### Email 2: Make it yours
 
 **Send**: Day 5
 **Subject**: Quick settings to improve your digests
@@ -327,7 +263,7 @@ Pro users can connect multiple sources. Worth it if you use both.
 
 ---
 
-### Email 5: You're not alone
+### Email 3: You're not alone
 
 **Send**: Day 9
 **Subject**: 847 notes rediscovered this week
@@ -357,7 +293,7 @@ Keep reading those digests.
 
 ---
 
-### Email 6: How's it going?
+### Email 4: How's it going?
 
 **Send**: Day 14
 **Subject**: Two weeks in — how's DBB working for you?
@@ -603,8 +539,8 @@ Either way, thanks for using Daily Brain Bits. Your notes deserve to be remember
    - Track email opens/clicks via Resend webhooks
    - Store sequence state per user (current step, completed, exited)
 4. **Triggers**:
-   - Welcome: `user.created` event
-   - Onboarding: `integration.connected` event
+   - Welcome: `user.created` event **+ 1 hour delay**, only if no integration is connected
+   - Onboarding: `digest.sent` (first digest) event
    - Upgrade: Engagement threshold met (check daily/weekly job)
 5. **Webhook endpoint**:
    - `POST /webhooks/resend` (requires `RESEND_WEBHOOK_SECRET`)

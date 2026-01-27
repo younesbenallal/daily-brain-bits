@@ -60,10 +60,10 @@ function PreferencesPage() {
 	return (
 		<OnboardingLayout>
 			<div className="space-y-6">
-				<div className="space-y-3">
-					<h1 className="font-display text-3xl text-primary">Delivery preferences</h1>
-					<p className="text-sm text-muted-foreground">Choose when you’d like to receive your digest emails. You can change this anytime in Settings.</p>
-				</div>
+			<div className="space-y-3">
+				<h1 className="font-display text-3xl text-primary">When should we send your notes?</h1>
+				<p className="text-sm text-muted-foreground">Pick a time that fits your routine. Morning works best for most people.</p>
+			</div>
 
 				<div className="space-y-4">
 					<div className="space-y-2">
@@ -106,14 +106,14 @@ function PreferencesPage() {
 						</Select>
 					</div>
 
-					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Frequency</p>
-						<p className="text-sm text-muted-foreground">Free accounts receive a weekly digest. Upgrade to choose daily delivery.</p>
-					</div>
+			<div className="space-y-2">
+				<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Frequency</p>
+				<p className="text-sm text-muted-foreground">Free: weekly digest. Pro: daily delivery for faster knowledge compounding.</p>
+			</div>
 
-					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Notes per digest</p>
-						<p className="text-sm text-muted-foreground">Select how many notes to include in each email.</p>
+			<div className="space-y-2">
+				<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Notes per digest</p>
+				<p className="text-sm text-muted-foreground">More notes per email = faster review of your backlog.</p>
 						<div className="flex items-center gap-3">
 							<input
 								type="number"
@@ -137,9 +137,9 @@ function PreferencesPage() {
 						</div>
 					</div>
 
-					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">AI quizzes</p>
-						<p className="text-sm text-muted-foreground">Enable short quizzes alongside your notes.</p>
+			<div className="space-y-2">
+				<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">AI quizzes</p>
+				<p className="text-sm text-muted-foreground">Active recall beats passive reading. Quizzes help you remember 2x more.</p>
 						<label className="flex items-center gap-2 text-sm">
 							<input
 								type="checkbox"

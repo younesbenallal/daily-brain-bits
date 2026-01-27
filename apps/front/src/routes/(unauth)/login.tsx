@@ -32,7 +32,7 @@ function LoginPage() {
 	const title = mode === "signup" ? "Create your account" : "Log in";
 	const subtitle =
 		mode === "signup"
-			? "We’ll use this email to send your digests."
+			? "We’ll send you handpicked notes from your Notion or Obsidian vault—so nothing you\'ve learned gets forgotten."
 			: "Use your email/password, or continue with Google/Notion.";
 
 	return (

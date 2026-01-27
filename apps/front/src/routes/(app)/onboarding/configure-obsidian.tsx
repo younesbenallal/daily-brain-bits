@@ -121,7 +121,7 @@ function ConfigureObsidianPage() {
 						<Obsidian className="h-8 w-8" />
 						<h1 className="font-display text-3xl text-primary">Connect Obsidian</h1>
 					</div>
-					<p className="text-sm text-muted-foreground">Install the plugin and link your vault to start syncing notes.</p>
+					<p className="text-sm text-muted-foreground">Link your vault and we'll surface your best notes—without changing how you organize them.</p>
 				</div>
 
 				<div className="space-y-3">

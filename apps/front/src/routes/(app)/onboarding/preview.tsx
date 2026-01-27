@@ -65,7 +65,7 @@ function PreviewPage() {
 			<div className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-primary">Your first digest</h1>
-					<p className="text-sm text-muted-foreground">Here’s a preview of what you’ll receive by email.</p>
+					<p className="text-sm text-muted-foreground">This is what lands in your inbox—handpicked notes from your vault, ready for a quick review.</p>
 				</div>
 
 				{digestQuery.isLoading ? (

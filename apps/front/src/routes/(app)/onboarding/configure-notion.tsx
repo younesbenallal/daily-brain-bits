@@ -94,7 +94,7 @@ function ConfigureNotionPage() {
 					<div className="flex items-center gap-3">
 						<h1 className="font-display text-3xl text-primary">Connect Notion</h1>
 					</div>
-					<p className="text-sm text-muted-foreground">Select the databases you want Daily Brain Bits to include in your digest.</p>
+					<p className="text-sm text-muted-foreground">Pick the databases with notes worth revisiting. We'll surface them in your inbox using spaced repetition.</p>
 				</div>
 
 				<div className="space-y-3">
@@ -118,7 +118,7 @@ function ConfigureNotionPage() {
 
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-foreground">Databases</p>
-					<p className="text-sm text-muted-foreground">Choose at least one database. You can change this later in Settings.</p>
+				<p className="text-sm text-muted-foreground">Select at least one database. More databases = more variety in your digests.</p>
 
 					<Tags>
 						<TagsTrigger

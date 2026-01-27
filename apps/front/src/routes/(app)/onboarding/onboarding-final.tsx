@@ -40,11 +40,14 @@ function OnboardingFinalPage() {
 		settings && !canUseDaily && settings.emailFrequency === "daily" ? "weekly" : (settings?.emailFrequency ?? "weekly");
 	const timeLabel =
 		settings && settings.timezone
-			? `at ${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
+			? `${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
 					hour: "numeric",
 					minute: "2-digit",
-				})} (${settings.timezone})`
+			  })} (${settings.timezone})`
 			: null;
+	const frequencyLabel = effectiveFrequency === "daily" ? "Daily" : effectiveFrequency === "monthly" ? "Monthly" : "Weekly";
+	const frequencyCopy = frequencyLabel.toLowerCase();
+	const scheduleLabel = `${frequencyLabel}${timeLabel ? ` at ${timeLabel}` : ""}`;
 
 	return (
 		<OnboardingLayout
@@ -60,15 +63,15 @@ function OnboardingFinalPage() {
 			<div className="space-y-6">
 				<div className="space-y-3">
 					<h1 className="font-display text-3xl text-primary">You’re all set</h1>
-					<p className="text-sm text-muted-foreground">Your notes are connected and your first digest is ready.</p>
+					<p className="text-sm text-muted-foreground">
+						Your notes are connected. Your first digest arrives {frequencyCopy}
+						{timeLabel ? ` at ${timeLabel}` : ""}.
+					</p>
 				</div>
 
 				<div className="rounded-lg border border-border bg-muted/30 p-4">
 					<p className="text-sm font-medium text-foreground">Email schedule</p>
-					<p className="mt-1 text-sm text-muted-foreground">
-						{effectiveFrequency === "daily" ? "Daily" : effectiveFrequency === "monthly" ? "Monthly" : "Weekly"}
-						{timeLabel ? ` ${timeLabel}` : ""}
-					</p>
+					<p className="mt-1 text-sm text-muted-foreground">{scheduleLabel}</p>
 					<p className="mt-2 text-sm text-muted-foreground">You can change this anytime in Settings.</p>
 				</div>
 

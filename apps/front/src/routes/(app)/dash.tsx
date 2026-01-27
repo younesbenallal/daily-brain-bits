@@ -135,8 +135,8 @@ function AppPage() {
 						<div className="mb-4 rounded-full bg-primary/5 p-4 text-primary">
 							<Sparkles className="h-8 w-8" />
 						</div>
-						<h2 className="font-display text-2xl font-semibold text-foreground">No digest yet</h2>
-						<p className="mt-2 max-w-[300px] text-[15px] text-muted-foreground">Once your sources finish syncing, today’s digest will appear here.</p>
+					<h2 className="font-display text-2xl font-semibold text-foreground">Your digest is on its way</h2>
+					<p className="mt-2 max-w-[300px] text-[15px] text-muted-foreground">We're syncing your notes. Check back in a few minutes—or wait for it in your inbox.</p>
 					</div>
 				) : (
 					<>
