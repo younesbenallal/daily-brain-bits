@@ -69,6 +69,7 @@ Notes:
 - **Quiz gating**: The quiz toggle is disabled on Free and saved as `false`.
 - **Invoices**: Orders list tries to extract a receipt URL; if missing, it routes the user to the portal.
 - **React Query**: Customer state and orders use shared query keys to avoid refetching.
+- **Entitlements**: Server-side entitlements are derived from `packages/core/src/plans.ts`, exposed via the settings capabilities endpoint, and enforced during sync and connection creation.
 
 ## DB Schema
 

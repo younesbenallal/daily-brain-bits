@@ -4,11 +4,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_DAYS = 7;
 const MONTH_DAYS = 28;
 
-export function resolveEffectiveFrequency(params: { requested: DigestFrequency; isPro: boolean }): DigestFrequency {
-	if (params.isPro) {
-		return params.requested;
+export function resolveEffectiveFrequency(params: { requested: DigestFrequency; features: { dailyDigest: boolean } }): DigestFrequency {
+	if (params.requested === "daily" && !params.features.dailyDigest) {
+		return "weekly";
 	}
-	return params.requested === "daily" ? "weekly" : params.requested;
+	return params.requested;
 }
 
 /**

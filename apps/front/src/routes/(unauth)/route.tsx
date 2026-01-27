@@ -15,7 +15,7 @@ export const Route = createFileRoute("/(unauth)")({
 
 function RouteComponent() {
 	return (
-		<OnboardingLayout>
+		<OnboardingLayout showSettingsMenu={false}>
 			<Outlet />
 		</OnboardingLayout>
 	);

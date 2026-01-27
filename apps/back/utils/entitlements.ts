@@ -1,5 +1,6 @@
-import { billingSubscriptions, db } from "@daily-brain-bits/db";
-import { and, inArray } from "drizzle-orm";
+import { buildUserEntitlements, type PlanId } from "@daily-brain-bits/core";
+import { billingSubscriptions, db, documents, integrationConnections } from "@daily-brain-bits/db";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { env } from "./env";
 
 export type DeploymentMode = "cloud" | "self-hosted";
@@ -15,6 +16,59 @@ export function getBillingMode(): BillingMode {
 
 export function isBillingEnabled(): boolean {
 	return getBillingMode() === "polar";
+}
+
+export async function getUserPlan(userId: string): Promise<PlanId> {
+	if (!isBillingEnabled()) {
+		return "pro";
+	}
+
+	const subscription = await db.query.billingSubscriptions.findFirst({
+		where: and(eq(billingSubscriptions.userId, userId), inArray(billingSubscriptions.status, ["active", "trialing"])),
+		columns: { id: true },
+	});
+
+	return subscription ? "pro" : "free";
+}
+
+function applySelfHostedOverrides(entitlements: ReturnType<typeof buildUserEntitlements>) {
+	if (isBillingEnabled()) {
+		return entitlements;
+	}
+
+	return {
+		...entitlements,
+		limits: {
+			maxNotes: Number.POSITIVE_INFINITY,
+			maxSources: Number.POSITIVE_INFINITY,
+		},
+	};
+}
+
+export async function getUserEntitlements(userId: string) {
+	const planId = await getUserPlan(userId);
+	const entitlements = buildUserEntitlements(planId);
+	return applySelfHostedOverrides(entitlements);
+}
+
+export async function countUserDocuments(userId: string): Promise<number> {
+	const [row] = await db
+		.select({ count: sql<number>`count(${documents.id})`.mapWith(Number) })
+		.from(documents)
+		.where(and(eq(documents.userId, userId), isNull(documents.deletedAtSource)))
+		.limit(1);
+
+	return row?.count ?? 0;
+}
+
+export async function countUserConnections(userId: string): Promise<number> {
+	const [row] = await db
+		.select({ count: sql<number>`count(${integrationConnections.id})`.mapWith(Number) })
+		.from(integrationConnections)
+		.where(and(eq(integrationConnections.userId, userId), eq(integrationConnections.status, "active")))
+		.limit(1);
+
+	return row?.count ?? 0;
 }
 
 export async function getProUsers(userIds: string[]): Promise<Set<string>> {

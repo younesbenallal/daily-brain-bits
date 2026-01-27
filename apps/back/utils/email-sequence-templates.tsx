@@ -1,3 +1,4 @@
+import { PLANS } from "@daily-brain-bits/core";
 import { Body, Button, Column, Container, Head, Heading, Html, Preview, Row, Section, Tailwind, Text } from "@react-email/components";
 import type * as React from "react";
 import { emailBodyStyle, emailTailwindConfig } from "./email-brand";
@@ -32,6 +33,39 @@ const primaryButtonClass =
 	"bg-brand-primary text-brand-primary-foreground rounded-full px-6 py-3.5 text-sm font-semibold font-ui no-underline border border-solid border-brand-primary block text-center shadow-[var(--email-button-shadow)]";
 const secondaryButtonClass =
 	"bg-brand-card text-brand-foreground rounded-full px-6 py-3.5 text-sm font-semibold font-ui no-underline border border-solid border-brand-border block text-center shadow-[var(--email-button-shadow-soft)]";
+
+function formatLimit(value: number): string {
+	return value === Number.POSITIVE_INFINITY ? "Unlimited" : String(value);
+}
+
+function formatDigestFrequencies(features: { dailyDigest: boolean; weeklyDigest: boolean; monthlyDigest: boolean }): string {
+	const parts: string[] = [];
+	if (features.dailyDigest) {
+		parts.push("Daily");
+	}
+	if (features.weeklyDigest) {
+		parts.push("Weekly");
+	}
+	if (features.monthlyDigest) {
+		parts.push("Monthly");
+	}
+	return parts.join(", ");
+}
+
+function getPlanComparison() {
+	return {
+		free: {
+			frequency: formatDigestFrequencies(PLANS.free.features),
+			sources: formatLimit(PLANS.free.limits.maxSources),
+			quizzes: PLANS.free.features.aiQuizzes ? "Yes" : "No",
+		},
+		pro: {
+			frequency: formatDigestFrequencies(PLANS.pro.features),
+			sources: formatLimit(PLANS.pro.limits.maxSources),
+			quizzes: PLANS.pro.features.aiQuizzes ? "Yes" : "No",
+		},
+	};
+}
 
 export function buildSequenceEmail(params: { emailId: SequenceEmailId; templateParams: SequenceEmailTemplateParams }) {
 	const definition = sequenceEmailDefinitions[params.emailId];
@@ -490,29 +524,37 @@ See Pro features: ${params.upgradeUrl ?? buildFrontendUrl(params.frontendUrl, "/
 	"upgrade-2": {
 		subject: () => "What $10/month gets you",
 		previewText: () => "Honest comparison",
-		render: (params) => (
-			<SequenceEmailShell previewText="Honest comparison" firstName={params.firstName}>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">Here&apos;s an honest breakdown of Free vs Pro:</Text>
-				<ComparisonRow label="Digest frequency" left="Weekly or monthly" right="Daily, weekly, or monthly" />
-				<ComparisonRow label="Sources" left="1" right="Unlimited" />
-				<ComparisonRow label="AI quizzes" left="No" right="Yes" />
-				<ComparisonRow label="Note selection" left="Same algorithm" right="Same algorithm" />
-				<ComparisonRow label="Support" left="Community" right="Priority" />
-				<Text className="text-base leading-7 text-brand-muted m-0 mt-4">The real question: How often do you want to revisit your notes?</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mt-3">- If weekly is enough &rarr; Free works great</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0">- If you want daily reinforcement &rarr; Pro is worth it</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">- If you use both Notion and Obsidian &rarr; Pro is the only way</Text>
-				<SingleButton label="Upgrade to Pro" href={params.upgradeUrl ?? buildFrontendUrl(params.frontendUrl, "/settings?tab=billing")} />
-				<Text className="text-base leading-7 text-brand-muted m-0 mt-6">- The DBB Team</Text>
-			</SequenceEmailShell>
-		),
+		render: (params) => {
+			const comparison = getPlanComparison();
+			return (
+				<SequenceEmailShell previewText="Honest comparison" firstName={params.firstName}>
+					<Text className="text-base leading-7 text-brand-muted m-0 mb-4">Here&apos;s an honest breakdown of Free vs Pro:</Text>
+					<ComparisonRow label="Digest frequency" left={comparison.free.frequency} right={comparison.pro.frequency} />
+					<ComparisonRow label="Sources" left={comparison.free.sources} right={comparison.pro.sources} />
+					<ComparisonRow label="AI quizzes" left={comparison.free.quizzes} right={comparison.pro.quizzes} />
+					<ComparisonRow label="Note selection" left="Same algorithm" right="Same algorithm" />
+					<ComparisonRow label="Support" left="Community" right="Priority" />
+					<Text className="text-base leading-7 text-brand-muted m-0 mt-4">The real question: How often do you want to revisit your notes?</Text>
+					<Text className="text-base leading-7 text-brand-muted m-0 mt-3">- If weekly is enough &rarr; Free works great</Text>
+					<Text className="text-base leading-7 text-brand-muted m-0">- If you want daily reinforcement &rarr; Pro is worth it</Text>
+					<Text className="text-base leading-7 text-brand-muted m-0 mb-4">- If you use both Notion and Obsidian &rarr; Pro is the only way</Text>
+					<SingleButton label="Upgrade to Pro" href={params.upgradeUrl ?? buildFrontendUrl(params.frontendUrl, "/settings?tab=billing")} />
+					<Text className="text-base leading-7 text-brand-muted m-0 mt-6">- The DBB Team</Text>
+				</SequenceEmailShell>
+			);
+		},
 		renderText: (params) => `Hello ${params.firstName},
 
 Here's an honest breakdown of Free vs Pro:
 
-Digest frequency: Free = Weekly or monthly, Pro = Daily, weekly, or monthly
-Sources: Free = 1, Pro = Unlimited
-AI quizzes: Free = No, Pro = Yes
+${(() => {
+	const comparison = getPlanComparison();
+	return [
+		`Digest frequency: Free = ${comparison.free.frequency}, Pro = ${comparison.pro.frequency}`,
+		`Sources: Free = ${comparison.free.sources}, Pro = ${comparison.pro.sources}`,
+		`AI quizzes: Free = ${comparison.free.quizzes}, Pro = ${comparison.pro.quizzes}`,
+	].join("\n");
+})()}
 Note selection: Free = Same algorithm, Pro = Same algorithm
 Support: Free = Community, Pro = Priority
 

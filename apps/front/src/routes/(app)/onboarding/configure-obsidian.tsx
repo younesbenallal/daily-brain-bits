@@ -119,13 +119,13 @@ function ConfigureObsidianPage() {
 				<div className="space-y-3">
 					<div className="flex items-center gap-3">
 						<Obsidian className="h-8 w-8" />
-						<h1 className="font-display text-3xl text-[#2d71c4]">Configure Obsidian</h1>
+						<h1 className="font-display text-3xl text-primary">Connect Obsidian</h1>
 					</div>
-					<p className="text-sm text-muted-foreground">Tell us what notes you would like to receive in your inbox</p>
+					<p className="text-sm text-muted-foreground">Install the plugin and link your vault to start syncing notes.</p>
 				</div>
 
 				<div className="space-y-3">
-					<p className="font-ui text-base font-semibold text-[#163c6b]">Install the plugin</p>
+					<p className="font-ui text-base font-semibold text-foreground">Install the plugin</p>
 					<p className="text-sm text-muted-foreground">Open the GitHub repo to follow the plugin install steps.</p>
 					<Button
 						type="button"
@@ -138,7 +138,7 @@ function ConfigureObsidianPage() {
 				</div>
 
 				<div className="space-y-3">
-					<p className="font-ui text-base font-semibold text-[#163c6b]">API token</p>
+					<p className="font-ui text-base font-semibold text-foreground">API token</p>
 					<p className="text-sm text-muted-foreground">Generate a token, then paste it into the plugin settings inside Obsidian.</p>
 					<div className="flex flex-wrap items-center gap-3">
 						<Button
@@ -168,7 +168,7 @@ function ConfigureObsidianPage() {
 				</div>
 
 				<div className="space-y-3">
-					<p className="font-ui text-base font-semibold text-[#163c6b]">Connection status</p>
+					<p className="font-ui text-base font-semibold text-foreground">Connection status</p>
 					<div className="flex items-center gap-3">
 						<Badge variant={connected ? "secondary" : "outline"}>{connected ? "Connected" : "Not connected"}</Badge>
 						<p className="text-sm text-muted-foreground">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
@@ -187,7 +187,7 @@ function ConfigureObsidianPage() {
 							router.navigate({ to: "/onboarding/onboarding-loading" });
 						}}
 					>
-						Go to app
+						Continue
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>

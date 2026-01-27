@@ -70,6 +70,7 @@ export async function syncDatabase(notion: Client, databaseId: string, options: 
 	const iterator = iteratePaginatedAPI(query, queryArgs);
 
 	for await (const page of iterator) {
+		console.log("[notion.sync] Page", page.id);
 		const pageId = page.id;
 		stats.pagesVisited += 1;
 

@@ -1,9 +1,10 @@
-import { db, emailSequenceStates, integrationConnections } from "@daily-brain-bits/db";
+import { PLANS } from "@daily-brain-bits/core";
+import { billingSubscriptions, db, emailSequenceStates, integrationConnections } from "@daily-brain-bits/db";
 import { configure, tasks } from "@trigger.dev/sdk/v3";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { createPolarPlugin } from "./polar";
 
 const polarPlugin = createPolarPlugin();
@@ -39,6 +40,34 @@ async function enterOnboardingSequence(userId: string) {
 		userId,
 		sequenceName: "onboarding",
 	});
+}
+
+async function ensureSourceLimitForNotionConnection(userId: string) {
+	if (!billingEnabled) {
+		return;
+	}
+
+	const [subscription] = await db
+		.select({ id: billingSubscriptions.id })
+		.from(billingSubscriptions)
+		.where(and(eq(billingSubscriptions.userId, userId), inArray(billingSubscriptions.status, ["active", "trialing"])))
+		.limit(1);
+	const limit = subscription ? PLANS.pro.limits.maxSources : PLANS.free.limits.maxSources;
+
+	if (limit === Number.POSITIVE_INFINITY) {
+		return;
+	}
+
+	const [row] = await db
+		.select({ count: sql<number>`count(${integrationConnections.id})`.mapWith(Number) })
+		.from(integrationConnections)
+		.where(and(eq(integrationConnections.userId, userId), eq(integrationConnections.status, "active")))
+		.limit(1);
+
+	const currentCount = row?.count ?? 0;
+	if (currentCount >= limit) {
+		throw new Error("source_limit_reached");
+	}
 }
 
 let triggerConfigured = false;
@@ -140,6 +169,8 @@ export const auth = betterAuth({
 						return;
 					}
 
+					await ensureSourceLimitForNotionConnection(account.userId);
+
 					const now = new Date();
 					await db
 						.insert(integrationConnections)
@@ -172,6 +203,8 @@ export const auth = betterAuth({
 					if (account.providerId !== "notion") {
 						return;
 					}
+
+					await ensureSourceLimitForNotionConnection(account.userId);
 
 					const now = new Date();
 					await db

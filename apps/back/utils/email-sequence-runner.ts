@@ -10,6 +10,7 @@ import {
 } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import * as React from "react";
+import { PLANS } from "@daily-brain-bits/core";
 import { resolveEffectiveFrequency, type DigestFrequency } from "./digest-schedule";
 import { getAllProUsers, getProUsers, isBillingEnabled } from "./entitlements";
 import { env } from "./env";
@@ -491,9 +492,10 @@ function buildTemplateParams(options: {
 }) {
 	const greetingName = formatFirstName(options.user.name);
 	const sourceName = options.integrationSummary.primaryKind === "notion" ? "Notion" : options.integrationSummary.primaryKind === "obsidian" ? "Obsidian" : undefined;
+	const features = options.isPro ? PLANS.pro.features : PLANS.free.features;
 	const effectiveFrequency = resolveEffectiveFrequency({
 		requested: options.settings.emailFrequency,
-		isPro: options.isPro,
+		features,
 	});
 	const digestTiming = formatDigestTiming(effectiveFrequency);
 

@@ -8,6 +8,7 @@
 	},
 	"dependencies": {
 		"@daily-brain-bits/db": "workspace:*",
+		"@daily-brain-bits/core": "workspace:*",
 		"@polar-sh/better-auth": "^1.6.4",
 		"@polar-sh/sdk": "^0.42.2",
 		"@trigger.dev/sdk": "^3.0.0",

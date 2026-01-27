@@ -9,6 +9,7 @@ import * as obsidianRoutes from "./routes/obsidian";
 import { onboardingRouter } from "./routes/onboarding";
 import { handleResendWebhook } from "./routes/resend-webhook";
 import { settingsRouter } from "./routes/settings";
+import { usageRouter } from "./routes/usage";
 import { createApiKeySession } from "./utils/api-key";
 import { env } from "./utils/env";
 
@@ -18,6 +19,7 @@ export const ORPCRouter = {
 	digest: digestRouter,
 	onboarding: onboardingRouter,
 	settings: settingsRouter,
+	usage: usageRouter,
 };
 
 type RequestContext = {

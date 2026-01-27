@@ -18,6 +18,12 @@ function OnboardingFinalPage() {
 		refetchInterval: 5_000,
 	});
 	const statusData = statusQuery.data as { noteDigestReady?: boolean } | undefined;
+	const settingsQuery = useQuery(orpc.settings.get.queryOptions());
+	const capabilitiesQuery = useQuery(orpc.settings.capabilities.queryOptions());
+	const settings = settingsQuery.data?.settings;
+	const capabilities = capabilitiesQuery.data?.capabilities;
+	const isPro = capabilities?.entitlements?.planId === "pro" || capabilities?.isPro || false;
+	const canUseDaily = capabilities?.entitlements?.features.dailyDigest ?? isPro;
 	const canProceed =
 		statusData?.noteDigestReady &&
 		isOnboardingStepComplete("loading", {
@@ -29,6 +35,16 @@ function OnboardingFinalPage() {
 			router.navigate({ to: "/onboarding/onboarding-loading" });
 		}
 	}, [canProceed, router, statusQuery.isLoading]);
+
+	const effectiveFrequency =
+		settings && !canUseDaily && settings.emailFrequency === "daily" ? "weekly" : (settings?.emailFrequency ?? "weekly");
+	const timeLabel =
+		settings && settings.timezone
+			? `at ${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
+					hour: "numeric",
+					minute: "2-digit",
+				})} (${settings.timezone})`
+			: null;
 
 	return (
 		<OnboardingLayout
@@ -43,30 +59,44 @@ function OnboardingFinalPage() {
 		>
 			<div className="space-y-6">
 				<div className="space-y-3">
-					<h1 className="font-display text-3xl text-[#2d71c4]">Everything is ready!</h1>
-					<p className="text-sm text-muted-foreground">We've successfully synced your notes.</p>
+					<h1 className="font-display text-3xl text-primary">You’re all set</h1>
+					<p className="text-sm text-muted-foreground">Your notes are connected and your first digest is ready.</p>
 				</div>
 
-				<p className="text-sm text-muted-foreground">From now on, you will receive your notes in your inbox.</p>
+				<div className="rounded-lg border border-border bg-muted/30 p-4">
+					<p className="text-sm font-medium text-foreground">Email schedule</p>
+					<p className="mt-1 text-sm text-muted-foreground">
+						{effectiveFrequency === "daily" ? "Daily" : effectiveFrequency === "monthly" ? "Monthly" : "Weekly"}
+						{timeLabel ? ` ${timeLabel}` : ""}
+					</p>
+					<p className="mt-2 text-sm text-muted-foreground">You can change this anytime in Settings.</p>
+				</div>
 
-				<div className="flex justify-end">
+				<div className="flex flex-wrap items-center justify-between gap-3">
 					<Button
 						type="button"
+						variant="outline"
+						disabled={completeMutation.isPending}
+						onClick={async () => {
+							await completeMutation.mutateAsync({});
+							router.navigate({ to: "/settings" });
+						}}
+					>
+						Open settings
+					</Button>
+					<Button
+						type="button"
+						disabled={completeMutation.isPending}
 						onClick={async () => {
 							await completeMutation.mutateAsync({});
 							router.navigate({ to: "/dash" });
 						}}
 					>
-						Check my daily review
+						Go to dashboard
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
-
-				<p className="text-sm text-muted-foreground">
-					You can also check your data policy here (syncing regularity, notes pulled, ...)
-					<br />
-					You can also check how we manage your data in our Privacy terms
-				</p>
+				<p className="text-xs text-muted-foreground">Manage your connected sources in Settings → Integrations.</p>
 			</div>
 		</OnboardingLayout>
 	);

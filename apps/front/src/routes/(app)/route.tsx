@@ -30,7 +30,7 @@ export const Route = createFileRoute("/(app)")({
 		}
 
 		if (showOnboarding && !isOnboardingRoute) {
-			throw redirect({ to: "/onboarding/preferences" });
+			throw redirect({ to: "/onboarding/choose-source" });
 		}
 
 		if (!showOnboarding && isOnboardingRoute && !isFinalStep) {

@@ -13,6 +13,7 @@ const configureObsidianSchema = z.object({
 
 const configureNotionSchema = z.object({
 	connected: z.literal(true),
+	databasesSelected: z.number().int().min(1),
 });
 
 const loadingSchema = z.object({

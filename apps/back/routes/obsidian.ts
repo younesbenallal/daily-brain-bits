@@ -12,6 +12,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { apiKeyRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
+import { checkSourceLimitForConnection } from "../utils/plan-enforcement";
 import { captureBackendEvent } from "../utils/posthog-client";
 import { enterOnboardingSequence } from "../utils/trigger-client";
 
@@ -137,6 +138,16 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 
 	const now = new Date();
 	const config = buildObsidianConfig({ vaultId });
+	const sourceLimit = await checkSourceLimitForConnection({ userId });
+	if (!sourceLimit.allowed) {
+		throw new ORPCError("FORBIDDEN", {
+			message: "source_limit_reached",
+			cause: {
+				currentCount: sourceLimit.currentCount,
+				limit: sourceLimit.limit,
+			},
+		});
+	}
 	const [created] = await db
 		.insert(integrationConnections)
 		.values({

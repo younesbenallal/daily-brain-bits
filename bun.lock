@@ -74,6 +74,7 @@
         "@daily-brain-bits/auth": "workspace:*",
         "@daily-brain-bits/back": "workspace:*",
         "@daily-brain-bits/types": "workspace:*",
+        "@daily-brain-bits/typescript-config": "workspace:*",
         "@orpc/server": "catalog:",
         "@tailwindcss/vite": "^4.1.18",
         "@tanstack/router-plugin": "^1.114.3",
@@ -119,6 +120,7 @@
       "name": "@daily-brain-bits/auth",
       "version": "0.0.0",
       "dependencies": {
+        "@daily-brain-bits/core": "workspace:*",
         "@daily-brain-bits/db": "workspace:*",
         "@polar-sh/better-auth": "^1.6.4",
         "@polar-sh/sdk": "^0.42.2",

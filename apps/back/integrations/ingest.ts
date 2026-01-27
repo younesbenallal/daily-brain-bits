@@ -3,6 +3,7 @@ import { normalizeForHash, sha256Hex, syncItemDeleteSchema, syncItemSchema, sync
 import { db, documents, syncState } from "@daily-brain-bits/db";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
+import { countUserDocuments, getUserEntitlements } from "../utils/entitlements";
 
 export type IngestResult = {
 	accepted: number;
@@ -119,6 +120,13 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 	let rejected = 0;
 	let skipped = 0;
 	const itemResults: IngestResult["itemResults"] = [];
+	const entitlements = await getUserEntitlements(userId);
+	const noteLimit = entitlements.limits.maxNotes;
+	let remainingSlots = Number.POSITIVE_INFINITY;
+	if (noteLimit !== Number.POSITIVE_INFINITY) {
+		const currentCount = await countUserDocuments(userId);
+		remainingSlots = Math.max(0, noteLimit - currentCount);
+	}
 
 	for (const rawItem of items) {
 		const parsed = syncItemSchema.safeParse(rawItem);
@@ -158,6 +166,15 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 						externalId: upsert.externalId,
 						status: "skipped",
 						reason: decision.reason,
+					});
+					continue;
+				}
+				if (!existing && remainingSlots <= 0) {
+					rejected += 1;
+					itemResults.push({
+						externalId: upsert.externalId,
+						status: "rejected",
+						reason: "note_limit_reached",
 					});
 					continue;
 				}
@@ -208,6 +225,9 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 					externalId: upsert.externalId,
 					status: "accepted",
 				});
+				if (!existing && remainingSlots !== Number.POSITIVE_INFINITY) {
+					remainingSlots = Math.max(0, remainingSlots - 1);
+				}
 				continue;
 			}
 
@@ -264,6 +284,9 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 				externalId: deleted.externalId,
 				status: "accepted",
 			});
+			if (existing && !existing.deletedAtSource && remainingSlots !== Number.POSITIVE_INFINITY) {
+				remainingSlots += 1;
+			}
 		} catch (error) {
 			console.error("Sync item failed", error);
 			rejected += 1;

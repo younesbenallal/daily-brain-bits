@@ -27,8 +27,9 @@ const FALLBACK_TIMEZONES = [
 
 function PreferencesPage() {
 	const router = useRouter();
-	const { capabilities } = useSettingsCapabilities();
-	const isPro = capabilities?.isPro ?? false;
+	const { capabilities, entitlements } = useSettingsCapabilities();
+	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
+	const canUseQuizzes = entitlements?.features.aiQuizzes ?? isPro;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const timezoneOptions = useMemo(() => {
 		if (typeof Intl !== "undefined" && typeof (Intl as any).supportedValuesOf === "function") {
@@ -60,14 +61,14 @@ function PreferencesPage() {
 		<OnboardingLayout>
 			<div className="space-y-6">
 				<div className="space-y-3">
-					<h1 className="font-display text-3xl text-[#2d71c4]">Gimme your preferences</h1>
-					<p className="text-sm text-muted-foreground">Help us craft your experience to your wishes.</p>
+					<h1 className="font-display text-3xl text-primary">Delivery preferences</h1>
+					<p className="text-sm text-muted-foreground">Choose when you’d like to receive your digest emails. You can change this anytime in Settings.</p>
 				</div>
 
 				<div className="space-y-4">
 					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">Timezone</p>
-						<p className="text-sm text-muted-foreground">We tried to guess the timezone of your area.</p>
+						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Timezone</p>
+						<p className="text-sm text-muted-foreground">We’ll use this to schedule your emails.</p>
 						<Select value={timezone} onValueChange={setTimezone}>
 							<SelectTrigger>
 								<SelectValue />
@@ -83,8 +84,8 @@ function PreferencesPage() {
 					</div>
 
 					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">Send time</p>
-						<p className="text-sm text-muted-foreground">Pick the hour you want your weekly digest to arrive.</p>
+						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Send time</p>
+						<p className="text-sm text-muted-foreground">Pick the hour you want your digest to arrive.</p>
 						<Select value={String(preferredSendHour)} onValueChange={(value) => setPreferredSendHour(Number(value))}>
 							<SelectTrigger>
 								<SelectValue />
@@ -106,12 +107,12 @@ function PreferencesPage() {
 					</div>
 
 					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">Weekly digest</p>
+						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Frequency</p>
 						<p className="text-sm text-muted-foreground">Free accounts receive a weekly digest. Upgrade to choose daily delivery.</p>
 					</div>
 
 					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">Notes per digest</p>
+						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Notes per digest</p>
 						<p className="text-sm text-muted-foreground">Select how many notes to include in each email.</p>
 						<div className="flex items-center gap-3">
 							<input
@@ -137,23 +138,26 @@ function PreferencesPage() {
 					</div>
 
 					<div className="space-y-2">
-						<p className="font-ui text-base font-semibold tracking-[0.05em] text-[#163c6b]">AI quizzes</p>
+						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">AI quizzes</p>
 						<p className="text-sm text-muted-foreground">Enable short quizzes alongside your notes.</p>
 						<label className="flex items-center gap-2 text-sm">
 							<input
 								type="checkbox"
 								name="quiz-enabled"
 								checked={quizEnabled}
-								disabled={!isPro}
+								disabled={!canUseQuizzes}
 								onChange={(event) => setQuizEnabled(event.target.checked)}
 							/>
 							<span>{quizEnabled ? "On" : "Off"}</span>
-							{billingEnabled && !isPro ? <span className="text-xs text-muted-foreground">Pro only</span> : null}
+							{billingEnabled && !canUseQuizzes ? <span className="text-xs text-muted-foreground">Pro only</span> : null}
 						</label>
 					</div>
 				</div>
 
-				<div className="flex justify-end">
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<Button type="button" variant="ghost" onClick={() => router.navigate({ to: "/onboarding/preview" })}>
+						← Back
+					</Button>
 					<Button
 						type="button"
 						disabled={!canProceed || updateMutation.isPending}
@@ -164,15 +168,20 @@ function PreferencesPage() {
 							await updateMutation.mutateAsync({
 								emailFrequency: "weekly",
 								notesPerDigest: isPro ? notesPerDigest : 5,
-								quizEnabled: isPro ? quizEnabled : false,
+								quizEnabled: canUseQuizzes ? quizEnabled : false,
 								timezone,
 								preferredSendHour,
 							});
-							router.navigate({ to: "/onboarding/choose-source" });
+							router.navigate({ to: "/onboarding/onboarding-final" });
 						}}
 					>
-						{updateMutation.isPending ? "Saving…" : "Next"}
+						{updateMutation.isPending ? "Saving…" : "Save & continue"}
 						<span aria-hidden="true">→</span>
+					</Button>
+				</div>
+				<div className="flex justify-end">
+					<Button type="button" variant="link" className="h-auto p-0" onClick={() => router.navigate({ to: "/onboarding/onboarding-final" })}>
+						Skip for now
 					</Button>
 				</div>
 			</div>

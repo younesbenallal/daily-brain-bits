@@ -18,12 +18,25 @@ export function normalizeList<T>(value: unknown): T[] {
 export function useSettingsCapabilities() {
 	const query = useQuery(orpc.settings.capabilities.queryOptions());
 	const capabilities = query.data?.capabilities ?? null;
+	const entitlements = capabilities?.entitlements
+		? {
+				...capabilities.entitlements,
+				limits: {
+					maxNotes: capabilities.entitlements.limits.maxNotes ?? Number.POSITIVE_INFINITY,
+					maxSources: capabilities.entitlements.limits.maxSources ?? Number.POSITIVE_INFINITY,
+				},
+			}
+		: null;
+	const usage = capabilities?.usage ?? null;
+	const isPro = entitlements?.planId === "pro";
 
 	return {
 		query,
 		capabilities,
 		billingEnabled: capabilities?.billingEnabled ?? true,
-		isPro: capabilities?.isPro ?? true,
+		isPro: isPro ?? capabilities?.isPro ?? true,
+		entitlements,
+		usage,
 	};
 }
 

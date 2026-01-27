@@ -11,8 +11,10 @@ export function AppSettings() {
 	const settingsQueryOptions = orpc.settings.get.queryOptions();
 	const settingsQuery = useQuery(settingsQueryOptions);
 	const settingsData = settingsQuery.data?.settings;
-	const { capabilities } = useSettingsCapabilities();
-	const isPro = capabilities?.isPro ?? true;
+	const { entitlements, capabilities } = useSettingsCapabilities();
+	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
+	const canUseDaily = entitlements?.features.dailyDigest ?? isPro;
+	const canUseQuizzes = entitlements?.features.aiQuizzes ?? isPro;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const frequencyOptions = useMemo(
 		() =>
@@ -35,12 +37,12 @@ export function AppSettings() {
 		}
 
 		const nextFrequency =
-			!isPro && settingsData.emailFrequency === "daily" ? "weekly" : (settingsData.emailFrequency as EmailFrequency);
-		const nextQuizEnabled = isPro ? settingsData.quizEnabled : false;
+			!canUseDaily && settingsData.emailFrequency === "daily" ? "weekly" : (settingsData.emailFrequency as EmailFrequency);
+		const nextQuizEnabled = canUseQuizzes ? settingsData.quizEnabled : false;
 		setEmailFrequency(nextFrequency);
 		setNotesPerDigest(settingsData.notesPerDigest);
 		setQuizEnabled(nextQuizEnabled);
-	}, [settingsData, isPro]);
+	}, [settingsData, canUseDaily, canUseQuizzes]);
 
 	const updateMutation = useMutation(
 		orpc.settings.update.mutationOptions({
@@ -61,15 +63,15 @@ export function AppSettings() {
 	});
 
 	const baselineFrequency = settingsData
-		? (!isPro && settingsData.emailFrequency === "daily" ? "weekly" : settingsData.emailFrequency)
+		? (!canUseDaily && settingsData.emailFrequency === "daily" ? "weekly" : settingsData.emailFrequency)
 		: emailFrequency;
-	const baselineQuizEnabled = settingsData ? (isPro ? settingsData.quizEnabled : false) : quizEnabled;
+	const baselineQuizEnabled = settingsData ? (canUseQuizzes ? settingsData.quizEnabled : false) : quizEnabled;
 	const isDirty = Boolean(
 		settingsData &&
 			(emailFrequency !== baselineFrequency || notesPerDigest !== settingsData.notesPerDigest || quizEnabled !== baselineQuizEnabled),
 	);
 	const isBusy = settingsQuery.isLoading || updateMutation.isPending;
-	const forcedDailyToWeekly = Boolean(settingsData && !isPro && settingsData.emailFrequency === "daily");
+	const forcedDailyToWeekly = Boolean(settingsData && !canUseDaily && settingsData.emailFrequency === "daily");
 
 	return (
 		<div className="space-y-6">
@@ -118,7 +120,7 @@ export function AppSettings() {
 						onChange={(event) => setEmailFrequency(event.target.value as EmailFrequency)}
 					>
 							{frequencyOptions.map((option) => {
-								const isLocked = option.value === "daily" && !isPro;
+								const isLocked = option.value === "daily" && !canUseDaily;
 								return (
 									<option key={option.value} value={option.value} disabled={isLocked}>
 										{option.label}
@@ -156,14 +158,14 @@ export function AppSettings() {
 						<div>
 							<div className="font-medium">Generate quizzes</div>
 							<div className="text-sm text-muted-foreground">Create AI-powered quizzes alongside your notes.</div>
-							{!isPro ? <p className="mt-1 text-xs text-muted-foreground">AI quizzes are available on Pro.</p> : null}
+							{!canUseQuizzes ? <p className="mt-1 text-xs text-muted-foreground">AI quizzes are available on Pro.</p> : null}
 						</div>
 					<label className="flex items-center gap-2 text-sm">
 						<input
 							type="checkbox"
 							name="quiz-enabled"
 							checked={quizEnabled}
-							disabled={isBusy || !isPro}
+							disabled={isBusy || !canUseQuizzes}
 							onChange={(event) => setQuizEnabled(event.target.checked)}
 						/>
 							<span>{quizEnabled ? "On" : "Off"}</span>
@@ -184,7 +186,9 @@ export function AppSettings() {
 						updateMutation.mutate({
 							emailFrequency,
 							notesPerDigest,
-							quizEnabled: isPro ? quizEnabled : false,
+							quizEnabled: canUseQuizzes ? quizEnabled : false,
+							timezone: settingsData?.timezone ?? "UTC",
+							preferredSendHour: settingsData?.preferredSendHour ?? 8,
 						});
 					}}
 				>

@@ -23,8 +23,8 @@ describe("digest-schedule", () => {
 	});
 
 	it("resolves effective frequency for free users", () => {
-		expect(resolveEffectiveFrequency({ requested: "daily", isPro: false })).toBe("weekly");
-		expect(resolveEffectiveFrequency({ requested: "weekly", isPro: false })).toBe("weekly");
+		expect(resolveEffectiveFrequency({ requested: "daily", features: { dailyDigest: false } })).toBe("weekly");
+		expect(resolveEffectiveFrequency({ requested: "weekly", features: { dailyDigest: false } })).toBe("weekly");
 	});
 
 	it("returns monthly interval", () => {

@@ -14,10 +14,16 @@ export function AccountIntegrationsSettings() {
 	const notionStatusQuery = useQuery({ ...notionStatusQueryOptions, enabled: Boolean(user) });
 	const obsidianStatusQueryOptions = useMemo(() => orpc.obsidian.status.queryOptions(), []);
 	const obsidianStatusQuery = useQuery({ ...obsidianStatusQueryOptions, enabled: Boolean(user) });
-	const { capabilities } = useSettingsCapabilities();
-	const isPro = capabilities?.isPro ?? true;
+	const { capabilities, entitlements, usage } = useSettingsCapabilities();
+	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const [upgradeStatus, setUpgradeStatus] = useState<StatusMessageState>(null);
+	const noteLimit = entitlements?.limits.maxNotes ?? Number.POSITIVE_INFINITY;
+	const sourceLimit = entitlements?.limits.maxSources ?? Number.POSITIVE_INFINITY;
+	const noteCount = usage?.noteCount ?? 0;
+	const sourceCount = usage?.sourceCount ?? 0;
+	const noteUsageRatio = noteLimit === Number.POSITIVE_INFINITY ? 0 : noteCount / Math.max(1, noteLimit);
+	const showNoteWarning = noteLimit !== Number.POSITIVE_INFINITY && noteUsageRatio >= 0.8;
 
 	const upgradeMutation = useMutation({
 		mutationFn: async () => authClient.checkout({ slug: "pro" }),
@@ -32,11 +38,33 @@ export function AccountIntegrationsSettings() {
 	const notionStatus = notionStatusQuery.data;
 	const obsidianStatus = obsidianStatusQuery.data;
 	const connectedCount = [notionStatus?.connected, obsidianStatus?.connected].filter(Boolean).length;
+	const formatLimit = (value: number) => (value === Number.POSITIVE_INFINITY ? "Unlimited" : String(value));
 
 	return (
 		<div className="space-y-4">
 			<h3 className="text-lg font-medium">Integrations</h3>
 			<p className="text-sm text-muted-foreground">Manage the knowledge sources that power your daily digest.</p>
+			<div className="rounded-lg border p-4 text-sm text-muted-foreground">
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					<span>Notes</span>
+					<span className="text-foreground">
+						{noteCount} / {formatLimit(noteLimit)}
+					</span>
+				</div>
+				<div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+					<span>Sources</span>
+					<span className="text-foreground">
+						{sourceCount} / {formatLimit(sourceLimit)}
+					</span>
+				</div>
+				{showNoteWarning ? (
+					<p className="mt-2 text-xs text-amber-600">
+						{noteUsageRatio >= 1
+							? "Note limit reached. Syncing new notes is paused until you upgrade or delete notes."
+							: "Approaching your note limit. Consider upgrading to avoid sync pauses."}
+					</p>
+				) : null}
+			</div>
 			{billingEnabled && !isPro ? (
 				<div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
 					<div className="flex flex-wrap items-center justify-between gap-3">

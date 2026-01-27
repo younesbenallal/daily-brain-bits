@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { NoteContent } from "@/components/dash/dash-note-content";
 import { NoteProperties } from "@/components/dash/dash-note-properties";
 import { AppLayout } from "@/components/layouts/app-layout";
+import { useSettingsCapabilities } from "@/components/settings/settings-utils";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -25,6 +26,10 @@ export const Route = createFileRoute("/(app)/dash")({
 
 function AppPage() {
 	const digestQuery = useQuery(orpc.digest.today.queryOptions());
+	const { entitlements, usage } = useSettingsCapabilities();
+	const noteLimit = entitlements?.limits.maxNotes ?? Number.POSITIVE_INFINITY;
+	const noteCount = usage?.noteCount ?? 0;
+	const showNoteUsage = noteLimit !== Number.POSITIVE_INFINITY;
 	const digestData = digestQuery.data as
 		| {
 				digest: {
@@ -110,6 +115,11 @@ function AppPage() {
 		<AppLayout maxWidth="max-w-[600px]">
 			<div className="flex flex-col gap-10">
 				{/* Top Info & Navigation */}
+				{showNoteUsage ? (
+					<div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-2 text-xs text-muted-foreground">
+						Notes synced: <span className="font-medium text-foreground">{noteCount}</span> / {noteLimit}
+					</div>
+				) : null}
 
 				{digestQuery.isLoading ? (
 					<div className="space-y-8 animate-pulse">

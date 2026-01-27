@@ -25,6 +25,7 @@ function ConfigureNotionPage() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [query, setQuery] = useState("");
+	const [debouncedQuery, setDebouncedQuery] = useState("");
 	const [selectedDatabases, setSelectedDatabases] = useState<NotionDatabase[]>([]);
 
 	const statusQueryOptions = orpc.notion.status.queryOptions();
@@ -32,10 +33,15 @@ function ConfigureNotionPage() {
 	const statusData = statusQuery.data;
 	const connected = statusData?.connected ?? false;
 
+	useEffect(() => {
+		const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 250);
+		return () => window.clearTimeout(timer);
+	}, [query]);
+
 	const searchQuery = useQuery(
 		orpc.notion.databases.search.queryOptions({
-			input: { query },
-			enabled: connected && query.trim().length > 0,
+			input: { query: debouncedQuery },
+			enabled: connected,
 		}),
 	);
 	const searchData = searchQuery.data;
@@ -76,10 +82,9 @@ function ConfigureNotionPage() {
 
 	const selectedIds = new Set(selectedDatabases.map((item) => item.id));
 
-	console.log(statusData);
-
 	const statusLabel = connected ? (statusData?.workspaceName ? `Connected to ${statusData.workspaceName}` : "Connected to Notion") : "Not connected";
-	const canProceed = connected && isOnboardingStepComplete("configureNotion", { connected: true as const });
+	const canProceed = connected && isOnboardingStepComplete("configureNotion", { connected: true as const, databasesSelected: selectedDatabases.length });
+	const connectButtonLabel = connected ? "Reconnect Notion" : "Connect Notion";
 
 	return (
 		<OnboardingLayout>
@@ -87,14 +92,14 @@ function ConfigureNotionPage() {
 				<div className="space-y-3">
 					<Notion className="h-8 w-8" />
 					<div className="flex items-center gap-3">
-						<h1 className="font-display text-3xl text-[#2d71c4]">Configure Notion</h1>
+						<h1 className="font-display text-3xl text-primary">Connect Notion</h1>
 					</div>
-					<p className="text-sm text-muted-foreground">Tell us what notes you would like to receive in your inbox</p>
+					<p className="text-sm text-muted-foreground">Select the databases you want Daily Brain Bits to include in your digest.</p>
 				</div>
 
 				<div className="space-y-3">
 					<Button type="button" variant="outline" className="gap-2 bg-white" onClick={handleConnect}>
-						Connect to Notion
+						{connectButtonLabel}
 					</Button>
 					<p className="text-sm text-muted-foreground">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
 					{connected && statusData?.workspaceName ? (
@@ -112,8 +117,8 @@ function ConfigureNotionPage() {
 				</div>
 
 				<div className="space-y-3">
-					<p className="font-ui text-base font-semibold text-[#163c6b]">Databases to pull</p>
-					<p className="text-sm text-muted-foreground">Select the database in your Notion workspace that you'd like to receive reminders for.</p>
+					<p className="font-ui text-base font-semibold text-foreground">Databases</p>
+					<p className="text-sm text-muted-foreground">Choose at least one database. You can change this later in Settings.</p>
 
 					<Tags>
 						<TagsTrigger
@@ -122,7 +127,7 @@ function ConfigureNotionPage() {
 							className="bg-white"
 						>
 							{selectedDatabases.map((database) => (
-								<TagsValue key={database.id} onRemove={() => toggleDatabase(database)} className="bg-[#f5e1e7] text-[#262626] hover:bg-[#f5e1e7]/80">
+								<TagsValue key={database.id} onRemove={() => toggleDatabase(database)} className="bg-muted text-foreground hover:bg-muted/80">
 									{database.icon ? (
 										database.icon.startsWith("http") ? (
 											<img src={database.icon} alt="" className="mr-1 h-3 w-3 shrink-0 rounded-sm object-contain" />
@@ -164,7 +169,7 @@ function ConfigureNotionPage() {
 													) : null}
 													<span>{database.title}</span>
 												</span>
-												{isSelected && <CheckIcon className="ml-auto h-4 w-4 text-[#2d71c4]" />}
+												{isSelected && <CheckIcon className="ml-auto h-4 w-4 text-primary" />}
 											</TagsItem>
 										);
 									})}
@@ -174,6 +179,9 @@ function ConfigureNotionPage() {
 					</Tags>
 
 					{saveMutation.isError && <p className="text-sm text-destructive">Failed to save selection.</p>}
+					{connected && selectedDatabases.length === 0 ? (
+						<p className="text-sm text-muted-foreground">Select at least one database to continue.</p>
+					) : null}
 				</div>
 
 				<div className="flex justify-end">
@@ -182,18 +190,16 @@ function ConfigureNotionPage() {
 						disabled={!canProceed}
 						onClick={() => {
 							// Trigger sync (fire and forget - don't wait for it)
-							if (selectedDatabases.length > 0) {
-								syncMutation.mutate({}, { onError: (error) => console.error("Failed to start sync:", error) });
-							}
+							syncMutation.mutate({}, { onError: (error) => console.error("Failed to start sync:", error) });
 							// Navigate immediately to loading page which will poll for status
 							router.navigate({ to: "/onboarding/onboarding-loading" });
 						}}
 					>
-						Go to app
+						Continue
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
-				{!canProceed ? <p className="text-sm text-muted-foreground">Connect your Notion workspace to continue.</p> : null}
+				{!connected ? <p className="text-sm text-muted-foreground">Connect your Notion workspace to continue.</p> : null}
 			</div>
 		</OnboardingLayout>
 	);

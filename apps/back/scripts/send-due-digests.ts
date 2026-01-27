@@ -1,11 +1,7 @@
 import { db, noteDigests, reviewStates } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import {
-	type DigestFrequency,
-	isDigestDueWithTimezone,
-	isSameLocalDay,
-	resolveEffectiveFrequency,
-} from "../utils/digest-schedule";
+import { PLANS } from "@daily-brain-bits/core";
+import { type DigestFrequency, isDigestDueWithTimezone, isSameLocalDay, resolveEffectiveFrequency } from "../utils/digest-schedule";
 import { upsertDigestWithItems } from "../utils/digest-storage";
 import { getProUsers } from "../utils/entitlements";
 import { env } from "../utils/env";
@@ -69,9 +65,10 @@ export async function runSendDueDigests() {
 		const requestedFrequency = settings?.emailFrequency ?? DEFAULT_FREQUENCY;
 		const timezone = settings?.timezone ?? "UTC";
 		const preferredSendHour = settings?.preferredSendHour ?? 8;
+		const features = proUsers.has(candidate.id) ? PLANS.pro.features : PLANS.free.features;
 		const effectiveFrequency = resolveEffectiveFrequency({
 			requested: requestedFrequency,
-			isPro: proUsers.has(candidate.id),
+			features,
 		});
 		const lastSentAt = lastSentMap.get(candidate.id) ?? null;
 

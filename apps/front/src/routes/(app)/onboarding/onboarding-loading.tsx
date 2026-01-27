@@ -58,7 +58,7 @@ function OnboardingLoadingPage() {
 
 	useEffect(() => {
 		if (canProceed) {
-			router.navigate({ to: "/onboarding/onboarding-final" });
+			router.navigate({ to: "/onboarding/preview" });
 		}
 	}, [canProceed, router]);
 
@@ -69,7 +69,11 @@ function OnboardingLoadingPage() {
 			) : step === "loading-two" ? (
 				<LoadingStepTwo />
 			) : (
-				<TutorialStep noteDigestReady={statusData?.noteDigestReady ?? false} />
+				<TutorialStep
+					noteDigestReady={statusData?.noteDigestReady ?? false}
+					hasDocuments={statusData?.hasDocuments ?? false}
+					onTroubleshoot={() => router.navigate({ to: "/onboarding/choose-source" })}
+				/>
 			)}
 		</OnboardingLayout>
 	);
@@ -89,7 +93,7 @@ function OnboardingFooter() {
 function LoadingStepOne() {
 	return (
 		<div className="space-y-4">
-			<h1 className="font-display text-3xl text-[#163c6b]">We are preparing your app...</h1>
+			<h1 className="font-display text-3xl text-foreground">Preparing your digest…</h1>
 			<p className="text-sm text-muted-foreground">Getting your notes ready for the first sync.</p>
 		</div>
 	);
@@ -98,17 +102,25 @@ function LoadingStepOne() {
 function LoadingStepTwo() {
 	return (
 		<div className="space-y-4 text-center">
-			<h1 className="font-display text-3xl text-[#163c6b]">While we sync, here&apos;s a quick tour</h1>
+			<h1 className="font-display text-3xl text-foreground">While we sync, here’s a quick tour</h1>
 			<p className="text-sm text-muted-foreground">This takes a moment. You can still explore the basics.</p>
 		</div>
 	);
 }
 
-function TutorialStep({ noteDigestReady }: { noteDigestReady: boolean }) {
+function TutorialStep({
+	noteDigestReady,
+	hasDocuments,
+	onTroubleshoot,
+}: {
+	noteDigestReady: boolean;
+	hasDocuments: boolean;
+	onTroubleshoot: () => void;
+}) {
 	return (
 		<div className="space-y-6">
 			<div className="space-y-3">
-				<h1 className="font-display text-3xl text-[#2d71c4]">How to prioritize a note</h1>
+				<h1 className="font-display text-3xl text-primary">How to prioritize a note</h1>
 				<p className="text-sm text-muted-foreground">Use the priority tag to surface what matters most.</p>
 			</div>
 
@@ -119,6 +131,24 @@ function TutorialStep({ noteDigestReady }: { noteDigestReady: boolean }) {
 			</div>
 
 			<p className="text-sm text-muted-foreground">Prioritized notes appear more often in your note digest, helping you review them faster.</p>
+
+			{!hasDocuments ? (
+				<div className="rounded-lg border border-border bg-muted/30 p-4">
+					<p className="text-sm font-medium text-foreground">Still waiting for notes…</p>
+					<p className="mt-1 text-sm text-muted-foreground">
+						If this takes more than a minute, go back and check your connection (or make sure you selected at least one Notion database).
+					</p>
+					<div className="mt-3 flex justify-end">
+						<button
+							type="button"
+							className="text-sm font-medium text-primary hover:underline"
+							onClick={onTroubleshoot}
+						>
+							Back to setup
+						</button>
+					</div>
+				</div>
+			) : null}
 
 			<div className="flex justify-end">
 				<span className="text-sm text-muted-foreground">

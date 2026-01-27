@@ -13,11 +13,13 @@ function ChooseSourcePage() {
 		<OnboardingLayout>
 			<div className="space-y-6">
 				<div className="space-y-3">
-					<h1 className="font-display text-3xl text-[#2d71c4]">Choose source</h1>
-					<p className="text-sm text-muted-foreground">Give us a place to swallow your notes</p>
+					<h1 className="font-display text-3xl text-primary">Connect your notes</h1>
+					<p className="text-sm text-muted-foreground">
+						Choose where your notes live. You can change this later in Settings.
+					</p>
 				</div>
 
-				<div className="flex flex-col items-center gap-4">
+				<div className="flex flex-col gap-3">
 					{[
 						{ label: "Notion", id: "notion", Logo: Notion },
 						{ label: "Obsidian", id: "obsidian", Logo: Obsidian },
@@ -25,7 +27,7 @@ function ChooseSourcePage() {
 						<Button
 							key={item.id}
 							variant="outline"
-							className="h-[59px] w-[150px] gap-3 bg-card text-foreground border-border"
+							className="h-[59px] w-full justify-center gap-3 border-border bg-card text-foreground"
 							type="button"
 							onClick={() => {
 								router.navigate({
@@ -38,6 +40,10 @@ function ChooseSourcePage() {
 						</Button>
 					))}
 				</div>
+
+				<p className="text-xs text-muted-foreground">
+					We only access what you explicitly connect. You stay in control of your data.
+				</p>
 			</div>
 		</OnboardingLayout>
 	);

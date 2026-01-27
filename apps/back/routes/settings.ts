@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { baseRoute } from "../context";
 import { isValidTimezone } from "../utils/digest-schedule";
-import { getBillingMode, getDeploymentMode, getIsProForUser, isBillingEnabled } from "../utils/entitlements";
+import { getBillingMode, getDeploymentMode, getIsProForUser, isBillingEnabled, getUserEntitlements, countUserConnections, countUserDocuments } from "../utils/entitlements";
 
 const frequencyOptions = ["daily", "weekly", "monthly"] as const;
 
@@ -32,8 +32,30 @@ const capabilitiesSchema = z.object({
 	deploymentMode: z.enum(["cloud", "self-hosted"]),
 	billingMode: z.enum(["polar", "disabled"]),
 	billingEnabled: z.boolean(),
+	entitlements: z.object({
+		planId: z.enum(["free", "pro"]),
+		planName: z.string(),
+		limits: z.object({
+			maxNotes: z.number().nullable(),
+			maxSources: z.number().nullable(),
+		}),
+		features: z.object({
+			dailyDigest: z.boolean(),
+			weeklyDigest: z.boolean(),
+			monthlyDigest: z.boolean(),
+			aiQuizzes: z.boolean(),
+		}),
+	}),
+	usage: z.object({
+		noteCount: z.number().int(),
+		sourceCount: z.number().int(),
+	}),
 	isPro: z.boolean(),
 });
+
+function serializeLimit(value: number) {
+	return value === Number.POSITIVE_INFINITY ? null : value;
+}
 
 const get = baseRoute
 	.input(z.object({}).optional())
@@ -102,12 +124,28 @@ const capabilities = baseRoute
 		const deploymentMode = getDeploymentMode();
 		const billingEnabled = isBillingEnabled();
 		const isPro = await getIsProForUser(userId);
+		const [entitlements, noteCount, sourceCount] = await Promise.all([
+			getUserEntitlements(userId),
+			countUserDocuments(userId),
+			countUserConnections(userId),
+		]);
 
 		return {
 			capabilities: {
 				deploymentMode,
 				billingMode,
 				billingEnabled,
+				entitlements: {
+					...entitlements,
+					limits: {
+						maxNotes: serializeLimit(entitlements.limits.maxNotes),
+						maxSources: serializeLimit(entitlements.limits.maxSources),
+					},
+				},
+				usage: {
+					noteCount,
+					sourceCount,
+				},
 				isPro,
 			},
 		};
