@@ -9,6 +9,7 @@
 		"./scripts/generate-daily-digests": "./scripts/generate-daily-digests.ts",
 		"./scripts/send-due-digests": "./scripts/send-due-digests.ts",
 		"./utils/email-sequence-runner": "./utils/email-sequence-runner.ts",
+		"./utils/entitlements": "./utils/entitlements.ts",
 		"./utils/env": "./utils/env.ts"
 	},
 	"scripts": {
@@ -35,19 +36,19 @@
 		"@react-email/components": "^1.0.4",
 		"@react-email/render": "^2.0.2",
 		"@trigger.dev/sdk": "^3.0.0",
-		"better-auth": "^1.4.14",
+		"better-auth": "catalog:",
 		"drizzle-orm": "catalog:",
 		"hono": "^4.6.0",
 		"posthog-node": "^5.21.1",
-		"react": "^18.3.1",
-		"react-dom": "^18.3.1",
+		"react": "catalog:",
+		"react-dom": "catalog:",
 		"resend": "^4.0.0",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@daily-brain-bits/typescript-config": "workspace:*",
-		"@types/bun": "latest",
-		"@types/react": "^19.2.8",
+		"@types/bun": "catalog:",
+		"@types/react": "catalog:",
 		"tsup": "^8.5.1",
 		"typescript": "^5.6.0"
 	}

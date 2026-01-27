@@ -89,7 +89,7 @@ function parseContentBlocks(content: string): ContentBlock[] {
 	while (index < lines.length) {
 		const line = lines[index];
 
-		if (!line.trim()) {
+		if (!line || !line.trim()) {
 			index += 1;
 			continue;
 		}
@@ -97,8 +97,12 @@ function parseContentBlocks(content: string): ContentBlock[] {
 		if (line.startsWith("```")) {
 			const codeLines: string[] = [];
 			index += 1;
-			while (index < lines.length && !lines[index].startsWith("```")) {
-				codeLines.push(lines[index]);
+			while (index < lines.length) {
+				const codeLine = lines[index];
+				if (!codeLine || codeLine.startsWith("```")) {
+					break;
+				}
+				codeLines.push(codeLine);
 				index += 1;
 			}
 			index += 1;
@@ -115,8 +119,12 @@ function parseContentBlocks(content: string): ContentBlock[] {
 
 		if (/^>\s?/.test(line)) {
 			const quoteLines: string[] = [];
-			while (index < lines.length && /^>\s?/.test(lines[index])) {
-				quoteLines.push(lines[index].replace(/^>\s?/, "").trim());
+			while (index < lines.length) {
+				const quoteLine = lines[index];
+				if (!quoteLine || !/^>\s?/.test(quoteLine)) {
+					break;
+				}
+				quoteLines.push(quoteLine.replace(/^>\s?/, "").trim());
 				index += 1;
 			}
 			blocks.push({ type: "quote", content: quoteLines.join(" ") });
@@ -125,8 +133,12 @@ function parseContentBlocks(content: string): ContentBlock[] {
 
 		if (/^(-|\*|•)\s+/.test(line)) {
 			const items: string[] = [];
-			while (index < lines.length && /^(-|\*|•)\s+/.test(lines[index])) {
-				items.push(lines[index].replace(/^(-|\*|•)\s+/, "").trim());
+			while (index < lines.length) {
+				const listLine = lines[index];
+				if (!listLine || !/^(-|\*|•)\s+/.test(listLine)) {
+					break;
+				}
+				items.push(listLine.replace(/^(-|\*|•)\s+/, "").trim());
 				index += 1;
 			}
 			blocks.push({ type: "list", items });
@@ -134,8 +146,12 @@ function parseContentBlocks(content: string): ContentBlock[] {
 		}
 
 		const paragraph: string[] = [];
-		while (index < lines.length && lines[index].trim()) {
-			paragraph.push(lines[index].trim());
+		while (index < lines.length) {
+			const paragraphLine = lines[index];
+			if (!paragraphLine || !paragraphLine.trim()) {
+				break;
+			}
+			paragraph.push(paragraphLine.trim());
 			index += 1;
 		}
 		blocks.push({ type: "paragraph", content: paragraph.join(" ") });

@@ -3,6 +3,7 @@
 	"include": ["src/**/*.ts", "trigger.config.ts"],
 	"compilerOptions": {
 		"noErrorTruncation": true,
+		"jsx": "react-jsx",
 		"lib": ["ES2022"],
 		"incremental": true
 	}

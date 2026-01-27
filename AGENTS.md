@@ -7,7 +7,12 @@ This is the Daily Brain Bits (DBB) repository.
 
 ## Commands
 
-`bun type-check` - check types
+- `bun type-check` - check types
+- `bun test` - run tests
+
+## Rules
+- run type-check after you finish your work
+- never run the dev server
 
 ## Technologies (current stack)
 

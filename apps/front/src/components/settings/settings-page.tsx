@@ -10,7 +10,9 @@ import { useSettingsCapabilities } from "./settings-utils";
 export function SettingsPage({ tab }: { tab: SettingsTab }) {
 	const { capabilities } = useSettingsCapabilities();
 	const billingEnabled = capabilities?.billingEnabled ?? true;
-	const tabs = billingEnabled ? settingsTabs : settingsTabs.filter((item) => item !== "billing");
+	const tabs: SettingsTab[] = billingEnabled
+		? [...settingsTabs]
+		: settingsTabs.filter((item): item is SettingsTab => item !== "billing");
 	const activeTab = billingEnabled ? tab : tab === "billing" ? "app" : tab;
 
 	return (

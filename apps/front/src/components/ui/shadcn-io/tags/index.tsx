@@ -57,7 +57,11 @@ export const Tags = ({ value, setValue, open: controlledOpen, onOpenChange: cont
 		}
 
 		const resizeObserver = new ResizeObserver((entries) => {
-			setWidth(entries[0].contentRect.width);
+			const entry = entries[0];
+			if (!entry) {
+				return;
+			}
+			setWidth(entry.contentRect.width);
 		});
 
 		resizeObserver.observe(ref.current);

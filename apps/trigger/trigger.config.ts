@@ -10,4 +10,5 @@ export default defineConfig({
 	project,
 	dirs: ["./src/tasks"],
 	runtime: "node",
+	maxDuration: 900,
 });

@@ -250,8 +250,9 @@ function getTimeZoneOffsetMs(date: Date, timezone: string): number {
  */
 function getSupportedTimezones(): readonly string[] {
 	// Intl.supportedValuesOf is available in Node 18+ and modern browsers
-	if ("supportedValuesOf" in Intl) {
-		return (Intl as { supportedValuesOf: (key: string) => string[] }).supportedValuesOf("timeZone");
+	const supportedValuesOf = (Intl as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
+	if (supportedValuesOf) {
+		return supportedValuesOf("timeZone");
 	}
 	// Fallback to common timezones
 	return COMMON_TIMEZONES;

@@ -23,6 +23,8 @@ import {
 } from "./email-sequence-schedule";
 import { sendResendEmail } from "./resend";
 
+export type { EmailSequenceName } from "./email-sequence-schedule";
+
 const DEFAULT_SETTINGS = {
 	emailFrequency: "daily" as DigestFrequency,
 	notesPerDigest: 5,
