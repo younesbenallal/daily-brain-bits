@@ -26,7 +26,7 @@ debug.log
 
 # Local env files
 .env
-.env*.local
+.env*
 
 # Vercel
 .vercel

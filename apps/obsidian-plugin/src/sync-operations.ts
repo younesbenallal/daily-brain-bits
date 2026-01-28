@@ -82,6 +82,8 @@ export class SyncOperations {
 			this.queueManager.dropQueueItems(batch.skippedKeys);
 			if (batch.items.length === 0) {
 				this.isSyncing = false;
+				// Signal sync complete when queue is empty
+				await this.signalSyncComplete();
 				return;
 			}
 
@@ -99,10 +101,20 @@ export class SyncOperations {
 			if (this.queueManager.getQueueLength() > 0) {
 				// Schedule next flush with backoff
 				window.setTimeout(() => void this.flushQueue(pathFilter), this.rpcClient.getBackoffMs());
+			} else {
+				// Queue is empty, signal sync complete
+				await this.signalSyncComplete();
 			}
 		} finally {
 			this.isSyncing = false;
 		}
+	}
+
+	private async signalSyncComplete() {
+		if (!this.settings.vaultId) {
+			return;
+		}
+		await this.rpcClient.signalSyncComplete(this.settings.vaultId);
 	}
 
 	async connect() {

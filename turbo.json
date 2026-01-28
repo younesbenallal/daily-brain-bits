@@ -4,14 +4,7 @@
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"tsconfig*.json",
-				"vite.config.*",
-				"tsup.config.*",
-				"tailwind.config.*",
-				"postcss.config.*"
-			],
+			"inputs": ["$TURBO_DEFAULT$", "tsconfig*.json", "vite.config.*", "tsup.config.*", "tailwind.config.*", "postcss.config.*"],
 			"outputs": [".next/**", "!.next/cache/**", "dist/**", "index.js", "index.js.map"]
 		},
 		"dev": {
@@ -19,14 +12,7 @@
 			"persistent": true
 		},
 		"lint": {
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"biome.json",
-				".biome.json",
-				".eslintrc*",
-				"eslint.config.*",
-				"tsconfig*.json"
-			]
+			"inputs": ["$TURBO_DEFAULT$", "biome.json", ".biome.json", ".eslintrc*", "eslint.config.*", "tsconfig*.json"]
 		},
 		"type-check": {
 			"dependsOn": ["^type-check"],
@@ -39,13 +25,7 @@
 		},
 		"format": {
 			"cache": false,
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"biome.json",
-				".biome.json",
-				".prettierrc*",
-				"prettier.config.*"
-			]
+			"inputs": ["$TURBO_DEFAULT$", "biome.json", ".biome.json", ".prettierrc*", "prettier.config.*"]
 		},
 		"clean": {
 			"cache": false

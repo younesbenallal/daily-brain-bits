@@ -1,4 +1,4 @@
-import { account, db, integrationConnections, integrationScopeItems, syncState } from "@daily-brain-bits/db";
+import { account, db, integrationConnections, integrationScopeItems, syncRuns, syncState } from "@daily-brain-bits/db";
 import { createNotionClient, createNotionSyncAdapter } from "@daily-brain-bits/integrations-notion";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, notInArray } from "drizzle-orm";
@@ -377,85 +377,127 @@ const syncNow = sessionRoute
 			databaseIds,
 		});
 
-		// Get sync state cursor
-		const state = await db.query.syncState.findFirst({
-			where: eq(syncState.connectionId, connectionId),
-			columns: { cursorJson: true },
-		});
-
-		const cursor = state?.cursorJson && typeof state.cursorJson === "object" ? (state.cursorJson as { since?: string }) : undefined;
-
-		// Create Notion client and adapter
-		const notion = createNotionClient(connectionBundle.tokens.accessToken);
-		const adapter = createNotionSyncAdapter({ notion });
-
+		// Create a sync run to track progress
 		const now = new Date();
-		let totalDocumentsImported = 0;
-
-		// Sync each database
-		for (const databaseId of databaseIds) {
-			console.log("[notion.sync] Syncing database", {
-				userId,
+		const [syncRun] = await db
+			.insert(syncRuns)
+			.values({
 				connectionId,
-				databaseId,
+				kind: "manual",
+				status: "running",
+				statsJson: { accepted: 0, rejected: 0, databasesSynced: 0 },
+				startedAt: now,
+			})
+			.returning({ id: syncRuns.id });
+
+		const syncRunId = syncRun?.id;
+
+		try {
+			// Get sync state cursor
+			const state = await db.query.syncState.findFirst({
+				where: eq(syncState.connectionId, connectionId),
+				columns: { cursorJson: true },
 			});
 
-			const syncResult = await adapter.sync({ databaseId }, cursor ? { since: cursor.since ?? new Date().toISOString() } : undefined);
+			const cursor = state?.cursorJson && typeof state.cursorJson === "object" ? (state.cursorJson as { since?: string }) : undefined;
 
-			console.log("[notion.sync] Database sync completed", {
-				userId,
-				connectionId,
-				databaseId,
-				itemsFound: syncResult.items.length,
-				stats: syncResult.stats,
-			});
+			// Create Notion client and adapter
+			const notion = createNotionClient(connectionBundle.tokens.accessToken);
+			const adapter = createNotionSyncAdapter({ notion });
 
-			if (syncResult.items.length > 0) {
-				// Run sync pipeline to ingest items
-				const ingestResult = await runSyncPipeline({
-					connectionId,
-					userId,
-					items: syncResult.items,
-					receivedAt: now,
-					sourceKind: "notion",
-					nextCursor: syncResult.nextCursor,
-				});
+			let totalDocumentsImported = 0;
 
-				totalDocumentsImported += ingestResult.accepted;
-
-				console.log("[notion.sync] Database ingestion completed", {
+			// Sync each database
+			for (const databaseId of databaseIds) {
+				console.log("[notion.sync] Syncing database", {
 					userId,
 					connectionId,
 					databaseId,
-					accepted: ingestResult.accepted,
-					rejected: ingestResult.rejected,
-					skipped: ingestResult.skipped,
 				});
+
+				const syncResult = await adapter.sync({ databaseId }, cursor ? { since: cursor.since ?? new Date().toISOString() } : undefined);
+
+				console.log("[notion.sync] Database sync completed", {
+					userId,
+					connectionId,
+					databaseId,
+					itemsFound: syncResult.items.length,
+					stats: syncResult.stats,
+				});
+
+				if (syncResult.items.length > 0) {
+					// Run sync pipeline to ingest items
+					const ingestResult = await runSyncPipeline({
+						connectionId,
+						userId,
+						items: syncResult.items,
+						receivedAt: now,
+						sourceKind: "notion",
+						nextCursor: syncResult.nextCursor,
+					});
+
+					totalDocumentsImported += ingestResult.accepted;
+
+					console.log("[notion.sync] Database ingestion completed", {
+						userId,
+						connectionId,
+						databaseId,
+						accepted: ingestResult.accepted,
+						rejected: ingestResult.rejected,
+						skipped: ingestResult.skipped,
+					});
+				}
 			}
+
+			// Mark sync run as success
+			if (syncRunId) {
+				await db
+					.update(syncRuns)
+					.set({
+						status: "success",
+						statsJson: { accepted: totalDocumentsImported, rejected: 0, databasesSynced: databaseIds.length },
+						finishedAt: new Date(),
+					})
+					.where(eq(syncRuns.id, syncRunId));
+			}
+
+			console.log("[notion.sync] Notion sync process completed", {
+				userId,
+				connectionId,
+				syncRunId,
+				databasesSynced: databaseIds.length,
+				totalDocumentsImported,
+			});
+
+			captureBackendEvent({
+				distinctId: userId,
+				event: "Notion sync completed",
+				properties: {
+					source_kind: "notion",
+					databases_synced: databaseIds.length,
+					documents_imported: totalDocumentsImported,
+				},
+			});
+
+			return {
+				success: true,
+				databasesSynced: databaseIds.length,
+				totalDocumentsImported,
+			};
+		} catch (error) {
+			// Mark sync run as failed
+			if (syncRunId) {
+				await db
+					.update(syncRuns)
+					.set({
+						status: "failed",
+						errorJson: { message: error instanceof Error ? error.message : "Unknown error" },
+						finishedAt: new Date(),
+					})
+					.where(eq(syncRuns.id, syncRunId));
+			}
+			throw error;
 		}
-
-		console.log("[notion.sync] Notion sync process completed", {
-			userId,
-			connectionId,
-			databasesSynced: databaseIds.length,
-			totalDocumentsImported,
-		});
-
-		captureBackendEvent({
-			distinctId: userId,
-			event: "Notion sync completed",
-			properties: {
-				source_kind: "notion",
-				databases_synced: databaseIds.length,
-				documents_imported: totalDocumentsImported,
-			},
-		});
-
-		return {
-			success: true,
-			databasesSynced: databaseIds.length,
-			totalDocumentsImported,
-		};
 	});
 
 export const notionRouter = {

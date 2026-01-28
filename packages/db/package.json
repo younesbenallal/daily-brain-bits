@@ -10,7 +10,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:push": "drizzle-kit push",
-		"db:push:prod": "drizzle-kit push",
+		"db:push:prod": "bun run --env-file .env.prod drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
 		"type-check": "tsc --noEmit"
 	},

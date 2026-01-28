@@ -1,4 +1,4 @@
-import { apikey, db, integrationConnections } from "@daily-brain-bits/db";
+import { apikey, db, integrationConnections, syncRuns } from "@daily-brain-bits/db";
 import {
 	obsidianConnectionConfigSchema,
 	obsidianConnectRequestSchema,
@@ -176,6 +176,39 @@ async function getOrCreateConnectionForVault(options: { userId: string; vaultId:
 	return { connectionId, displayName: created.displayName ?? "Obsidian Vault", config };
 }
 
+async function getOrCreateRunningSyncRun(connectionId: number): Promise<number> {
+	// Check if there's an existing running sync run for this connection
+	const existingRun = await db.query.syncRuns.findFirst({
+		where: and(eq(syncRuns.connectionId, connectionId), eq(syncRuns.status, "running")),
+		columns: { id: true },
+	});
+
+	if (existingRun) {
+		return existingRun.id;
+	}
+
+	// Create a new sync run
+	const now = new Date();
+	const [newRun] = await db
+		.insert(syncRuns)
+		.values({
+			connectionId,
+			kind: "manual",
+			status: "running",
+			statsJson: { accepted: 0, rejected: 0 },
+			startedAt: now,
+		})
+		.returning({ id: syncRuns.id });
+
+	if (!newRun) {
+		throw new ORPCError("INTERNAL_SERVER_ERROR", {
+			message: "failed_to_create_sync_run",
+		});
+	}
+
+	return newRun.id;
+}
+
 const syncBatch = authenticatedRoute
 	.input(syncBatchRequestSchema)
 	.output(syncBatchResponseSchema)
@@ -207,6 +240,9 @@ const syncBatch = authenticatedRoute
 			});
 		}
 
+		// Get or create a running sync run for tracking
+		const syncRunId = await getOrCreateRunningSyncRun(connectionId);
+
 		const now = new Date();
 		const ingestResult = await runSyncPipeline({
 			connectionId,
@@ -216,6 +252,26 @@ const syncBatch = authenticatedRoute
 			sourceKind: "obsidian",
 			defaultDeletedAtSource: input.sentAt,
 		});
+
+		// Update sync run stats (accumulate accepted/rejected counts)
+		const currentRun = await db.query.syncRuns.findFirst({
+			where: eq(syncRuns.id, syncRunId),
+			columns: { statsJson: true },
+		});
+		const currentStats =
+			currentRun?.statsJson && typeof currentRun.statsJson === "object"
+				? (currentRun.statsJson as { accepted?: number; rejected?: number })
+				: { accepted: 0, rejected: 0 };
+
+		await db
+			.update(syncRuns)
+			.set({
+				statsJson: {
+					accepted: (currentStats.accepted ?? 0) + ingestResult.accepted,
+					rejected: (currentStats.rejected ?? 0) + ingestResult.rejected,
+				},
+			})
+			.where(eq(syncRuns.id, syncRunId));
 
 		let nextConfig = config;
 		let shouldUpdateConfig = false;
@@ -245,6 +301,7 @@ const syncBatch = authenticatedRoute
 		console.log("[obsidian.sync.batch] complete", {
 			userId,
 			connectionId,
+			syncRunId,
 			accepted: ingestResult.accepted,
 			rejected: ingestResult.rejected,
 			itemResultsCount: ingestResult.itemResults.length,
@@ -341,10 +398,94 @@ const status = authenticatedRoute
 		};
 	});
 
+const syncComplete = authenticatedRoute
+	.input(
+		z.object({
+			vaultId: z.string().min(1),
+		}),
+	)
+	.output(
+		z.object({
+			success: z.boolean(),
+			syncRunId: z.number().nullable(),
+		}),
+	)
+	.handler(async ({ context, input }) => {
+		const userId = context.user?.id;
+		if (!userId) {
+			throw new ORPCError("Unauthorized");
+		}
+
+		console.log("[obsidian.sync.complete] start", {
+			userId,
+			vaultId: input.vaultId,
+		});
+
+		// Find the connection for this vault
+		const connection = await db.query.integrationConnections.findFirst({
+			where: and(
+				eq(integrationConnections.userId, userId),
+				eq(integrationConnections.kind, "obsidian"),
+				eq(integrationConnections.accountExternalId, input.vaultId),
+			),
+			columns: { id: true },
+		});
+
+		if (!connection) {
+			console.log("[obsidian.sync.complete] no connection found", {
+				userId,
+				vaultId: input.vaultId,
+			});
+			return { success: false, syncRunId: null };
+		}
+
+		// Find the running sync run and mark it as success
+		const runningRun = await db.query.syncRuns.findFirst({
+			where: and(eq(syncRuns.connectionId, connection.id), eq(syncRuns.status, "running")),
+			columns: { id: true },
+		});
+
+		if (!runningRun) {
+			console.log("[obsidian.sync.complete] no running sync run found", {
+				userId,
+				connectionId: connection.id,
+			});
+			return { success: true, syncRunId: null };
+		}
+
+		const now = new Date();
+		await db
+			.update(syncRuns)
+			.set({
+				status: "success",
+				finishedAt: now,
+			})
+			.where(eq(syncRuns.id, runningRun.id));
+
+		console.log("[obsidian.sync.complete] ok", {
+			userId,
+			connectionId: connection.id,
+			syncRunId: runningRun.id,
+		});
+
+		captureBackendEvent({
+			distinctId: userId,
+			event: "Obsidian sync completed",
+			properties: {
+				source_kind: "obsidian",
+				connection_id: connection.id,
+				sync_run_id: runningRun.id,
+			},
+		});
+
+		return { success: true, syncRunId: runningRun.id };
+	});
+
 export const obsidianRouter = {
 	connect,
 	status,
 	sync: {
 		batch: syncBatch,
+		complete: syncComplete,
 	},
 };

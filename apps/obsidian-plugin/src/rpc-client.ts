@@ -157,6 +157,24 @@ export class RPCClient {
 		}
 	}
 
+	async signalSyncComplete(vaultId: string): Promise<boolean> {
+		try {
+			const result = await this.client.obsidian.sync.complete({ vaultId });
+			this.lastError = null;
+			return result?.success ?? false;
+		} catch (error) {
+			const orpcError = toORPCError(error);
+
+			if (orpcError.status === 401 || orpcError.status === 403) {
+				this.lastError = "auth_failed";
+				return false;
+			}
+
+			this.lastError = "request_failed";
+			return false;
+		}
+	}
+
 	getBackoffMs(): number {
 		return this.backoffMs;
 	}

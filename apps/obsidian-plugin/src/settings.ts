@@ -12,8 +12,10 @@ export type DBBSettings = {
 	maxBytesPerBatch: number;
 };
 
+declare const DBB_API_BASE_URL: string;
+
 export const DEFAULT_SETTINGS: DBBSettings = {
-	apiBaseUrl: "http://localhost:3001",
+	apiBaseUrl: typeof DBB_API_BASE_URL !== "undefined" ? DBB_API_BASE_URL : "http://localhost:3001",
 	pluginToken: "",
 	vaultId: "",
 	deviceId: "",

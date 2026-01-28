@@ -29,11 +29,13 @@
 		"clean": "turbo run clean",
 		"db:push": "turbo run db:push --filter=@daily-brain-bits/db",
 		"db:push:prod": "turbo run db:push:prod --filter=@daily-brain-bits/db",
-		"obsidian:install": "turbo run build --filter=@daily-brain-bits/obsidian && mkdir -p \"/Users/younes/Library/Mobile Documents/iCloud~md~obsidian/Documents/YOUNES/.obsidian/plugins/daily-brain-bits\" && cp apps/obsidian-plugin/manifest.json apps/obsidian-plugin/dist/main.js \"/Users/younes/Library/Mobile Documents/iCloud~md~obsidian/Documents/YOUNES/.obsidian/plugins/daily-brain-bits/\""
+		"obsidian:install": "turbo run build --filter=@daily-brain-bits/obsidian && mkdir -p \"/Users/younes/Library/Mobile Documents/iCloud~md~obsidian/Documents/YOUNES/.obsidian/plugins/daily-brain-bits\" && cp apps/obsidian-plugin/manifest.json apps/obsidian-plugin/dist/main.js \"/Users/younes/Library/Mobile Documents/iCloud~md~obsidian/Documents/YOUNES/.obsidian/plugins/daily-brain-bits/\"",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.11",
 		"@types/bun": "catalog:",
+		"husky": "^9.1.7",
 		"turbo": "^2.7.5",
 		"typescript": "^5.6.0"
 	},

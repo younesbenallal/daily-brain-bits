@@ -1,9 +1,48 @@
-import { db, documents, noteDigests, user } from "@daily-brain-bits/db";
+import { db, documents, integrationConnections, noteDigests, syncRuns, user } from "@daily-brain-bits/db";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sessionRoute } from "../context";
 import { createSeedDigestIfNeeded } from "../utils/seed-note-digest";
+
+const syncStatusSchema = z.enum(["pending", "syncing", "complete", "error"]);
+
+async function getSyncStatus(userId: string): Promise<z.infer<typeof syncStatusSchema>> {
+	// Get all active connections for this user
+	const connections = await db.query.integrationConnections.findMany({
+		where: and(eq(integrationConnections.userId, userId), eq(integrationConnections.status, "active")),
+		columns: { id: true },
+	});
+
+	if (connections.length === 0) {
+		return "pending";
+	}
+
+	const connectionIds = connections.map((c) => c.id);
+
+	// Get the most recent sync run for any of the user's connections
+	const latestSyncRun = await db.query.syncRuns.findFirst({
+		where: inArray(syncRuns.connectionId, connectionIds),
+		columns: { status: true },
+		orderBy: [desc(syncRuns.createdAt)],
+	});
+
+	if (!latestSyncRun) {
+		return "pending";
+	}
+
+	switch (latestSyncRun.status) {
+		case "running":
+			return "syncing";
+		case "success":
+		case "partial":
+			return "complete";
+		case "failed":
+			return "error";
+		default:
+			return "pending";
+	}
+}
 
 const status = sessionRoute
 	.input(z.object({}).optional())
@@ -13,6 +52,7 @@ const status = sessionRoute
 			noteDigestReady: z.boolean(),
 			hasDocuments: z.boolean(),
 			showOnboarding: z.boolean(),
+			syncStatus: syncStatusSchema,
 		}),
 	)
 	.handler(async ({ context }) => {
@@ -41,11 +81,14 @@ const status = sessionRoute
 			columns: { showOnboarding: true },
 		});
 
+		const syncStatus = await getSyncStatus(userId);
+
 		return {
 			ready: noteDigestReady,
 			noteDigestReady,
 			hasDocuments,
 			showOnboarding: userRow?.showOnboarding ?? true,
+			syncStatus,
 		};
 	});
 

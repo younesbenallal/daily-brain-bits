@@ -1,13 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { Loader2Icon } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { OnboardingLayout } from "@/components/layouts/onboarding-layout";
 import { isOnboardingStepComplete } from "@/lib/onboarding/step-validation";
 import { orpc } from "@/lib/orpc-client";
 
-const REFRESH_INTERVAL = 5_000;
-const LOADING_ONE_MS = 2_000;
-const LOADING_TWO_MS = 2_000;
+const REFRESH_INTERVAL = 3_000;
 
 export const Route = createFileRoute("/(app)/onboarding/onboarding-loading")({
 	component: OnboardingLoadingPage,
@@ -15,7 +14,6 @@ export const Route = createFileRoute("/(app)/onboarding/onboarding-loading")({
 
 function OnboardingLoadingPage() {
 	const router = useRouter();
-	const [step, setStep] = useState<"loading-one" | "loading-two" | "tutorial">("loading-one");
 	const { mutate: seedDigest } = useMutation(orpc.onboarding.seedDigest.mutationOptions());
 	const hasTriggeredSeedDigest = useRef(false);
 	const statusQuery = useQuery({
@@ -23,24 +21,14 @@ function OnboardingLoadingPage() {
 		refetchInterval: REFRESH_INTERVAL,
 	});
 	const statusData = statusQuery.data;
+	const syncStatus = statusData?.syncStatus ?? "pending";
 	const canProceed =
 		statusData?.noteDigestReady &&
 		isOnboardingStepComplete("loading", {
 			noteDigestReady: true as const,
 		});
 
-	useEffect(() => {
-		if (step === "loading-one") {
-			const timer = window.setTimeout(() => setStep("loading-two"), LOADING_ONE_MS);
-			return () => window.clearTimeout(timer);
-		}
-		if (step === "loading-two") {
-			const timer = window.setTimeout(() => setStep("tutorial"), LOADING_TWO_MS);
-			return () => window.clearTimeout(timer);
-		}
-		return undefined;
-	}, [step]);
-
+	// Trigger seed digest when documents are available
 	useEffect(() => {
 		if (hasTriggeredSeedDigest.current) {
 			return;
@@ -56,18 +44,26 @@ function OnboardingLoadingPage() {
 		seedDigest({}, { onError: (error) => console.error("Failed to start onboarding seed digest:", error) });
 	}, [seedDigest, statusData?.hasDocuments, statusData?.noteDigestReady]);
 
+	// Auto-navigate when ready
 	useEffect(() => {
 		if (canProceed) {
 			router.navigate({ to: "/onboarding/preview" });
 		}
 	}, [canProceed, router]);
 
+	// Determine which UI to show based on sync status
+	const isSyncing = syncStatus === "pending" || syncStatus === "syncing";
+	const syncComplete = syncStatus === "complete";
+	const syncError = syncStatus === "error";
+
 	return (
-		<OnboardingLayout footer={<OnboardingFooter />}>
-			{step === "loading-one" ? (
-				<LoadingStepOne />
-			) : step === "loading-two" ? (
-				<LoadingStepTwo />
+		<OnboardingLayout footer={<OnboardingFooter syncStatus={syncStatus} />}>
+			{isSyncing ? (
+				<SyncingStep />
+			) : syncError ? (
+				<ErrorStep onTroubleshoot={() => router.navigate({ to: "/onboarding/choose-source" })} />
+			) : syncComplete && !statusData?.hasDocuments ? (
+				<NoDocumentsStep onTroubleshoot={() => router.navigate({ to: "/onboarding/choose-source" })} />
 			) : (
 				<TutorialStep
 					noteDigestReady={statusData?.noteDigestReady ?? false}
@@ -79,31 +75,68 @@ function OnboardingLoadingPage() {
 	);
 }
 
-function OnboardingFooter() {
+function OnboardingFooter({ syncStatus }: { syncStatus: string }) {
+	const statusText = syncStatus === "complete" ? "Sync complete" : syncStatus === "error" ? "Sync error" : "Syncing notes...";
+
 	return (
 		<>
 			<span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
-				<span className="h-2 w-2 rounded-full bg-white" />
+				{syncStatus === "complete" ? (
+					<span className="h-2 w-2 rounded-full bg-white" />
+				) : syncStatus === "error" ? (
+					<span className="h-2 w-2 rounded-full bg-red-400" />
+				) : (
+					<Loader2Icon className="h-3 w-3 animate-spin text-white" />
+				)}
 			</span>
-			<span className="text-base font-medium">Syncing ongoing</span>
+			<span className="text-base font-medium">{statusText}</span>
 		</>
 	);
 }
 
-function LoadingStepOne() {
+function SyncingStep() {
 	return (
 		<div className="space-y-4">
-			<h1 className="font-display text-3xl text-foreground">Building your first digest…</h1>
-			<p className="text-sm text-muted-foreground">We're scanning your notes and selecting the ones most worth revisiting.</p>
+			<h1 className="font-display text-3xl text-foreground">Syncing your notes...</h1>
+			<p className="text-sm text-muted-foreground">We're importing your notes and preparing your first digest. This usually takes 10-30 seconds.</p>
+			<div className="flex justify-center pt-4">
+				<Loader2Icon className="h-8 w-8 animate-spin text-primary" />
+			</div>
 		</div>
 	);
 }
 
-function LoadingStepTwo() {
+function ErrorStep({ onTroubleshoot }: { onTroubleshoot: () => void }) {
 	return (
-		<div className="space-y-4 text-center">
-			<h1 className="font-display text-3xl text-foreground">Quick tip while we sync</h1>
-			<p className="text-sm text-muted-foreground">This usually takes 10–30 seconds. Here's how to get the most out of your digests.</p>
+		<div className="space-y-6">
+			<div className="space-y-3">
+				<h1 className="font-display text-3xl text-foreground">Something went wrong</h1>
+				<p className="text-sm text-muted-foreground">We encountered an error while syncing your notes. Please check your connection and try again.</p>
+			</div>
+			<div className="flex justify-center">
+				<button type="button" className="text-sm font-medium text-primary hover:underline" onClick={onTroubleshoot}>
+					Back to setup
+				</button>
+			</div>
+		</div>
+	);
+}
+
+function NoDocumentsStep({ onTroubleshoot }: { onTroubleshoot: () => void }) {
+	return (
+		<div className="space-y-6">
+			<div className="space-y-3">
+				<h1 className="font-display text-3xl text-foreground">No notes found</h1>
+				<p className="text-sm text-muted-foreground">
+					The sync completed but we didn't find any notes. Make sure you've selected at least one Notion database or triggered a sync from the Obsidian
+					plugin.
+				</p>
+			</div>
+			<div className="flex justify-center">
+				<button type="button" className="text-sm font-medium text-primary hover:underline" onClick={onTroubleshoot}>
+					Back to setup
+				</button>
+			</div>
 		</div>
 	);
 }
