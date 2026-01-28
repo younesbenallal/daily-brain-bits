@@ -1,19 +1,21 @@
 {
-  "name": "@daily-brain-bits/trigger",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "type-check": "tsc --noEmit --incremental",
-    "clean": "rm -rf dist"
-  },
-  "dependencies": {
-    "@daily-brain-bits/back": "workspace:*",
-    "@trigger.dev/sdk": "4.3.3"
-  },
-  "devDependencies": {
-    "@daily-brain-bits/typescript-config": "workspace:*",
-    "@trigger.dev/build": "4.3.3",
-    "typescript": "^5.6.0"
-  }
+	"name": "@daily-brain-bits/trigger",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "set -a && source .env && set +a && npx trigger.dev dev",
+		"deploy": "npx trigger.dev deploy",
+		"type-check": "tsc --noEmit --incremental",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@daily-brain-bits/back": "workspace:*",
+		"@trigger.dev/sdk": "4.3.3"
+	},
+	"devDependencies": {
+		"@daily-brain-bits/typescript-config": "workspace:*",
+		"@trigger.dev/build": "4.3.3",
+		"typescript": "^5.6.0"
+	}
 }
