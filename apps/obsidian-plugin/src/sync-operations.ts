@@ -99,8 +99,8 @@ export class SyncOperations {
 			await this.saveData();
 
 			if (this.queueManager.getQueueLength() > 0) {
-				// Schedule next flush with backoff
-				window.setTimeout(() => void this.flushQueue(pathFilter), this.rpcClient.getBackoffMs());
+				// Schedule next flush immediately (minimal delay for success)
+				window.setTimeout(() => void this.flushQueue(pathFilter), 50);
 			} else {
 				// Queue is empty, signal sync complete
 				await this.signalSyncComplete();
@@ -149,14 +149,22 @@ export class SyncOperations {
 		const queueItems: PendingQueueItem[] = [];
 		const itemMap = new Map<string, SyncItem>();
 		const skippedKeys = new Set<string>();
+
+		// Take up to batchSize items from queue for parallel processing
+		const pendingQueue = this.queueManager.getPendingQueue();
+		const candidateItems = pendingQueue.slice(0, this.settings.batchSize);
+
+		// Build all items in parallel
+		const buildResults = await Promise.all(
+			candidateItems.map(async (queued) => {
+				const built = await this.buildSyncItem(queued, pathFilter);
+				return { queued, built };
+			}),
+		);
+
+		// Apply byte limit and collect results
 		let batchBytes = 0;
-
-		for (const queued of this.queueManager.getPendingQueue()) {
-			if (queueItems.length >= this.settings.batchSize) {
-				break;
-			}
-
-			const built = await this.buildSyncItem(queued, pathFilter);
+		for (const { queued, built } of buildResults) {
 			if (!built) {
 				skippedKeys.add(toQueueKey(queued));
 				continue;
@@ -166,6 +174,7 @@ export class SyncOperations {
 			const wouldOverflow = items.length > 0 && projectedBytes + batchBytes > this.settings.maxBytesPerBatch;
 
 			if (wouldOverflow) {
+				// Stop adding items but don't skip - they'll be picked up in next batch
 				break;
 			}
 

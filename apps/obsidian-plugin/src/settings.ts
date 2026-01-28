@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: DBBSettings = {
 	vaultId: "",
 	deviceId: "",
 	scopeGlob: "",
-	batchSize: 50,
+	batchSize: 100,
 	debounceMs: 2000,
 	maxBytesPerBatch: 2_000_000,
 };

@@ -1,7 +1,7 @@
 import type { SyncCursor, SyncItem } from "@daily-brain-bits/core";
 import { normalizeForHash, sha256Hex, syncItemDeleteSchema, syncItemSchema, syncItemUpsertSchema } from "@daily-brain-bits/core";
 import { db, documents, syncState } from "@daily-brain-bits/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { z } from "zod";
 import { countUserDocuments, getUserEntitlements } from "../domains/billing/entitlements";
 
@@ -120,14 +120,9 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 	let rejected = 0;
 	let skipped = 0;
 	const itemResults: IngestResult["itemResults"] = [];
-	const entitlements = await getUserEntitlements(userId);
-	const noteLimit = entitlements.limits.maxNotes;
-	let remainingSlots = Number.POSITIVE_INFINITY;
-	if (noteLimit !== Number.POSITIVE_INFINITY) {
-		const currentCount = await countUserDocuments(userId);
-		remainingSlots = Math.max(0, noteLimit - currentCount);
-	}
 
+	// Phase 1: Parse all items and separate valid from invalid
+	const parsedItems: Array<{ item: SyncItem; raw: unknown }> = [];
 	for (const rawItem of items) {
 		const parsed = syncItemSchema.safeParse(rawItem);
 		if (!parsed.success) {
@@ -143,23 +138,70 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 			});
 			continue;
 		}
+		parsedItems.push({ item: parsed.data, raw: rawItem });
+	}
 
-		const item: SyncItem = parsed.data;
+	if (parsedItems.length === 0) {
+		await updateSyncState(connectionId, receivedAt, nextCursor);
+		return { accepted, rejected, skipped, itemResults };
+	}
 
-		const [existing] = await db
-			.select({
-				contentHash: documents.contentHash,
-				updatedAtSource: documents.updatedAtSource,
-				deletedAtSource: documents.deletedAtSource,
-			})
-			.from(documents)
-			.where(and(eq(documents.userId, userId), eq(documents.connectionId, connectionId), eq(documents.externalId, parsed.data.externalId)))
-			.limit(1);
+	// Phase 2: Bulk fetch all existing documents in one query
+	const externalIds = parsedItems.map((p) => p.item.externalId);
+	const existingDocs = await db
+		.select({
+			externalId: documents.externalId,
+			contentHash: documents.contentHash,
+			updatedAtSource: documents.updatedAtSource,
+			deletedAtSource: documents.deletedAtSource,
+		})
+		.from(documents)
+		.where(and(eq(documents.userId, userId), eq(documents.connectionId, connectionId), inArray(documents.externalId, externalIds)));
+
+	const existingMap = new Map(existingDocs.map((d) => [d.externalId, d]));
+
+	// Phase 3: Check entitlements for note limits
+	const entitlements = await getUserEntitlements(userId);
+	const noteLimit = entitlements.limits.maxNotes;
+	let remainingSlots = Number.POSITIVE_INFINITY;
+	if (noteLimit !== Number.POSITIVE_INFINITY) {
+		const currentCount = await countUserDocuments(userId);
+		remainingSlots = Math.max(0, noteLimit - currentCount);
+	}
+
+	// Phase 4: Process decisions and collect operations
+	type UpsertOp = {
+		type: "upsert";
+		externalId: string;
+		values: typeof documents.$inferInsert;
+		isNew: boolean;
+	};
+	type DeleteUpdateOp = {
+		type: "delete_update";
+		externalId: string;
+		deletedAtSource: Date | null;
+		updatedAtSource: Date | null;
+		metadataJson: unknown;
+		wasDeleted: boolean;
+	};
+	type TombstoneOp = {
+		type: "tombstone";
+		externalId: string;
+		values: typeof documents.$inferInsert;
+	};
+
+	const upsertOps: UpsertOp[] = [];
+	const deleteUpdateOps: DeleteUpdateOp[] = [];
+	const tombstoneOps: TombstoneOp[] = [];
+
+	for (const { item } of parsedItems) {
+		const existing = existingMap.get(item.externalId) ?? null;
 
 		try {
 			if (item.op === "upsert") {
 				const upsert = syncItemUpsertSchema.parse(item);
-				const decision = resolveUpsertDecision(existing ?? null, upsert, receivedAt);
+				const decision = resolveUpsertDecision(existing, upsert, receivedAt);
+
 				if (decision.action === "skip") {
 					skipped += 1;
 					itemResults.push({
@@ -169,7 +211,9 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 					});
 					continue;
 				}
-				if (!existing && remainingSlots <= 0) {
+
+				const isNew = !existing;
+				if (isNew && remainingSlots <= 0) {
 					rejected += 1;
 					itemResults.push({
 						externalId: upsert.externalId,
@@ -181,20 +225,12 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 
 				const contentFields = encodeContent(upsert.contentMarkdown);
 				const metadataJson = upsert.metadata ?? null;
-				const metadataRecord =
-					metadataJson && typeof metadataJson === "object" && !Array.isArray(metadataJson) ? (metadataJson as Record<string, unknown>) : null;
 
-				console.log("[ingest] upsert metadata", {
-					connectionId,
+				upsertOps.push({
+					type: "upsert",
 					externalId: upsert.externalId,
-					metadataKeys: metadataRecord ? Object.keys(metadataRecord) : [],
-					hasPropertiesSummary: Boolean(metadataRecord?.propertiesSummary),
-					hasFrontmatter: Boolean(metadataRecord?.frontmatter),
-				});
-
-				await db
-					.insert(documents)
-					.values({
+					isNew,
+					values: {
 						userId,
 						connectionId,
 						externalId: upsert.externalId,
@@ -206,33 +242,25 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 						lastSyncedAt: receivedAt,
 						metadataJson,
 						...contentFields,
-					})
-					.onConflictDoUpdate({
-						target: [documents.userId, documents.connectionId, documents.externalId],
-						set: {
-							title: upsert.title ?? null,
-							contentHash: upsert.contentHash,
-							updatedAtSource: parseDateOrNull(upsert.updatedAtSource ?? null),
-							deletedAtSource: null,
-							lastSyncedAt: receivedAt,
-							metadataJson,
-							...contentFields,
-						},
-					});
+					},
+				});
 
 				accepted += 1;
 				itemResults.push({
 					externalId: upsert.externalId,
 					status: "accepted",
 				});
-				if (!existing && remainingSlots !== Number.POSITIVE_INFINITY) {
+
+				if (isNew && remainingSlots !== Number.POSITIVE_INFINITY) {
 					remainingSlots = Math.max(0, remainingSlots - 1);
 				}
 				continue;
 			}
 
+			// Delete operation
 			const deleted = syncItemDeleteSchema.parse(item);
-			const decision = resolveDeleteDecision(existing ?? null, deleted, receivedAt);
+			const decision = resolveDeleteDecision(existing, deleted, receivedAt);
+
 			if (decision.action === "skip") {
 				skipped += 1;
 				itemResults.push({
@@ -247,18 +275,22 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 				const contentFields = encodeContent("");
 				const emptyHash = sha256Hex(normalizeForHash(""));
 
-				await db.insert(documents).values({
-					userId,
-					connectionId,
+				tombstoneOps.push({
+					type: "tombstone",
 					externalId: deleted.externalId,
-					title: deleted.title ?? null,
-					contentHash: emptyHash,
-					createdAtSource: null,
-					updatedAtSource: parseDateOrNull(deleted.updatedAtSource ?? null),
-					deletedAtSource: parseDateOrNull(deleted.deletedAtSource),
-					lastSyncedAt: receivedAt,
-					metadataJson: deleted.metadata ?? null,
-					...contentFields,
+					values: {
+						userId,
+						connectionId,
+						externalId: deleted.externalId,
+						title: deleted.title ?? null,
+						contentHash: emptyHash,
+						createdAtSource: null,
+						updatedAtSource: parseDateOrNull(deleted.updatedAtSource ?? null),
+						deletedAtSource: parseDateOrNull(deleted.deletedAtSource),
+						lastSyncedAt: receivedAt,
+						metadataJson: deleted.metadata ?? null,
+						...contentFields,
+					},
 				});
 
 				accepted += 1;
@@ -269,21 +301,21 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 				continue;
 			}
 
-			await db
-				.update(documents)
-				.set({
-					deletedAtSource: parseDateOrNull(deleted.deletedAtSource),
-					updatedAtSource: parseDateOrNull(deleted.updatedAtSource ?? null),
-					lastSyncedAt: receivedAt,
-					metadataJson: deleted.metadata ?? null,
-				})
-				.where(and(eq(documents.userId, userId), eq(documents.connectionId, connectionId), eq(documents.externalId, deleted.externalId)));
+			deleteUpdateOps.push({
+				type: "delete_update",
+				externalId: deleted.externalId,
+				deletedAtSource: parseDateOrNull(deleted.deletedAtSource),
+				updatedAtSource: parseDateOrNull(deleted.updatedAtSource ?? null),
+				metadataJson: deleted.metadata ?? null,
+				wasDeleted: existing ? !existing.deletedAtSource : false,
+			});
 
 			accepted += 1;
 			itemResults.push({
 				externalId: deleted.externalId,
 				status: "accepted",
 			});
+
 			if (existing && !existing.deletedAtSource && remainingSlots !== Number.POSITIVE_INFINITY) {
 				remainingSlots += 1;
 			}
@@ -291,13 +323,72 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 			console.error("Sync item failed", error);
 			rejected += 1;
 			itemResults.push({
-				externalId: parsed.data.externalId,
+				externalId: item.externalId,
 				status: "rejected",
 				reason: "server_error",
 			});
 		}
 	}
 
+	// Phase 5: Execute bulk operations
+	// Upserts - use individual onConflictDoUpdate since Drizzle doesn't support bulk upsert with different values
+	// But we batch them in a transaction for better performance
+	if (upsertOps.length > 0 || tombstoneOps.length > 0 || deleteUpdateOps.length > 0) {
+		await db.transaction(async (tx) => {
+			// Bulk upserts
+			for (const op of upsertOps) {
+				await tx
+					.insert(documents)
+					.values(op.values)
+					.onConflictDoUpdate({
+						target: [documents.userId, documents.connectionId, documents.externalId],
+						set: {
+							title: op.values.title,
+							contentHash: op.values.contentHash,
+							updatedAtSource: op.values.updatedAtSource,
+							deletedAtSource: null,
+							lastSyncedAt: receivedAt,
+							metadataJson: op.values.metadataJson,
+							contentCiphertext: op.values.contentCiphertext,
+							contentIv: op.values.contentIv,
+							contentAlg: op.values.contentAlg,
+							contentKeyVersion: op.values.contentKeyVersion,
+							contentSizeBytes: op.values.contentSizeBytes,
+						},
+					});
+			}
+
+			// Bulk tombstones (inserts only, no conflict expected)
+			for (const op of tombstoneOps) {
+				await tx.insert(documents).values(op.values);
+			}
+
+			// Bulk delete updates
+			for (const op of deleteUpdateOps) {
+				await tx
+					.update(documents)
+					.set({
+						deletedAtSource: op.deletedAtSource,
+						updatedAtSource: op.updatedAtSource,
+						lastSyncedAt: receivedAt,
+						metadataJson: op.metadataJson,
+					})
+					.where(and(eq(documents.userId, userId), eq(documents.connectionId, connectionId), eq(documents.externalId, op.externalId)));
+			}
+		});
+	}
+
+	await updateSyncState(connectionId, receivedAt, nextCursor);
+
+	return {
+		accepted,
+		rejected,
+		skipped,
+		itemResults,
+	};
+}
+
+async function updateSyncState(connectionId: number, receivedAt: Date, nextCursor?: SyncCursor | null) {
 	const cursorProvided = nextCursor !== undefined;
 	const cursorValue = nextCursor ?? null;
 
@@ -316,11 +407,4 @@ export async function ingestSyncItems(params: IngestParams): Promise<IngestResul
 				updatedAt: receivedAt,
 			},
 		});
-
-	return {
-		accepted,
-		rejected,
-		skipped,
-		itemResults,
-	};
 }
