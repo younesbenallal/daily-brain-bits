@@ -1,9 +1,9 @@
 import { db, noteDigests } from "@daily-brain-bits/db";
 import { desc, eq } from "drizzle-orm";
+import { getStartOfLocalDay, isSameLocalDay } from "../domains/digest/schedule";
+import { env } from "../infra/env";
 import { prepareDigestItems } from "../utils/digest-generation";
-import { getStartOfLocalDay, isSameLocalDay } from "../utils/digest-schedule";
 import { upsertDigestWithItems } from "../utils/digest-storage";
-import { env } from "../utils/env";
 
 const DEFAULT_NOTES_PER_DIGEST = 5;
 const now = new Date();

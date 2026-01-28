@@ -1,7 +1,7 @@
 import { PLANS } from "@daily-brain-bits/core";
 import { Body, Button, Column, Container, Head, Heading, Html, Preview, Row, Section, Tailwind, Text } from "@react-email/components";
 import type * as React from "react";
-import { emailBodyStyle, emailTailwindConfig } from "./email-brand";
+import { emailBodyStyle, emailTailwindConfig } from "./brand";
 
 export const welcomeEmailIds = ["welcome-1", "welcome-2", "welcome-3", "welcome-4"] as const;
 export const onboardingEmailIds = ["onboarding-1", "onboarding-2", "onboarding-3", "onboarding-4", "onboarding-5", "onboarding-6"] as const;
@@ -12,6 +12,7 @@ export type SequenceEmailId = (typeof welcomeEmailIds)[number] | (typeof onboard
 export type SequenceEmailTemplateParams = {
 	firstName: string;
 	frontendUrl: string;
+	founderEmail: string;
 	sourceName?: string;
 	digestTiming?: string;
 	notesPerDigest?: number;
@@ -101,6 +102,9 @@ const sequenceEmailDefinitions: Record<SequenceEmailId, SequenceEmailDefinition>
 				<Text className="text-base leading-7 text-brand-muted m-0 mt-4">
 					This takes about 2 minutes. Once connected, we&apos;ll start preparing your first digest.
 				</Text>
+				<Text className="text-base leading-7 text-brand-muted m-0 mt-4">
+					If you ran into any issues connecting, email me at {params.founderEmail} and I&apos;ll help.
+				</Text>
 				<Text className="text-base leading-7 text-brand-muted m-0 mt-6">Talk soon,</Text>
 				<Text className="text-base leading-7 text-brand-foreground m-0">The DBB Team</Text>
 			</SequenceEmailShell>
@@ -118,6 +122,8 @@ Connect Notion: ${buildFrontendUrl(params.frontendUrl, "/onboarding/choose-sourc
 Connect Obsidian: ${buildFrontendUrl(params.frontendUrl, "/onboarding/choose-source")}
 
 This takes about 2 minutes. Once connected, we'll start preparing your first digest.
+
+If you ran into any issues connecting, email me at ${params.founderEmail} and I'll help.
 
 Talk soon,
 The DBB Team

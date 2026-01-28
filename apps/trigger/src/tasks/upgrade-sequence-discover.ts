@@ -1,19 +1,19 @@
 import { logger, schedules, tasks } from "@trigger.dev/sdk/v3";
-import { ensureUpgradeSequenceEntries, loadProUsers } from "@daily-brain-bits/back/utils/email-sequence-runner";
-import { isBillingEnabled } from "@daily-brain-bits/back/utils/entitlements";
-import { env } from "@daily-brain-bits/back/utils/env";
+import { getAllProUsers, isBillingEnabled } from "@daily-brain-bits/back/domains/billing/entitlements";
+import { getDeploymentMode } from "@daily-brain-bits/back/domains/billing/deployment-mode";
+import { discoverUpgradeSequenceEntries } from "@daily-brain-bits/back/domains/email/sequence-runner";
 
 export const upgradeSequenceDiscover = schedules.task({
 	id: "upgrade-sequence-discover",
 	cron: "15 * * * *",
 	run: async () => {
-		if (!env.EMAIL_SEQUENCES_ENABLED) {
-			logger.info("upgrade-sequence-discover: disabled");
+		if (getDeploymentMode() === "self-hosted") {
+			logger.info("upgrade-sequence-discover: disabled in self-hosted mode");
 			return { status: "disabled" as const };
 		}
 
-		const proUsers = await loadProUsers();
-		const insertedUserIds = await ensureUpgradeSequenceEntries({
+		const proUsers = await getAllProUsers();
+		const insertedUserIds = await discoverUpgradeSequenceEntries({
 			now: new Date(),
 			proUsers,
 			billingEnabled: isBillingEnabled(),

@@ -22,6 +22,7 @@
 |------|----------------|
 | `apps/trigger/trigger.config.ts` | Trigger.dev project config and task discovery. |
 | `apps/trigger/src/tasks/digest-hourly.ts` | Hourly schedule to generate and send digests. |
+| `apps/trigger/src/tasks/digest-send-for-user.ts` | On-demand send for a single user's first digest. |
 | `apps/trigger/src/tasks/email-sequence-runner.ts` | Long-running per-user sequence workflow. |
 | `apps/trigger/src/tasks/upgrade-sequence-discover.ts` | Periodic discovery of upgrade sequence entries. |
 | `apps/back/routes/obsidian.ts` | Triggers onboarding sequence on Obsidian connect. |
@@ -36,6 +37,7 @@
 1. Trigger.dev runs `digest-hourly` on the hour.
 2. The task generates daily digests (idempotent per user/day).
 3. The task sends due digests using timezone-aware checks.
+4. When the first digest is created after a new sync, the backend triggers `digest-send-for-user` to send immediately.
 
 ### Email sequences
 
@@ -80,4 +82,5 @@
 - `TRIGGER_PROJECT_REF` (required for Trigger.dev config)
 - `TRIGGER_SECRET_KEY` (required to trigger runs from backend)
 - `TRIGGER_API_URL` (required for self-hosted Trigger.dev)
-- `EMAIL_SEQUENCES_ENABLED` (default `true`)
+
+Note: Email sequences are automatically disabled when `DEPLOYMENT_MODE=self-hosted`.

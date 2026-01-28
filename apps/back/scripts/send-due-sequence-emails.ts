@@ -1,4 +1,4 @@
-import { runEmailSequenceRunner } from "../utils/email-sequence-runner";
+import { runEmailSequenceRunner } from "../domains/email/sequence-runner";
 
 function readArgValue(args: string[], flag: string) {
 	const index = args.indexOf(flag);

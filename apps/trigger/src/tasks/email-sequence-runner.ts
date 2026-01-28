@@ -1,11 +1,8 @@
 import { logger, task, wait } from "@trigger.dev/sdk/v3";
-import {
-	loadSequenceContextForUser,
-	loadSequenceState,
-	processSequenceState,
-	type EmailSequenceName,
-} from "@daily-brain-bits/back/utils/email-sequence-runner";
-import { env } from "@daily-brain-bits/back/utils/env";
+import { loadSequenceContextForUser } from "@daily-brain-bits/back/domains/email/sequence-context";
+import { processSequenceState, type EmailSequenceName } from "@daily-brain-bits/back/domains/email/sequence-runner";
+import { loadSequenceState } from "@daily-brain-bits/back/domains/email/sequence-state";
+import { getDeploymentMode } from "@daily-brain-bits/back/domains/billing/deployment-mode";
 
 type SequenceRunnerPayload = {
 	userId: string;
@@ -16,8 +13,8 @@ type SequenceRunnerPayload = {
 export const emailSequenceRunner = task({
 	id: "email-sequence-runner",
 	run: async (payload: SequenceRunnerPayload) => {
-		if (!env.EMAIL_SEQUENCES_ENABLED) {
-			logger.info("email-sequence-runner: disabled", { userId: payload.userId, sequenceName: payload.sequenceName });
+		if (getDeploymentMode() === "self-hosted") {
+			logger.info("email-sequence-runner: disabled in self-hosted mode", { userId: payload.userId, sequenceName: payload.sequenceName });
 			return { status: "disabled" as const };
 		}
 

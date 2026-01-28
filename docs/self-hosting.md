@@ -21,7 +21,7 @@
 | `docker/nginx.conf` | SPA routing fallback. |
 | `docker/app.env` | App runtime env (self-host defaults). |
 | `docker/trigger.env` | Trigger.dev runtime env (self-host defaults). |
-| `apps/back/utils/entitlements.ts` | Deployment mode + Pro entitlements. |
+| `apps/back/domains/billing/entitlements.ts` | Deployment mode + Pro entitlements. |
 | `apps/back/routes/settings.ts` | Capabilities endpoint for the UI. |
 
 ## Quick Start

@@ -16,7 +16,9 @@ export function createNotionClient(auth: string): Client {
 }
 
 export function createNotionRequest(options: NotionRetryOptions = {}): <T>(fn: RequestFn<T>) => Promise<T> {
-	const limiter = createRateLimiter(options.minIntervalMs ?? 350);
+	// Notion API rate limit is 3 requests/second. 300ms interval stays within limit
+	// while allowing parallel processing to maximize throughput.
+	const limiter = createRateLimiter(options.minIntervalMs ?? 300);
 	const maxRetries = options.maxRetries ?? 5;
 	const baseDelayMs = options.baseDelayMs ?? 400;
 	const maxDelayMs = options.maxDelayMs ?? 10_000;

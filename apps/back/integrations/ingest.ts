@@ -3,7 +3,7 @@ import { normalizeForHash, sha256Hex, syncItemDeleteSchema, syncItemSchema, sync
 import { db, documents, syncState } from "@daily-brain-bits/db";
 import { and, eq } from "drizzle-orm";
 import type { z } from "zod";
-import { countUserDocuments, getUserEntitlements } from "../utils/entitlements";
+import { countUserDocuments, getUserEntitlements } from "../domains/billing/entitlements";
 
 export type IngestResult = {
 	accepted: number;

@@ -1,14 +1,14 @@
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
-import { baseRoute } from "../context";
-import { countUserConnections, countUserDocuments } from "../utils/entitlements";
+import { sessionRoute } from "../context";
+import { countUserConnections, countUserDocuments } from "../domains/billing/entitlements";
 
 const usageSchema = z.object({
 	noteCount: z.number().int(),
 	sourceCount: z.number().int(),
 });
 
-const get = baseRoute
+const get = sessionRoute
 	.input(z.object({}).optional())
 	.output(z.object({ usage: usageSchema }))
 	.handler(async ({ context }) => {

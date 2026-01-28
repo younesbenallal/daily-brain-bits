@@ -1,31 +1,31 @@
 import { describe, expect, test } from "bun:test";
-import { getSequenceStepDueAt, isSequenceStepDue } from "./email-sequence-schedule";
+import { getSequenceStepDueAt, isSequenceStepDue } from "../domains/email/sequence-schedule";
 
 describe("email-sequence-schedule", () => {
 	test("calculates welcome step due dates from entry time", () => {
 		const enteredAt = new Date("2026-01-01T12:00:00Z");
-		const stepTwo = getSequenceStepDueAt({ sequenceName: "welcome", step: 2, enteredAt });
-		expect(stepTwo?.toISOString()).toBe("2026-01-03T12:00:00.000Z");
+		const stepOne = getSequenceStepDueAt({ sequenceName: "welcome", step: 1, enteredAt });
+		expect(stepOne?.toISOString()).toBe("2026-01-01T13:00:00.000Z");
 	});
 
-	test("requires first digest for onboarding step 3", () => {
+	test("requires first digest for onboarding step 1", () => {
 		const enteredAt = new Date("2026-01-01T12:00:00Z");
-		const stepThreeWithoutDigest = getSequenceStepDueAt({
+		const stepOneWithoutDigest = getSequenceStepDueAt({
 			sequenceName: "onboarding",
-			step: 3,
+			step: 1,
 			enteredAt,
 			firstDigestSentAt: null,
 		});
-		expect(stepThreeWithoutDigest).toBeNull();
+		expect(stepOneWithoutDigest).toBeNull();
 
 		const firstDigestSentAt = new Date("2026-01-02T10:00:00Z");
-		const stepThree = getSequenceStepDueAt({
+		const stepOne = getSequenceStepDueAt({
 			sequenceName: "onboarding",
-			step: 3,
+			step: 1,
 			enteredAt,
 			firstDigestSentAt,
 		});
-		expect(stepThree?.toISOString()).toBe("2026-01-02T12:00:00.000Z");
+		expect(stepOne?.toISOString()).toBe("2026-01-02T12:00:00.000Z");
 	});
 
 	test("isSequenceStepDue returns false before due time", () => {

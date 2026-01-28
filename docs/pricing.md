@@ -45,7 +45,7 @@ This document is the single source of truth for Daily Brain Bits pricing, limits
 ## Implementation Notes
 
 - Source of truth lives in `packages/core/src/plans.ts` (plan limits + features).
-- Backend resolves per-user entitlements in `apps/back/utils/entitlements.ts`.
+- Backend resolves per-user entitlements in `apps/back/domains/billing/entitlements.ts`.
 - Limits are enforced server-side during sync (`apps/back/integrations/ingest.ts`) and connection creation (`apps/back/routes/obsidian.ts`, `packages/auth/auth.ts`).
 - Usage stats (note/source counts) are exposed via `apps/back/routes/settings.ts` (capabilities) and `apps/back/routes/usage.ts`.
 

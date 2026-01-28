@@ -32,7 +32,7 @@
 | --- | --- |
 | `apps/front/src/lib/posthog-client.ts` | Initialize PostHog (client helper shared by the frontend). |
 | `apps/front/src/index.tsx` | Initialize PostHog and identify users once sessions resolve. |
-| `apps/back/utils/posthog-client.ts` | Backend PostHog client and capture helper. |
+| `apps/back/infra/posthog-client.ts` | Backend PostHog client and capture helper. |
 | `apps/back/routes/notion.ts` | Capture Notion sync events. |
 | `apps/back/routes/obsidian.ts` | Capture Obsidian sync batch event. |
 

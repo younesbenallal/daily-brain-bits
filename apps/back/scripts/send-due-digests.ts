@@ -1,12 +1,12 @@
-import { db, noteDigests, reviewStates } from "@daily-brain-bits/db";
+import { db, noteDigests, reviewStates, user, userSettings } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { PLANS } from "@daily-brain-bits/core";
-import { type DigestFrequency, isDigestDueWithTimezone, isSameLocalDay, resolveEffectiveFrequency } from "../utils/digest-schedule";
+import { getProUsers } from "../domains/billing/entitlements";
+import { type DigestFrequency, isDigestDueWithTimezone, isSameLocalDay, resolveEffectiveFrequency } from "../domains/digest/schedule";
+import { sendResendEmail } from "../domains/email/resend";
+import { env } from "../infra/env";
 import { upsertDigestWithItems } from "../utils/digest-storage";
-import { getProUsers } from "../utils/entitlements";
-import { env } from "../utils/env";
 import { buildDigestEmail, loadDigestSnapshot } from "../utils/note-digest-email";
-import { sendResendEmail } from "../utils/resend";
 
 const DEFAULT_FREQUENCY: DigestFrequency = "daily";
 
@@ -15,24 +15,37 @@ const FROM_ADDRESS = env.RESEND_FROM;
 const REPLY_TO = env.RESEND_REPLY_TO;
 const FRONTEND_URL = env.FRONTEND_URL;
 
-const now = new Date();
-
 function buildIdempotencyKey(digestId: number): string {
 	return `note-digest-${digestId}`;
 }
 
-export async function runSendDueDigests() {
+type RunSendDueDigestsOptions = {
+	now?: Date;
+	targetUserId?: string;
+	/** Bypass schedule check if this is the user's first digest */
+	skipScheduleForFirstDigest?: boolean;
+};
+
+export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) {
+	const now = options.now ?? new Date();
+	const targetUserId = options.targetUserId ?? null;
+	const skipScheduleForFirstDigest = options.skipScheduleForFirstDigest ?? false;
+
 	console.log("[send-due-digests] Starting digest email process...");
 
 	const users = await db.query.user.findMany({
+		where: targetUserId ? eq(user.id, targetUserId) : undefined,
 		columns: { id: true, email: true, emailVerified: true, name: true },
 	});
 	const settingsRows = await db.query.userSettings.findMany({
+		where: targetUserId ? eq(userSettings.userId, targetUserId) : undefined,
 		columns: { userId: true, emailFrequency: true, timezone: true, preferredSendHour: true },
 	});
-	const proUsers = await getProUsers(users.map((user) => user.id));
+	const proUsers = await getProUsers(users.map((userRow) => userRow.id));
 	const sentDigests = await db.query.noteDigests.findMany({
-		where: eq(noteDigests.status, "sent"),
+		where: targetUserId
+			? and(eq(noteDigests.status, "sent"), eq(noteDigests.userId, targetUserId))
+			: eq(noteDigests.status, "sent"),
 		columns: { userId: true, sentAt: true, createdAt: true },
 		orderBy: [desc(noteDigests.sentAt), desc(noteDigests.createdAt)],
 	});
@@ -71,8 +84,12 @@ export async function runSendDueDigests() {
 			features,
 		});
 		const lastSentAt = lastSentMap.get(candidate.id) ?? null;
+		const shouldBypassSchedule = skipScheduleForFirstDigest && !lastSentAt;
 
-		if (!isDigestDueWithTimezone({ now, lastSentAt, frequency: effectiveFrequency, userId: candidate.id, timezone, preferredSendHour })) {
+		if (
+			!isDigestDueWithTimezone({ now, lastSentAt, frequency: effectiveFrequency, userId: candidate.id, timezone, preferredSendHour }) &&
+			!shouldBypassSchedule
+		) {
 			console.log(
 				`[send-due-digests] Skipping user ${candidate.id} - not due yet (freq: ${effectiveFrequency}, tz: ${timezone}, hour: ${preferredSendHour}, last sent: ${lastSentAt?.toISOString()})`,
 			);

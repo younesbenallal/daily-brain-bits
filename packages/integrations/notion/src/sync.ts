@@ -1,4 +1,4 @@
-import { normalizeForHash, type SyncItem, sha256Hex } from "@daily-brain-bits/core";
+import { createConcurrencyPool, normalizeForHash, type SyncItem, sha256Hex } from "@daily-brain-bits/core";
 import { APIErrorCode, type Client, isNotionClientError, iteratePaginatedAPI } from "@notionhq/client";
 import type {
 	BlockObjectResponse,
@@ -14,6 +14,7 @@ import type { NotionRequest, NotionSyncError, NotionSyncOptions, NotionSyncResul
 
 const defaultPageSize = 100;
 const defaultSafetyMarginSeconds = 2;
+const defaultConcurrency = 4;
 
 export async function syncDatabases(notion: Client, databaseIds: string[], options: NotionSyncOptions = {}): Promise<NotionSyncResult> {
 	const request = options.request ?? createNotionRequest();
@@ -43,13 +44,9 @@ export async function syncDatabases(notion: Client, databaseIds: string[], optio
 export async function syncDatabase(notion: Client, databaseId: string, options: NotionSyncOptions = {}): Promise<NotionSyncResult> {
 	const request = options.request ?? createNotionRequest();
 	const pageSize = options.pageSize ?? defaultPageSize;
+	const concurrency = options.concurrency ?? defaultConcurrency;
 	const safetyMarginSeconds = options.safetyMarginSeconds ?? defaultSafetyMarginSeconds;
 	const filterAfterIso = options.cursor?.since ? shiftIsoSeconds(options.cursor.since, -safetyMarginSeconds) : null;
-
-	const items: SyncItem[] = [];
-	const errors: NotionSyncError[] = [];
-	const stats = createStats();
-	let maxEditedTime: string | null = null;
 
 	const query = (args: Parameters<Client["databases"]["query"]>[0]) => request(() => notion.databases.query(args));
 
@@ -67,54 +64,96 @@ export async function syncDatabase(notion: Client, databaseId: string, options: 
 		};
 	}
 
+	// Collect pages from iterator first
+	const pages: PageObjectResponse[] = [];
 	const iterator = iteratePaginatedAPI(query, queryArgs);
-
 	for await (const page of iterator) {
-		console.log("[notion.sync] Page", page.id);
-		const pageId = page.id;
-		stats.pagesVisited += 1;
-
-		if (options.maxPages && stats.pagesVisited > options.maxPages) {
+		pages.push(page as PageObjectResponse);
+		if (options.maxPages && pages.length >= options.maxPages) {
 			break;
 		}
+	}
 
+	// Process pages in parallel with concurrency limit
+	type PageResult =
+		| { status: "success"; item: SyncItem; lastEditedTime: string }
+		| { status: "skipped" }
+		| { status: "error"; error: NotionSyncError; fatal?: boolean };
+
+	const pool = createConcurrencyPool(concurrency);
+
+	const pagePromises = pages.map(async (page): Promise<PageResult> => {
+		await pool.acquire();
 		try {
-			const fullPage = await ensureFullPage(notion, page as PageObjectResponse, request);
+			console.log("[notion.sync] Page", page.id);
+
+			const fullPage = await fetchFullPage(notion, page, request);
 			if (!fullPage) {
-				stats.pagesSkipped += 1;
-				stats.skipped += 1;
-				continue;
+				return { status: "skipped" };
 			}
 
 			if (isPageArchivedOrTrashed(fullPage)) {
-				stats.pagesSkipped += 1;
-				stats.skipped += 1;
-				continue;
+				return { status: "skipped" };
 			}
 
 			options.onPage?.({
 				databaseId,
-				pageId,
+				pageId: page.id,
 				lastEditedAt: fullPage.last_edited_time,
 			});
 
 			const item = await pageToSyncItem(notion, fullPage, databaseId, request, {
 				pageSize,
+				concurrency,
 			});
-			items.push(item);
+
+			return {
+				status: "success",
+				item,
+				lastEditedTime: fullPage.last_edited_time,
+			};
+		} catch (error: unknown) {
+			const syncError = toSyncError(error, page.id);
+			return {
+				status: "error",
+				error: syncError,
+				fatal: syncError.code === APIErrorCode.Unauthorized,
+			};
+		} finally {
+			pool.release();
+		}
+	});
+
+	const results = await Promise.all(pagePromises);
+
+	// Aggregate results
+	const items: SyncItem[] = [];
+	const errors: NotionSyncError[] = [];
+	const stats = createStats();
+	let maxEditedTime: string | null = null;
+
+	stats.pagesVisited = pages.length;
+
+	for (const result of results) {
+		if (result.status === "success") {
+			items.push(result.item);
 			stats.pagesSynced += 1;
 			stats.items += 1;
 			stats.upserts += 1;
-			maxEditedTime = pickLatestEditedTime(maxEditedTime, fullPage.last_edited_time);
-		} catch (error: unknown) {
-			const syncError = toSyncError(error, pageId);
-			errors.push(syncError);
-
-			if (syncError.code === APIErrorCode.Unauthorized) {
-				throw error;
-			}
+			maxEditedTime = pickLatestEditedTime(maxEditedTime, result.lastEditedTime);
+		} else if (result.status === "skipped") {
 			stats.pagesSkipped += 1;
 			stats.skipped += 1;
+		} else if (result.status === "error") {
+			errors.push(result.error);
+			stats.pagesSkipped += 1;
+			stats.skipped += 1;
+			if (result.fatal) {
+				// Re-throw unauthorized errors with context preserved
+				const fatalError = new Error(`Notion API unauthorized: ${result.error.message}`);
+				fatalError.cause = result.error;
+				throw fatalError;
+			}
 		}
 	}
 
@@ -131,10 +170,11 @@ async function pageToSyncItem(
 	page: PageObjectResponse,
 	databaseId: string,
 	request: NotionRequest,
-	options: { pageSize: number },
+	options: { pageSize: number; concurrency: number },
 ): Promise<SyncItem> {
 	const blocks = await fetchBlocksWithChildren(notion, page.id, request, {
 		pageSize: options.pageSize,
+		concurrency: options.concurrency,
 	});
 	const markdown = blocksToMarkdown(blocks).trim();
 	const normalized = normalizeForHash(markdown);
@@ -157,38 +197,71 @@ async function pageToSyncItem(
 	};
 }
 
+/**
+ * Fetch blocks using BFS with parallel sibling fetching for better performance.
+ */
 async function fetchBlocksWithChildren(
 	notion: Client,
 	blockId: string,
 	request: NotionRequest,
-	options: { pageSize: number },
+	options: { pageSize: number; concurrency: number },
+): Promise<NotionBlockWithChildren[]> {
+	// Fetch top-level blocks
+	const topBlocks = await fetchBlocksAtLevel(notion, blockId, request, options.pageSize);
+
+	// BFS: process level by level with parallel children fetching
+	let currentLevel = topBlocks;
+	while (currentLevel.length > 0) {
+		const blocksWithChildren = currentLevel.filter((b) => b.has_children);
+		if (blocksWithChildren.length === 0) break;
+
+		// Fetch all children in parallel (with concurrency limit)
+		const pool = createConcurrencyPool(options.concurrency);
+		const childPromises = blocksWithChildren.map(async (block) => {
+			await pool.acquire();
+			try {
+				block.children = await fetchBlocksAtLevel(notion, block.id, request, options.pageSize);
+			} finally {
+				pool.release();
+			}
+		});
+
+		await Promise.all(childPromises);
+
+		// Next level = all children we just fetched
+		currentLevel = blocksWithChildren.flatMap((b) => b.children ?? []);
+	}
+
+	return topBlocks;
+}
+
+/**
+ * Fetch all blocks at a single level (no recursion).
+ */
+async function fetchBlocksAtLevel(
+	notion: Client,
+	blockId: string,
+	request: NotionRequest,
+	pageSize: number,
 ): Promise<NotionBlockWithChildren[]> {
 	const list = (args: Parameters<Client["blocks"]["children"]["list"]>[0]) => request(() => notion.blocks.children.list(args));
 
 	const iterator = iteratePaginatedAPI(list, {
 		block_id: blockId,
-		page_size: options.pageSize,
+		page_size: pageSize,
 	});
 
 	const blocks: NotionBlockWithChildren[] = [];
-
 	for await (const block of iterator) {
-		if (!isFullBlock(block)) {
-			continue;
+		if (isFullBlock(block)) {
+			blocks.push({ ...block });
 		}
-
-		const enriched: NotionBlockWithChildren = { ...block };
-		if (block.has_children) {
-			enriched.children = await fetchBlocksWithChildren(notion, block.id, request, options);
-		}
-
-		blocks.push(enriched);
 	}
 
 	return blocks;
 }
 
-async function ensureFullPage(
+async function fetchFullPage(
 	notion: Client,
 	page: PageObjectResponse | PartialPageObjectResponse,
 	request: NotionRequest,

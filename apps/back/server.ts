@@ -10,8 +10,8 @@ import { onboardingRouter } from "./routes/onboarding";
 import { handleResendWebhook } from "./routes/resend-webhook";
 import { settingsRouter } from "./routes/settings";
 import { usageRouter } from "./routes/usage";
-import { createApiKeySession } from "./utils/api-key";
-import { env } from "./utils/env";
+import { createApiKeySession } from "./infra/api-key";
+import { env } from "./infra/env";
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,

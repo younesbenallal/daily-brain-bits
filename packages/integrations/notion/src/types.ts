@@ -37,6 +37,8 @@ export type NotionSyncOptions = {
 	safetyMarginSeconds?: number;
 	pageSize?: number;
 	maxPages?: number;
+	/** Number of pages to process in parallel. Default: 4 */
+	concurrency?: number;
 	onPage?: (progress: NotionSyncProgress) => void;
 	request?: NotionRequest;
 };

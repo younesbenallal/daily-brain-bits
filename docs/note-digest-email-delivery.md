@@ -27,11 +27,11 @@
 | `apps/back/scripts/run-digest-cron.ts` | Orchestrated job: generate then send in sequence (manual fallback). |
 | `apps/trigger/src/tasks/digest-hourly.ts` | Trigger.dev hourly schedule for digest generation + send. |
 | `apps/back/utils/digest-generation.ts` | Builds digest items using the note selection algorithm. |
-| `apps/back/utils/digest-schedule.ts` | Frequency resolution, timezone conversion, and due checks. |
+| `apps/back/domains/digest/schedule.ts` | Frequency resolution, timezone conversion, and due checks. |
 | `apps/back/utils/digest-storage.ts` | Inserts or updates digest + items in a transaction. |
 | `apps/back/utils/note-digest-email.ts` | Loads digest snapshots and renders React Email + text payloads. |
 | `apps/back/utils/note-digest-email-template.tsx` | React Email template and excerpt helpers. |
-| `apps/back/utils/resend.ts` | Resend client wrapper with idempotency support. |
+| `apps/back/domains/email/resend.ts` | Resend client wrapper with idempotency support. |
 | `apps/back/routes/digest.ts` | Serves the last sent digest to the app dashboard. |
 | `apps/back/routes/settings.ts` | User settings API including timezone and preferred send hour. |
 | `apps/back/scripts/send-test-digest-email.ts` | Sends a fake-data digest email without touching the DB. |
@@ -86,7 +86,7 @@
 3. For each invocation, we calculate which users have their local time matching their preferred hour.
 4. Users receive digests in the **morning of their local time**, not a fixed UTC time.
 
-### Key functions in `digest-schedule.ts`
+### Key functions in `domains/digest/schedule.ts`
 
 | Function | Purpose |
 |----------|---------|
@@ -127,7 +127,7 @@ The `Intl.DateTimeFormat` API handles Daylight Saving Time automatically. If a u
 ## Testing / Verification
 
 - Run unit tests:
-  - `bun test apps/back/utils/digest-schedule.test.ts`
+  - `bun test apps/back/utils/digest-schedule.test.ts` (tests `domains/digest/schedule.ts`)
   - `bun test apps/back/utils/note-digest-email.test.ts`
 - Generate daily digests locally:
   - `bun --env-file apps/back/.env apps/back/scripts/generate-daily-digests.ts`

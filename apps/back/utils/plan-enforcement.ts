@@ -1,4 +1,4 @@
-import { getUserEntitlements, countUserConnections, countUserDocuments } from "./entitlements";
+import { getUserEntitlements, countUserConnections, countUserDocuments } from "../domains/billing/entitlements";
 import { evaluateNoteLimit, evaluateSourceLimit } from "./plan-enforcement-utils";
 
 export async function checkNoteLimitForSync(params: { userId: string; newNoteCount: number }) {

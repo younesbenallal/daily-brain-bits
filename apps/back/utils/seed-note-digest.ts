@@ -1,11 +1,11 @@
 import { db, documents, noteDigestItems, noteDigests } from "@daily-brain-bits/db";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
-export type EnsureSeedNoteDigestResult =
+export type SeedDigestResult =
 	| { created: true; digestId: number; itemCount: number }
 	| { created: false; reason: "already_exists" | "no_documents" | "insert_failed" };
 
-export async function ensureSeedNoteDigest(userId: string): Promise<EnsureSeedNoteDigestResult> {
+export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDigestResult> {
 	const existing = await db.query.noteDigests.findFirst({
 		where: eq(noteDigests.userId, userId),
 		columns: { id: true },

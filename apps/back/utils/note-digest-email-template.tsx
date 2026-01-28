@@ -1,7 +1,7 @@
 import { Body, Container, Head, Heading, Html, Link, Preview, Section, Tailwind, Text } from "@react-email/components";
 import * as React from "react";
-import { emailBodyStyle, emailBrand, emailTailwindConfig } from "./email-brand";
-import type { DigestFrequency } from "./digest-schedule";
+import { emailBodyStyle, emailBrand, emailTailwindConfig } from "../domains/email/brand";
+import type { DigestFrequency } from "../domains/digest/schedule";
 
 export type EmailContentBlock =
 	| { type: "heading"; content: string; level: number }

@@ -3,9 +3,9 @@ import { createNotionClient, createNotionSyncAdapter } from "@daily-brain-bits/i
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, notInArray } from "drizzle-orm";
 import { z } from "zod";
-import { baseRoute } from "../context";
+import { sessionRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
-import { captureBackendEvent } from "../utils/posthog-client";
+import { captureBackendEvent } from "../infra/posthog-client";
 
 const notionDatabaseSchema = z.object({
 	id: z.string().min(1),
@@ -156,7 +156,7 @@ async function searchNotionDatabases(accessToken: string, query?: string | null)
 	return payload.results ?? [];
 }
 
-const status = baseRoute
+const status = sessionRoute
 	.input(z.object({}).optional())
 	.output(notionStatusSchema)
 	.handler(async ({ context }) => {
@@ -212,7 +212,7 @@ const status = baseRoute
 		};
 	});
 
-const searchDatabases = baseRoute
+const searchDatabases = sessionRoute
 	.input(
 		z.object({
 			query: z.string().optional().nullable(),
@@ -243,7 +243,7 @@ const searchDatabases = baseRoute
 		return { databases };
 	});
 
-const setDatabases = baseRoute
+const setDatabases = sessionRoute
 	.input(
 		z.object({
 			databases: z.array(notionDatabaseSchema),
@@ -321,7 +321,7 @@ const setDatabases = baseRoute
 		return { saved: input.databases.length };
 	});
 
-const syncNow = baseRoute
+const syncNow = sessionRoute
 	.input(z.object({}).optional())
 	.output(
 		z.object({

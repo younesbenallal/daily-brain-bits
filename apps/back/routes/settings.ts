@@ -2,9 +2,9 @@ import { db, userSettings } from "@daily-brain-bits/db";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { baseRoute } from "../context";
-import { isValidTimezone } from "../utils/digest-schedule";
-import { getBillingMode, getDeploymentMode, getIsProForUser, isBillingEnabled, getUserEntitlements, countUserConnections, countUserDocuments } from "../utils/entitlements";
+import { sessionRoute } from "../context";
+import { getBillingMode, getDeploymentMode, getUserEntitlements, isBillingEnabled, countUserConnections, countUserDocuments, getIsProForUser } from "../domains/billing/entitlements";
+import { isValidTimezone } from "../domains/digest/schedule";
 
 const frequencyOptions = ["daily", "weekly", "monthly"] as const;
 
@@ -57,7 +57,7 @@ function serializeLimit(value: number) {
 	return value === Number.POSITIVE_INFINITY ? null : value;
 }
 
-const get = baseRoute
+const get = sessionRoute
 	.input(z.object({}).optional())
 	.output(z.object({ settings: settingsSchema }))
 	.handler(async ({ context }) => {
@@ -82,7 +82,7 @@ const get = baseRoute
 		};
 	});
 
-const update = baseRoute
+const update = sessionRoute
 	.input(settingsSchema)
 	.output(z.object({ settings: settingsSchema }))
 	.handler(async ({ context, input }) => {
@@ -111,7 +111,7 @@ const update = baseRoute
 		return { settings: input };
 	});
 
-const capabilities = baseRoute
+const capabilities = sessionRoute
 	.input(z.object({}).optional())
 	.output(z.object({ capabilities: capabilitiesSchema }))
 	.handler(async ({ context }) => {

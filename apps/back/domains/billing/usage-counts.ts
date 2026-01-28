@@ -1,55 +1,6 @@
-import { buildUserEntitlements, type PlanId } from "@daily-brain-bits/core";
 import { billingSubscriptions, db, documents, integrationConnections } from "@daily-brain-bits/db";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { env } from "./env";
-
-export type DeploymentMode = "cloud" | "self-hosted";
-export type BillingMode = "polar" | "disabled";
-
-export function getDeploymentMode(): DeploymentMode {
-	return env.DEPLOYMENT_MODE === "self-hosted" ? "self-hosted" : "cloud";
-}
-
-export function getBillingMode(): BillingMode {
-	return getDeploymentMode() === "self-hosted" ? "disabled" : "polar";
-}
-
-export function isBillingEnabled(): boolean {
-	return getBillingMode() === "polar";
-}
-
-export async function getUserPlan(userId: string): Promise<PlanId> {
-	if (!isBillingEnabled()) {
-		return "pro";
-	}
-
-	const subscription = await db.query.billingSubscriptions.findFirst({
-		where: and(eq(billingSubscriptions.userId, userId), inArray(billingSubscriptions.status, ["active", "trialing"])),
-		columns: { id: true },
-	});
-
-	return subscription ? "pro" : "free";
-}
-
-function applySelfHostedOverrides(entitlements: ReturnType<typeof buildUserEntitlements>) {
-	if (isBillingEnabled()) {
-		return entitlements;
-	}
-
-	return {
-		...entitlements,
-		limits: {
-			maxNotes: Number.POSITIVE_INFINITY,
-			maxSources: Number.POSITIVE_INFINITY,
-		},
-	};
-}
-
-export async function getUserEntitlements(userId: string) {
-	const planId = await getUserPlan(userId);
-	const entitlements = buildUserEntitlements(planId);
-	return applySelfHostedOverrides(entitlements);
-}
+import { isBillingEnabled } from "./deployment-mode";
 
 export async function countUserDocuments(userId: string): Promise<number> {
 	const [row] = await db

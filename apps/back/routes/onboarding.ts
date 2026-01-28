@@ -2,10 +2,10 @@ import { db, documents, noteDigests, user } from "@daily-brain-bits/db";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { baseRoute } from "../context";
-import { ensureSeedNoteDigest } from "../utils/seed-note-digest";
+import { sessionRoute } from "../context";
+import { createSeedDigestIfNeeded } from "../utils/seed-note-digest";
 
-const status = baseRoute
+const status = sessionRoute
 	.input(z.object({}).optional())
 	.output(
 		z.object({
@@ -49,7 +49,7 @@ const status = baseRoute
 		};
 	});
 
-const complete = baseRoute
+const complete = sessionRoute
 	.input(z.object({}).optional())
 	.output(z.object({ success: z.boolean() }))
 	.handler(async ({ context }) => {
@@ -68,7 +68,7 @@ const complete = baseRoute
 
 export const onboardingRouter = {
 	status,
-	seedDigest: baseRoute
+	seedDigest: sessionRoute
 		.input(z.object({}).optional())
 		.output(
 			z.object({
@@ -82,7 +82,7 @@ export const onboardingRouter = {
 				throw new ORPCError("Unauthorized");
 			}
 
-			const result = await ensureSeedNoteDigest(userId);
+			const result = await createSeedDigestIfNeeded(userId);
 
 			return {
 				created: result.created,

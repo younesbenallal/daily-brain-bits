@@ -8,9 +8,12 @@
 		".": "./index.js",
 		"./scripts/generate-daily-digests": "./scripts/generate-daily-digests.ts",
 		"./scripts/send-due-digests": "./scripts/send-due-digests.ts",
-		"./utils/email-sequence-runner": "./utils/email-sequence-runner.ts",
-		"./utils/entitlements": "./utils/entitlements.ts",
-		"./utils/env": "./utils/env.ts"
+		"./domains/billing/deployment-mode": "./domains/billing/deployment-mode.ts",
+		"./domains/billing/entitlements": "./domains/billing/entitlements.ts",
+		"./domains/email/sequence-context": "./domains/email/sequence-context.ts",
+		"./domains/email/sequence-runner": "./domains/email/sequence-runner.ts",
+		"./domains/email/sequence-state": "./domains/email/sequence-state.ts",
+		"./infra/env": "./infra/env.ts"
 	},
 	"scripts": {
 		"dev": "bun run dev.ts",
@@ -21,6 +24,7 @@
 		"send-due-digests": "bun run scripts/send-due-digests.ts",
 		"send-test-digest-email": "bun run scripts/send-test-digest-email.ts",
 		"type-check": "tsc --noEmit --incremental",
+		"test": "bun test",
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {

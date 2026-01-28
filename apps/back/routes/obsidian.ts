@@ -10,11 +10,11 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { apiKeyRoute } from "../context";
+import { authenticatedRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
+import { captureBackendEvent } from "../infra/posthog-client";
+import { activateOnboardingSequence } from "../infra/trigger-client";
 import { checkSourceLimitForConnection } from "../utils/plan-enforcement";
-import { captureBackendEvent } from "../utils/posthog-client";
-import { enterOnboardingSequence } from "../utils/trigger-client";
 
 function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; settings?: Record<string, unknown> }) {
 	return obsidianConnectionConfigSchema.parse({
@@ -24,7 +24,7 @@ function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; s
 	});
 }
 
-const connect = apiKeyRoute
+const connect = authenticatedRoute
 	.input(obsidianConnectRequestSchema)
 	.output(obsidianConnectResponseSchema)
 	.handler(async ({ context, input }) => {
@@ -38,7 +38,7 @@ const connect = apiKeyRoute
 			vaultId: input.vaultId,
 			vaultName: input.vaultName ?? null,
 		});
-		const { connectionId, displayName, config } = await ensureConnectionForVault({
+		const { connectionId, displayName, config } = await getOrCreateConnectionForVault({
 			userId,
 			vaultId: input.vaultId,
 			displayName: input.vaultName,
@@ -77,7 +77,7 @@ const connect = apiKeyRoute
 			displayName,
 		});
 
-		await enterOnboardingSequence(userId);
+		await activateOnboardingSequence(userId);
 
 		return {
 			connected: true,
@@ -85,7 +85,7 @@ const connect = apiKeyRoute
 		};
 	});
 
-async function ensureConnectionForVault(options: { userId: string; vaultId: string; displayName?: string }) {
+async function getOrCreateConnectionForVault(options: { userId: string; vaultId: string; displayName?: string }) {
 	const { userId, vaultId, displayName } = options;
 
 	const connection = await db.query.integrationConnections.findFirst({
@@ -176,7 +176,7 @@ async function ensureConnectionForVault(options: { userId: string; vaultId: stri
 	return { connectionId, displayName: created.displayName ?? "Obsidian Vault", config };
 }
 
-const syncBatch = apiKeyRoute
+const syncBatch = authenticatedRoute
 	.input(syncBatchRequestSchema)
 	.output(syncBatchResponseSchema)
 	.handler(async ({ context, input }) => {
@@ -193,13 +193,13 @@ const syncBatch = apiKeyRoute
 			itemCount: input.items.length,
 		});
 
-		const { connectionId, config } = await ensureConnectionForVault({
+		const { connectionId, config } = await getOrCreateConnectionForVault({
 			userId,
 			vaultId: input.vaultId,
 			displayName: input.vaultName,
 		});
 
-		await enterOnboardingSequence(userId);
+		await activateOnboardingSequence(userId);
 
 		if (!connectionId) {
 			throw new ORPCError("INTERNAL_SERVER_ERROR", {
@@ -269,7 +269,7 @@ const syncBatch = apiKeyRoute
 		};
 	});
 
-const status = apiKeyRoute
+const status = authenticatedRoute
 	.input(z.object({}).optional())
 	.output(
 		z.object({

@@ -1,6 +1,6 @@
-import type { DigestFrequency } from "../utils/digest-schedule";
+import type { DigestFrequency } from "../domains/digest/schedule";
+import { sendResendEmail } from "../domains/email/resend";
 import { buildDigestEmail, buildEmailContent, type DigestEmailItem, type DigestSnapshot } from "../utils/note-digest-email-template";
-import { sendResendEmail } from "../utils/resend";
 
 type CliArgs = {
 	to: string;

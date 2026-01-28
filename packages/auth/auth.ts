@@ -14,7 +14,15 @@ if (!polarPlugin && billingEnabled && process.env.NODE_ENV === "production") {
 	throw new Error("POLAR_ACCESS_TOKEN is required to enable the Polar plugin in production.");
 }
 
-async function enterOnboardingSequence(userId: string) {
+/**
+ * Saves the onboarding sequence state to the database.
+ * - Inserts an active onboarding sequence entry
+ * - Exits any active welcome sequence (user connected an integration)
+ *
+ * Note: This function is duplicated from apps/back/infra/trigger-client.ts
+ * because packages cannot import from apps. Keep implementations in sync.
+ */
+async function saveOnboardingSequenceEntry(userId: string) {
 	const now = new Date();
 	await db
 		.insert(emailSequenceStates)
@@ -35,14 +43,24 @@ async function enterOnboardingSequence(userId: string) {
 			completedAt: now,
 		})
 		.where(and(eq(emailSequenceStates.userId, userId), eq(emailSequenceStates.sequenceName, "welcome"), eq(emailSequenceStates.status, "active")));
+}
 
+/**
+ * Activates the onboarding sequence for a user.
+ * Saves the sequence state to the database and triggers the sequence runner job.
+ *
+ * Note: This function is duplicated from apps/back/infra/trigger-client.ts
+ * because packages cannot import from apps. Keep implementations in sync.
+ */
+async function activateOnboardingSequence(userId: string) {
+	await saveOnboardingSequenceEntry(userId);
 	await triggerSequenceRun({
 		userId,
 		sequenceName: "onboarding",
 	});
 }
 
-async function ensureSourceLimitForNotionConnection(userId: string) {
+async function checkSourceLimitForNotionConnection(userId: string) {
 	if (!billingEnabled) {
 		return;
 	}
@@ -72,14 +90,18 @@ async function ensureSourceLimitForNotionConnection(userId: string) {
 
 let triggerConfigured = false;
 
+// Note: Functions below are duplicated from apps/back/infra/trigger-client.ts
+// because packages cannot import from apps. Keep implementations in sync.
+
 function isEmailSequencesEnabled(): boolean {
-	if (!process.env.EMAIL_SEQUENCES_ENABLED) {
-		return true;
-	}
-	return process.env.EMAIL_SEQUENCES_ENABLED.toLowerCase() !== "false";
+	return process.env.DEPLOYMENT_MODE !== "self-hosted";
 }
 
-function ensureTriggerConfigured(): boolean {
+/**
+ * Lazily configures Trigger.dev SDK if not already configured.
+ * @returns true if Trigger.dev is configured and ready, false if TRIGGER_SECRET_KEY is missing.
+ */
+function tryConfigureTrigger(): boolean {
 	if (triggerConfigured) {
 		return true;
 	}
@@ -100,7 +122,7 @@ async function triggerSequenceRun(params: { userId: string; sequenceName: "welco
 	if (!isEmailSequencesEnabled()) {
 		return;
 	}
-	if (!ensureTriggerConfigured()) {
+	if (!tryConfigureTrigger()) {
 		console.warn("[email-sequences] trigger skipped: TRIGGER_SECRET_KEY not configured");
 		return;
 	}
@@ -169,7 +191,7 @@ export const auth = betterAuth({
 						return;
 					}
 
-					await ensureSourceLimitForNotionConnection(account.userId);
+					await checkSourceLimitForNotionConnection(account.userId);
 
 					const now = new Date();
 					await db
@@ -194,7 +216,7 @@ export const auth = betterAuth({
 							},
 						});
 
-					await enterOnboardingSequence(account.userId);
+					await activateOnboardingSequence(account.userId);
 				},
 			},
 			update: {
@@ -204,7 +226,7 @@ export const auth = betterAuth({
 						return;
 					}
 
-					await ensureSourceLimitForNotionConnection(account.userId);
+					await checkSourceLimitForNotionConnection(account.userId);
 
 					const now = new Date();
 					await db
@@ -229,7 +251,7 @@ export const auth = betterAuth({
 							},
 						});
 
-					await enterOnboardingSequence(account.userId);
+					await activateOnboardingSequence(account.userId);
 				},
 			},
 		},

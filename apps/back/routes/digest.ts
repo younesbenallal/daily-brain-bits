@@ -2,7 +2,7 @@ import { db, documents, integrationConnections, noteDigestItems, noteDigests, re
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { baseRoute } from "../context";
+import { sessionRoute } from "../context";
 import { prepareDigestItems } from "../utils/digest-generation";
 import { upsertDigestWithItems } from "../utils/digest-storage";
 import { decodeDocumentContent } from "../utils/document-content";
@@ -35,7 +35,7 @@ function extractDocumentProperties(metadata: unknown): Record<string, unknown> |
 	return null;
 }
 
-const today = baseRoute
+const today = sessionRoute
 	.input(z.object({}).optional())
 	.output(
 		z.object({
@@ -156,7 +156,7 @@ const today = baseRoute
 		};
 	});
 
-const regenerate = baseRoute
+const regenerate = sessionRoute
 	.input(z.object({}).optional())
 	.output(
 		z.object({
@@ -220,7 +220,7 @@ const regenerate = baseRoute
 		return { digestId, itemCount: digestPlan.itemCount };
 	});
 
-const recommend = baseRoute
+const recommend = sessionRoute
 	.input(
 		z.object({
 			documentId: z.number(),

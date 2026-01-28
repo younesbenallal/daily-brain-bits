@@ -20,7 +20,7 @@ All emails use React Email with the existing brand styling from `note-digest-ema
 - Sequences are run by **Trigger.dev** as long-running tasks that can `wait` between steps.
 - Each sequence uses a dedicated run per user (`email-sequence-runner`) and re-checks exit conditions before sending.
 - Upgrade sequences are discovered on a scheduled task (`upgrade-sequence-discover`).
-- Set `EMAIL_SEQUENCES_ENABLED=false` to disable all sequence sends (self-host safe).
+- Email sequences are **automatically disabled** when `DEPLOYMENT_MODE=self-hosted`.
 - **No emails are sent at signup.** The welcome sequence starts only if the user has **no integration connected after 1 hour**.
 - **Digest sends are scheduled by the user cron**, which starts immediately when the first integration connects. If the user connects right away, their **first email is the first digest**.
 
@@ -540,7 +540,7 @@ Either way, thanks for using Daily Brain Bits. Your notes deserve to be remember
    - Store sequence state per user (current step, completed, exited)
 4. **Triggers**:
    - Welcome: `user.created` event **+ 1 hour delay**, only if no integration is connected
-   - Onboarding: `digest.sent` (first digest) event
+   - Onboarding: `integration.connected` event (sequence waits for first digest sent)
    - Upgrade: Engagement threshold met (check daily/weekly job)
 5. **Webhook endpoint**:
    - `POST /webhooks/resend` (requires `RESEND_WEBHOOK_SECRET`)
@@ -596,7 +596,7 @@ CREATE TABLE email_sends (
 ### Testing
 
 1. Use `send-due-sequence-emails.ts --dry-run` for a safe run
-2. Unit-test schedule timing logic (`apps/back/utils/email-sequence-schedule.test.ts`)
+2. Unit-test schedule timing logic (`apps/back/utils/email-sequence-schedule.test.ts` tests `domains/email/sequence-schedule.ts`)
 3. Test exit conditions with mock user states
 
 ### Config

@@ -1,6 +1,7 @@
 import type { SyncCursor } from "@daily-brain-bits/core";
 import type { IntegrationKind } from "@daily-brain-bits/types";
-import { ensureSeedNoteDigest } from "../utils/seed-note-digest";
+import { triggerDigestSend } from "../infra/trigger-client";
+import { createSeedDigestIfNeeded } from "../utils/seed-note-digest";
 import { type IngestResult, ingestSyncItems } from "./ingest";
 
 type ScopeFilterResult = {
@@ -54,7 +55,10 @@ export async function runSyncPipeline(params: SyncPipelineParams): Promise<Inges
 	});
 
 	if (ingestResult.accepted > 0) {
-		await ensureSeedNoteDigest(params.userId);
+		const seedResult = await createSeedDigestIfNeeded(params.userId);
+		if (seedResult.created) {
+			await triggerDigestSend({ userId: params.userId, reason: "seed_digest_ready" });
+		}
 	}
 
 	return {

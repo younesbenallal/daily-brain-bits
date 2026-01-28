@@ -41,7 +41,6 @@ const schema = z.object({
 	RESEND_WEBHOOK_SECRET: optionalString,
 	DIGEST_EMAIL_DRY_RUN: booleanFromString.optional().default(false),
 	SEQUENCE_EMAIL_DRY_RUN: booleanFromString.optional().default(false),
-	EMAIL_SEQUENCES_ENABLED: booleanFromString.optional().default(true),
 	TRIGGER_SECRET_KEY: optionalString,
 	TRIGGER_API_URL: optionalString,
 	POSTHOG_API_KEY: optionalString,

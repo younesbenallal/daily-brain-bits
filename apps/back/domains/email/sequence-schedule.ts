@@ -1,4 +1,4 @@
-import type { SequenceEmailId } from "./email-sequence-templates";
+import type { SequenceEmailId } from "./sequence-templates";
 
 export type EmailSequenceName = "welcome" | "onboarding" | "upgrade";
 
@@ -14,18 +14,16 @@ const HOUR_MS = 60 * 60 * 1000;
 
 const sequenceSteps: Record<EmailSequenceName, SequenceStepDefinition[]> = {
 	welcome: [
-		{ step: 1, emailId: "welcome-1", kind: "relative", offsetMs: 0 },
+		{ step: 1, emailId: "welcome-1", kind: "relative", offsetMs: 1 * HOUR_MS },
 		{ step: 2, emailId: "welcome-2", kind: "relative", offsetMs: 2 * DAY_MS },
 		{ step: 3, emailId: "welcome-3", kind: "relative", offsetMs: 4 * DAY_MS },
 		{ step: 4, emailId: "welcome-4", kind: "relative", offsetMs: 7 * DAY_MS },
 	],
 	onboarding: [
-		{ step: 1, emailId: "onboarding-1", kind: "relative", offsetMs: 0 },
-		{ step: 2, emailId: "onboarding-2", kind: "relative", offsetMs: 1 * DAY_MS },
-		{ step: 3, emailId: "onboarding-3", kind: "after-first-digest", offsetMs: 2 * HOUR_MS },
-		{ step: 4, emailId: "onboarding-4", kind: "relative", offsetMs: 5 * DAY_MS },
-		{ step: 5, emailId: "onboarding-5", kind: "relative", offsetMs: 9 * DAY_MS },
-		{ step: 6, emailId: "onboarding-6", kind: "relative", offsetMs: 14 * DAY_MS },
+		{ step: 1, emailId: "onboarding-3", kind: "after-first-digest", offsetMs: 2 * HOUR_MS },
+		{ step: 2, emailId: "onboarding-4", kind: "after-first-digest", offsetMs: 5 * DAY_MS },
+		{ step: 3, emailId: "onboarding-5", kind: "after-first-digest", offsetMs: 9 * DAY_MS },
+		{ step: 4, emailId: "onboarding-6", kind: "after-first-digest", offsetMs: 14 * DAY_MS },
 	],
 	upgrade: [
 		{ step: 1, emailId: "upgrade-1", kind: "relative", offsetMs: 0 },

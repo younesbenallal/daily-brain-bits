@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { getFrequencyIntervalMs, getStartOfLocalDay, isDigestDue, resolveEffectiveFrequency } from "./digest-schedule";
+import { getFrequencyIntervalMs, getStartOfLocalDay, isDigestDue, resolveEffectiveFrequency } from "../domains/digest/schedule";
 
 describe("digest-schedule", () => {
 	it("defaults to due when no previous send exists", () => {

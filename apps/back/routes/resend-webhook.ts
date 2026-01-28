@@ -1,8 +1,8 @@
 import { db, emailSends } from "@daily-brain-bits/db";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Context } from "hono";
-import { env } from "../utils/env";
-import { verifyResendWebhook } from "../utils/resend";
+import { verifyResendWebhook } from "../domains/email/resend";
+import { env } from "../infra/env";
 
 type ResendWebhookEvent = {
 	type: string;
