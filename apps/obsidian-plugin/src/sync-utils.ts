@@ -31,19 +31,35 @@ export function toQueueKey(item: PendingQueueItem): string {
 	return `${item.op}:${item.externalId}:${item.path}`;
 }
 
-export function normalizeGlobPatterns(glob: string): string[] {
-	return glob
+export function parseGlobPatterns(glob: string): { include: string[]; exclude: string[] } {
+	const lines = glob
 		.split("\n")
 		.map((pattern) => pattern.trim())
 		.filter(Boolean);
+
+	const include: string[] = [];
+	const exclude: string[] = [];
+
+	for (const line of lines) {
+		if (line.startsWith("!")) {
+			const pattern = line.slice(1).trim();
+			if (pattern) {
+				exclude.push(pattern);
+			}
+		} else {
+			include.push(line);
+		}
+	}
+
+	return { include, exclude };
 }
 
 export function buildScopeFilter(glob: string): (path: string) => boolean {
-	const patterns = normalizeGlobPatterns(glob);
-	if (patterns.length === 0) {
+	const { include, exclude } = parseGlobPatterns(glob);
+	if (include.length === 0 && exclude.length === 0) {
 		return () => true;
 	}
-	return createPathFilter({ include: patterns });
+	return createPathFilter({ include, exclude });
 }
 
 export function pickFrontmatter(frontmatter?: Record<string, unknown>) {

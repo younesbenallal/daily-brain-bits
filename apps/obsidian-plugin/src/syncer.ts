@@ -4,7 +4,7 @@ import { QueueManager } from "./queue-manager";
 import { RPCClient } from "./rpc-client";
 import type { DBBSettings } from "./settings";
 import { SyncOperations } from "./sync-operations";
-import { buildScopeFilter, normalizeGlobPatterns, shouldSyncFile } from "./sync-utils";
+import { buildScopeFilter, parseGlobPatterns, shouldSyncFile } from "./sync-utils";
 import type { LocalIndex, SyncStatus } from "./types";
 
 export class Syncer {
@@ -73,9 +73,10 @@ export class Syncer {
 	}
 
 	getScopeStatus() {
+		const { include, exclude } = parseGlobPatterns(this.settings.scopeGlob);
 		return {
 			ready: true,
-			patterns: normalizeGlobPatterns(this.settings.scopeGlob),
+			patterns: [...include, ...exclude.map((p) => `!${p}`)],
 			updatedAt: null,
 		};
 	}

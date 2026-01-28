@@ -40,6 +40,10 @@ export function matchesGlob(path: string, pattern: string): boolean {
 	return globToRegExp(pattern).test(normalizeVaultPath(path));
 }
 
+function stripMdExtension(path: string): string {
+	return path.endsWith(".md") ? path.slice(0, -3) : path;
+}
+
 export function createPathFilter(options: { include?: string[]; exclude?: string[] }): (path: string) => boolean {
 	const includePatterns = (options.include || []).filter(Boolean);
 	const excludePatterns = (options.exclude || []).filter(Boolean);
@@ -47,7 +51,7 @@ export function createPathFilter(options: { include?: string[]; exclude?: string
 	const excludeRegs = excludePatterns.map((pattern) => globToRegExp(pattern));
 
 	return (path: string) => {
-		const normalized = normalizeVaultPath(path);
+		const normalized = stripMdExtension(normalizeVaultPath(path));
 		if (excludeRegs.some((regex) => regex.test(normalized))) {
 			return false;
 		}

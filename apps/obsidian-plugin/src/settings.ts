@@ -106,36 +106,59 @@ export class DBBSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl).setName("Scope").setDesc("Scope only affects what this plugin syncs.").setHeading();
 
+		const globHintEl = containerEl.createDiv({ cls: "setting-item-description" });
+		globHintEl.style.marginBottom = "12px";
+		globHintEl.innerHTML = `
+			<strong>Glob filter</strong> — Pattern(s) for notes to include or exclude. Leave empty to sync all notes.<br>
+			<span style="opacity: 0.8; font-size: 0.9em;">
+				One pattern per line. Prefix with <code>!</code> to exclude. Supports <code>*</code> (any chars), <code>**</code> (recursive), <code>?</code> (single char).<br><br>
+				<strong>Examples:</strong><br>
+				<code>Projects/**</code> — all notes in Projects folder<br>
+				<code>!Journaling/**</code> — exclude Journaling folder<br>
+				<code>Notes/*</code> — direct children of Notes only
+			</span>
+		`;
+
 		new Setting(containerEl)
-			.setName("Glob filter")
-			.setDesc("Pattern for notes to include (leave empty to sync everything).")
-			.addText((text) =>
+			.addTextArea((text) =>
 				text
-					.setPlaceholder("*(!Journaling)")
+					.setPlaceholder("!Journaling/**\n!Templates/**")
 					.setValue(this.plugin.settings.scopeGlob)
 					.onChange(async (value) => {
 						this.plugin.settings.scopeGlob = value.trim();
 						await this.plugin.saveSettings();
 						updatePreview();
 					}),
-			);
+			)
+			.then((setting) => {
+				const textarea = setting.controlEl.querySelector("textarea");
+				if (textarea) {
+					textarea.style.width = "100%";
+					textarea.style.minHeight = "60px";
+				}
+			});
 
 		const previewContainer = containerEl.createDiv({ cls: "dbb-scope-preview" });
+		const previewToggle = previewContainer.createEl("a", { text: "Show preview", href: "#" });
+		previewToggle.style.cursor = "pointer";
+		previewToggle.style.fontSize = "0.9em";
+
+		const previewContent = previewContainer.createDiv();
+		previewContent.style.display = "none";
+		previewContent.style.marginTop = "8px";
+
+		let previewVisible = false;
 
 		const updatePreview = () => {
 			const preview = this.plugin.syncer?.getScopePreview(5);
-			previewContainer.empty();
-
-			const title = previewContainer.createEl("strong", { text: "Preview" });
-			title.style.display = "block";
-			title.style.marginBottom = "6px";
+			previewContent.empty();
 
 			if (!preview) {
-				previewContainer.createEl("div", { text: "Connect the plugin to preview." });
+				previewContent.createEl("div", { text: "Connect the plugin to preview." });
 				return;
 			}
 
-			const included = previewContainer.createEl("div");
+			const included = previewContent.createEl("div");
 			included.createEl("div", { text: "Included:" });
 			if (preview.included.length === 0) {
 				included.createEl("div", { text: "No matches yet." });
@@ -146,7 +169,7 @@ export class DBBSettingTab extends PluginSettingTab {
 				});
 			}
 
-			const excluded = previewContainer.createEl("div");
+			const excluded = previewContent.createEl("div");
 			excluded.style.marginTop = "6px";
 			excluded.createEl("div", { text: "Excluded:" });
 			if (preview.excluded.length === 0) {
@@ -159,7 +182,15 @@ export class DBBSettingTab extends PluginSettingTab {
 			}
 		};
 
-		updatePreview();
+		previewToggle.addEventListener("click", (e) => {
+			e.preventDefault();
+			previewVisible = !previewVisible;
+			previewContent.style.display = previewVisible ? "block" : "none";
+			previewToggle.textContent = previewVisible ? "Hide preview" : "Show preview";
+			if (previewVisible) {
+				updatePreview();
+			}
+		});
 
 		new Setting(containerEl).setName("Sync behavior").setHeading();
 

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { authClient, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
 import { getCustomerState, getPlanSummary, normalizeList, resolveData, useSettingsCapabilities } from "./settings-utils";
 import { StatusMessage, type StatusMessageState } from "./status-message";
 
@@ -12,7 +13,7 @@ export function BillingSettings() {
 	const sessionQuery = useSession();
 	const user = sessionQuery.data?.user;
 	const [billingStatus, setBillingStatus] = useState<StatusMessageState>(null);
-	const { capabilities } = useSettingsCapabilities();
+	const { capabilities, entitlements, usage } = useSettingsCapabilities();
 	const billingEnabled = capabilities?.billingEnabled ?? true;
 
 	const customerStateQuery = useQuery({
@@ -101,6 +102,8 @@ export function BillingSettings() {
 				<StatusMessage status={billingStatus} />
 			</div>
 
+			{usage && entitlements && <UsageSection usage={usage} entitlements={entitlements} isPro={planSummary.isPro} />}
+
 			<div className="space-y-4">
 				<h3 className="text-lg font-medium">Invoices & Orders</h3>
 				{hasOrders ? (
@@ -153,6 +156,58 @@ export function BillingSettings() {
 							Open customer portal
 						</button>
 					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+function UsageSection({
+	usage,
+	entitlements,
+	isPro,
+}: {
+	usage: { noteCount: number; sourceCount: number };
+	entitlements: {
+		limits: { maxNotes: number; maxSources: number };
+	};
+	isPro: boolean;
+}) {
+	const noteLimit = entitlements.limits.maxNotes;
+	const sourceLimit = entitlements.limits.maxSources;
+	const notePercent = noteLimit === Number.POSITIVE_INFINITY ? 0 : Math.min((usage.noteCount / noteLimit) * 100, 100);
+	const sourcePercent = sourceLimit === Number.POSITIVE_INFINITY ? 0 : Math.min((usage.sourceCount / sourceLimit) * 100, 100);
+	const isNearNoteLimit = notePercent >= 80;
+	const isNearSourceLimit = sourcePercent >= 80;
+
+	return (
+		<div className="space-y-4">
+			<h3 className="text-lg font-medium">Usage</h3>
+			<div className="rounded-lg border p-4 space-y-4">
+				<div className="space-y-2">
+					<div className="flex items-center justify-between text-sm">
+						<span className="text-muted-foreground">Notes synced</span>
+						<span className={cn("font-medium", isNearNoteLimit && !isPro && "text-amber-600")}>
+							{usage.noteCount.toLocaleString()} / {noteLimit === Number.POSITIVE_INFINITY ? "∞" : noteLimit.toLocaleString()}
+						</span>
+					</div>
+					{noteLimit !== Number.POSITIVE_INFINITY && (
+						<Progress value={notePercent} className={cn("h-2", isNearNoteLimit && !isPro && "[&>div]:bg-amber-500")} />
+					)}
+				</div>
+				<div className="space-y-2">
+					<div className="flex items-center justify-between text-sm">
+						<span className="text-muted-foreground">Sources connected</span>
+						<span className={cn("font-medium", isNearSourceLimit && !isPro && "text-amber-600")}>
+							{usage.sourceCount} / {sourceLimit === Number.POSITIVE_INFINITY ? "∞" : sourceLimit}
+						</span>
+					</div>
+					{sourceLimit !== Number.POSITIVE_INFINITY && (
+						<Progress value={sourcePercent} className={cn("h-2", isNearSourceLimit && !isPro && "[&>div]:bg-amber-500")} />
+					)}
+				</div>
+				{!isPro && (isNearNoteLimit || isNearSourceLimit) && (
+					<p className="text-xs text-amber-600">You're approaching your plan limits. Upgrade to Pro for higher limits.</p>
 				)}
 			</div>
 		</div>

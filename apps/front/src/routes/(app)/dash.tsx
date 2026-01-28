@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { NoteContent } from "@/components/dash/dash-note-content";
 import { NoteProperties } from "@/components/dash/dash-note-properties";
 import { AppLayout } from "@/components/layouts/app-layout";
-import { useSettingsCapabilities } from "@/components/settings/settings-utils";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -26,10 +25,6 @@ export const Route = createFileRoute("/(app)/dash")({
 
 function AppPage() {
 	const digestQuery = useQuery(orpc.digest.today.queryOptions());
-	const { entitlements, usage } = useSettingsCapabilities();
-	const noteLimit = entitlements?.limits.maxNotes ?? Number.POSITIVE_INFINITY;
-	const noteCount = usage?.noteCount ?? 0;
-	const showNoteUsage = noteLimit !== Number.POSITIVE_INFINITY;
 	const digestData = digestQuery.data as
 		| {
 				digest: {
@@ -114,13 +109,6 @@ function AppPage() {
 	return (
 		<AppLayout maxWidth="max-w-[600px]">
 			<div className="flex flex-col gap-10">
-				{/* Top Info & Navigation */}
-				{showNoteUsage ? (
-					<div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-2 text-xs text-muted-foreground">
-						Notes synced: <span className="font-medium text-foreground">{noteCount}</span> / {noteLimit}
-					</div>
-				) : null}
-
 				{digestQuery.isLoading ? (
 					<div className="space-y-8 animate-pulse">
 						<div className="h-10 w-3/4 rounded-lg bg-muted/40" />
@@ -135,8 +123,10 @@ function AppPage() {
 						<div className="mb-4 rounded-full bg-primary/5 p-4 text-primary">
 							<Sparkles className="h-8 w-8" />
 						</div>
-					<h2 className="font-display text-2xl font-semibold text-foreground">Your digest is on its way</h2>
-					<p className="mt-2 max-w-[300px] text-[15px] text-muted-foreground">We're syncing your notes. Check back in a few minutes—or wait for it in your inbox.</p>
+						<h2 className="font-display text-2xl font-semibold text-foreground">Your digest is on its way</h2>
+						<p className="mt-2 max-w-[300px] text-[15px] text-muted-foreground">
+							We're syncing your notes. Check back in a few minutes—or wait for it in your inbox.
+						</p>
 					</div>
 				) : (
 					<>
