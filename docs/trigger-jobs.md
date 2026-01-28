@@ -1,9 +1,9 @@
-# Trigger.dev Jobs
+# Trigger.dev Jobs (Cloud Only)
 
 ## Summary
 
-- Runs DBB background workflows on Trigger.dev (cloud or self-hosted).
-- Self-host uses the Trigger.dev v3 Docker stack (see `docker-compose.yml`).
+- Runs DBB background workflows on Trigger.dev Cloud.
+- **Only used for cloud deployments** - self-hosted uses a simple cron container instead.
 - Covers digest delivery and lifecycle email sequences.
 
 ## Scope
@@ -27,8 +27,6 @@
 | `apps/trigger/src/tasks/upgrade-sequence-discover.ts` | Periodic discovery of upgrade sequence entries. |
 | `apps/back/routes/obsidian.ts` | Triggers onboarding sequence on Obsidian connect. |
 | `packages/auth/auth.ts` | Triggers welcome/onboarding sequences on signup/connect. |
-| `docker-compose.yml` | Self-hosted Trigger.dev stack + DBB services. |
-| `docker/trigger.env` | Trigger.dev runtime configuration for self-host. |
 
 ## Main Flows
 
@@ -77,10 +75,25 @@
 - Run email sequence runner manually:
   - `bun --env-file apps/back/.env apps/back/scripts/send-due-sequence-emails.ts`
 
-## Configuration
+## Configuration (Cloud Deployment)
 
-- `TRIGGER_PROJECT_REF` (required for Trigger.dev config)
+### Backend (`apps/back`)
 - `TRIGGER_SECRET_KEY` (required to trigger runs from backend)
-- `TRIGGER_API_URL` (required for self-hosted Trigger.dev)
 
-Note: Email sequences are automatically disabled when `DEPLOYMENT_MODE=self-hosted`.
+### Trigger app (`apps/trigger`)
+- `TRIGGER_PROJECT_REF` (required for deployment, set in `apps/trigger/.env`)
+
+### Deployment
+
+1. Login to Trigger.dev: `npx trigger.dev login`
+2. Set project ref in `apps/trigger/.env`
+3. Deploy tasks: `cd apps/trigger && npx trigger.dev deploy`
+4. Set env vars in Trigger.dev dashboard (same as backend)
+
+## Self-Hosted
+
+Self-hosted deployments do **not** use Trigger.dev. Instead:
+- Digest cron runs via a simple Docker container (see `docker-compose.yml`)
+- Email sequences are disabled
+
+See [self-hosting.md](./self-hosting.md) for details.
