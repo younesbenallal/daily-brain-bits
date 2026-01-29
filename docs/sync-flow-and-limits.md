@@ -6,7 +6,7 @@ This document describes how note syncing works for both integrations, how plan l
 
 | Integration | Sync Model | Trigger | Scheduled Sync |
 |-------------|------------|---------|----------------|
-| **Notion** | Pull (backend fetches from Notion API) | Manual ("Sync Now" in Settings) | None (gap) |
+| **Notion** | Pull (backend fetches from Notion API) | Manual ("Sync Now" in Settings) | Weekly (Sunday 3 AM UTC) |
 | **Obsidian** | Push (plugin sends to backend) | Plugin events + manual | Plugin handles |
 
 ## Sync Flow by Integration
@@ -15,13 +15,18 @@ This document describes how note syncing works for both integrations, how plan l
 
 1. User connects Notion via OAuth (handled by Better Auth)
 2. User selects databases to sync in onboarding or Settings
-3. User triggers `syncNow` manually (no automatic sync)
+3. Sync happens via:
+   - Manual "Sync Now" button in Settings
+   - Weekly scheduled sync (every Sunday at 3 AM UTC)
 4. Backend fetches pages from selected databases via Notion API
-5. Backend uses cursor-based incremental sync (`last_edited_time`)
+5. Backend uses cursor-based incremental sync (`last_edited_time`) - only fetches pages modified since last sync
 6. Items are ingested via `runSyncPipeline` → `ingestSyncItems`
 
 **Key files:**
 - [apps/back/routes/notion.ts](../apps/back/routes/notion.ts) - `syncNow` endpoint
+- [apps/back/domains/notion/sync-connection.ts](../apps/back/domains/notion/sync-connection.ts) - Core sync function
+- [apps/back/scripts/sync-notion-connections.ts](../apps/back/scripts/sync-notion-connections.ts) - Scheduled sync script
+- [apps/trigger/src/tasks/notion-sync-weekly.ts](../apps/trigger/src/tasks/notion-sync-weekly.ts) - Trigger.dev weekly task
 - [packages/integrations/notion/src/sync.ts](../packages/integrations/notion/src/sync.ts) - Notion adapter
 
 ### Obsidian
@@ -139,19 +144,6 @@ if (entry?.lastSeenMtime === file.stat.mtime) {
 **Result**: Previously rejected notes will be re-synced on manual "Sync Now".
 
 ## Current Gaps
-
-### No Scheduled Notion Sync
-
-Unlike Obsidian (where the plugin handles real-time sync), Notion has no automatic sync:
-
-- Users must manually click "Sync Now" to get new notes
-- No cron job exists for periodic Notion sync
-- This means new Notion pages won't appear until manual sync
-
-**Potential solutions:**
-1. Add a `notion-sync-hourly.ts` Trigger.dev task
-2. Implement Notion webhooks (complex, per-workspace setup)
-3. Keep manual and document clearly
 
 ### No Upgrade Notification
 

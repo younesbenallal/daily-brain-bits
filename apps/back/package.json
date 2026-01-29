@@ -8,6 +8,7 @@
 		".": "./index.js",
 		"./scripts/generate-daily-digests": "./scripts/generate-daily-digests.ts",
 		"./scripts/send-due-digests": "./scripts/send-due-digests.ts",
+		"./scripts/sync-notion-connections": "./scripts/sync-notion-connections.ts",
 		"./domains/billing/deployment-mode": "./domains/billing/deployment-mode.ts",
 		"./domains/billing/entitlements": "./domains/billing/entitlements.ts",
 		"./domains/email/sequence-context": "./domains/email/sequence-context.ts",

@@ -25,6 +25,7 @@
 | `apps/trigger/src/tasks/digest-send-for-user.ts` | On-demand send for a single user's first digest. |
 | `apps/trigger/src/tasks/email-sequence-runner.ts` | Long-running per-user sequence workflow. |
 | `apps/trigger/src/tasks/upgrade-sequence-discover.ts` | Periodic discovery of upgrade sequence entries. |
+| `apps/trigger/src/tasks/notion-sync-weekly.ts` | Weekly Notion sync for all active connections. |
 | `apps/back/routes/obsidian.ts` | Triggers onboarding sequence on Obsidian connect. |
 | `packages/auth/auth.ts` | Triggers welcome/onboarding sequences on signup/connect. |
 
@@ -49,6 +50,13 @@
 1. `upgrade-sequence-discover` runs hourly.
 2. It inserts upgrade sequence states for eligible users.
 3. It triggers `email-sequence-runner` for each new entry.
+
+### Notion sync
+
+1. `notion-sync-weekly` runs every Sunday at 3 AM UTC.
+2. It fetches all active Notion connections with valid tokens.
+3. For each connection, it runs an incremental sync (cursor-based, only fetches pages modified since last sync).
+4. A 2-second delay is added between connections to respect Notion API rate limits.
 
 ## Data Model / DB
 
