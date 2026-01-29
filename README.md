@@ -236,7 +236,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**[Website](https://dbb.notionist.app)** · **[GitHub](https://github.com/younesbenallal/daily-brain-bits)** · **[Releases](https://github.com/younesbenallal/daily-brain-bits/releases)**
+**[Website](https://notionist.app)** · **[GitHub](https://github.com/younesbenallal/daily-brain-bits)** · **[Releases](https://github.com/younesbenallal/daily-brain-bits/releases)**
 
 Made with ☕ by [@younesbenallal](https://github.com/younesbenallal)
 

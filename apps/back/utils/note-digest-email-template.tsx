@@ -1,6 +1,6 @@
-import { Body, Container, Head, Heading, Html, Link, Preview, Section, Tailwind, Text } from "@react-email/components";
+import { Body, Container, Font, Head, Heading, Html, Link, Preview, Section, Tailwind, Text } from "@react-email/components";
 import * as React from "react";
-import { emailBodyStyle, emailBrand, emailTailwindConfig } from "../domains/email/brand";
+import { emailBodyStyle, emailBrand, emailGoogleFontsUrl, emailGradientWrapperStyle, emailTailwindConfig } from "../domains/email/brand";
 import type { DigestFrequency } from "../domains/digest/schedule";
 
 export type EmailContentBlock =
@@ -83,18 +83,21 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 	return (
 		<Html lang="en">
 			<Tailwind config={emailTailwindConfig}>
-				<Head />
+				<Head>
+					<Font fontFamily="Crimson Pro" fallbackFontFamily="Georgia" webFont={{ url: emailGoogleFontsUrl, format: "woff2" }} fontWeight={600} fontStyle="normal" />
+				</Head>
 				<Preview>{props.previewText}</Preview>
 				<Body className="font-body m-0 text-brand-foreground" style={emailBodyStyle}>
-					<Section className="py-10">
-						<Container className="max-w-[600px] mx-auto px-5">
-							<Text className="text-xs text-brand-muted font-ui m-0 mb-3">
+					{/* Gmail strips gradients from body, so we use a wrapper Section */}
+					<Section style={emailGradientWrapperStyle}>
+						<Container className="max-w-[600px] mx-auto px-5 py-10">
+							<Text className="text-xs text-brand-muted-on-blue font-ui m-0 mb-3">
 								{props.frequencyLabel} digest · {props.digestDate}
 							</Text>
 							<Heading className="text-[30px] leading-[1.15] font-semibold font-display text-brand-foreground m-0 mb-3">
 								Hello {props.greetingName},
 							</Heading>
-							<Text className="text-[15px] leading-7 text-brand-muted m-0 mb-6">
+							<Text className="text-[15px] leading-7 text-brand-muted-on-blue m-0 mb-6">
 								Here is your {props.frequencyLabel.toLowerCase()} selection of notes to revisit today.
 							</Text>
 							<Section className="mb-7">
@@ -104,7 +107,7 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 										<Section
 											key={item.documentId}
 											className="bg-brand-card border border-solid border-brand-border rounded-3xl p-6 mb-6"
-											style={{ boxShadow: "var(--email-card-shadow)" }}
+											style={{ boxShadow: "0 20px 50px rgba(15, 23, 42, 0.12)" }}
 										>
 											<Text className="text-[22px] font-semibold font-display text-brand-foreground m-0 mb-2">
 												{item.title}
@@ -122,12 +125,13 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 							<Section className="mb-7">
 								<Link
 									href={props.viewUrl}
-									className="inline-block px-7 py-3.5 rounded-full bg-brand-primary text-brand-primary-foreground no-underline text-sm font-semibold font-ui shadow-[var(--email-button-shadow)]"
+									className="inline-block px-7 py-3.5 rounded-full bg-brand-primary text-brand-primary-foreground no-underline text-sm font-semibold font-ui"
+									style={{ boxShadow: "0 12px 24px rgba(37, 86, 160, 0.25)" }}
 								>
 									View this digest in the app
 								</Link>
 							</Section>
-							<Text className="text-xs text-brand-muted font-ui m-0">
+							<Text className="text-xs text-brand-muted-on-blue font-ui m-0">
 								Daily Brain Bits · Sent to help you retain what matters.
 							</Text>
 						</Container>
@@ -380,7 +384,7 @@ function renderEmailContentBlocks(blocks: EmailContentBlock[], options: { keyPre
 					className="text-[13px] leading-6 text-brand-foreground m-0 mb-3 p-3 rounded-xl border border-solid border-brand-border"
 					style={{
 						fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-						backgroundColor: "var(--email-code-bg)",
+						backgroundColor: "rgba(99, 161, 242, 0.08)",
 						whiteSpace: "pre-wrap",
 					}}
 				>

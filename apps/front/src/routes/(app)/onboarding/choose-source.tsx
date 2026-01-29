@@ -10,14 +10,12 @@ export const Route = createFileRoute("/(app)/onboarding/choose-source")({
 function ChooseSourcePage() {
 	const router = useRouter();
 	return (
-			<OnboardingLayout>
-				<div className="space-y-6">
-					<div className="space-y-3">
-						<h1 className="font-display text-3xl text-primary">Where does your second brain live?</h1>
-						<p className="text-sm text-muted-foreground">
-							We\'ll pull insights from the notes you\'ve already captured—no re-organizing needed.
-						</p>
-					</div>
+		<OnboardingLayout>
+			<div className="space-y-6">
+				<div className="space-y-3">
+					<h1 className="font-display text-3xl text-primary">Where does your second brain live?</h1>
+					<p className="text-sm text-muted-foreground">We'll pull insights from the notes you've already captured—no re-organizing needed.</p>
+				</div>
 
 				<div className="flex flex-col gap-3">
 					{[
@@ -41,9 +39,7 @@ function ChooseSourcePage() {
 					))}
 				</div>
 
-				<p className="text-xs text-muted-foreground">
-					We only access what you explicitly connect. You stay in control of your data.
-				</p>
+				<p className="text-xs text-muted-foreground">We only access what you explicitly connect. You stay in control of your data.</p>
 			</div>
 		</OnboardingLayout>
 	);

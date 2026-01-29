@@ -112,7 +112,7 @@ function ConfigureObsidianPage() {
 
 	const seedDigestMutation = useMutation(orpc.onboarding.seedDigest.mutationOptions());
 
-	const pluginInstallUrl = "https://github.com/younesbenallal/daily-brain-bits";
+	const pluginInstallUrl = "https://github.com/younesbenallal/daily-brain-bits?tab=readme-ov-file#obsidian-plugin-setup";
 	return (
 		<OnboardingLayout>
 			<div className="space-y-6">
