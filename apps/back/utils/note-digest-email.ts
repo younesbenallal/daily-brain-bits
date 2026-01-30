@@ -30,7 +30,9 @@ export async function loadDigestSnapshot(params: { userId: string; digestId: num
 			id: true,
 			title: true,
 			contentCiphertext: true,
+			contentIv: true,
 			contentAlg: true,
+			contentKeyVersion: true,
 			connectionId: true,
 		},
 	});

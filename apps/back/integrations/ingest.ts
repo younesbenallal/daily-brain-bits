@@ -1,5 +1,13 @@
 import type { SyncCursor, SyncItem } from "@daily-brain-bits/core";
-import { normalizeForHash, sha256Hex, syncItemDeleteSchema, syncItemSchema, syncItemUpsertSchema } from "@daily-brain-bits/core";
+import {
+	encryptContent,
+	isEncryptionConfigured,
+	normalizeForHash,
+	sha256Hex,
+	syncItemDeleteSchema,
+	syncItemSchema,
+	syncItemUpsertSchema,
+} from "@daily-brain-bits/core";
 import { db, documents, syncState } from "@daily-brain-bits/db";
 import { and, eq, inArray } from "drizzle-orm";
 import type { z } from "zod";
@@ -33,12 +41,27 @@ function parseDateOrNull(value?: string | null): Date | null {
 }
 
 function encodeContent(contentMarkdown: string) {
+	const sizeBytes = Buffer.byteLength(contentMarkdown, "utf8");
+
+	// Use encryption if configured, otherwise fall back to base64 encoding
+	if (isEncryptionConfigured()) {
+		const encrypted = encryptContent(contentMarkdown);
+		return {
+			contentCiphertext: encrypted.ciphertext,
+			contentIv: encrypted.iv,
+			contentAlg: encrypted.alg,
+			contentKeyVersion: encrypted.keyVersion,
+			contentSizeBytes: sizeBytes,
+		};
+	}
+
+	// Legacy fallback: base64 encoding (no encryption)
 	return {
 		contentCiphertext: Buffer.from(contentMarkdown, "utf8").toString("base64"),
 		contentIv: "none",
 		contentAlg: "none",
 		contentKeyVersion: 0,
-		contentSizeBytes: Buffer.byteLength(contentMarkdown, "utf8"),
+		contentSizeBytes: sizeBytes,
 	};
 }
 
