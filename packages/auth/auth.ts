@@ -1,5 +1,5 @@
 import { PLANS } from "@daily-brain-bits/core";
-import { billingSubscriptions, db, emailSequenceStates, integrationConnections } from "@daily-brain-bits/db";
+import { billingSubscriptions, db, emailSequenceStates, integrationConnections, userSettings } from "@daily-brain-bits/db";
 import { configure, tasks } from "@trigger.dev/sdk/v3";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -165,6 +165,9 @@ export const auth = betterAuth({
 			create: {
 				after: async (userRecord) => {
 					const now = new Date();
+
+					await db.insert(userSettings).values({ userId: userRecord.id, updatedAt: now }).onConflictDoNothing();
+
 					await db
 						.insert(emailSequenceStates)
 						.values({

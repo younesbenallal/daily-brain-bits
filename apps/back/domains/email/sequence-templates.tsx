@@ -4,7 +4,7 @@ import type * as React from "react";
 import { emailBodyStyle, emailTailwindConfig } from "./brand";
 
 export const welcomeEmailIds = ["welcome-1", "welcome-2", "welcome-3", "welcome-4"] as const;
-export const onboardingEmailIds = ["onboarding-1", "onboarding-2", "onboarding-3", "onboarding-4", "onboarding-5", "onboarding-6"] as const;
+export const onboardingEmailIds = ["onboarding-3", "onboarding-4", "onboarding-5", "onboarding-6"] as const;
 export const upgradeEmailIds = ["upgrade-1", "upgrade-2", "upgrade-3", "upgrade-4", "upgrade-5"] as const;
 
 export type SequenceEmailId = (typeof welcomeEmailIds)[number] | (typeof onboardingEmailIds)[number] | (typeof upgradeEmailIds)[number];
@@ -249,81 +249,6 @@ Connect Notion: ${buildFrontendUrl(params.frontendUrl, "/onboarding/choose-sourc
 Connect Obsidian: ${buildFrontendUrl(params.frontendUrl, "/onboarding/choose-source")}
 
 If DBB isn't right for you, no hard feelings. You can manage email preferences in settings.
-
-- The DBB Team
-`,
-	},
-	"onboarding-1": {
-		subject: (params) => `Your ${params.sourceName ?? "notes"} are syncing`,
-		previewText: () => "First digest coming soon",
-		render: (params) => (
-			<SequenceEmailShell previewText="First digest coming soon" firstName={params.firstName}>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">
-					Great news - your {params.sourceName ?? "notes source"} is now connected to Daily Brain Bits.
-				</Text>
-				<Text className="text-base leading-7 text-brand-foreground font-semibold m-0 mb-3">What happens next:</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-1">1. We&apos;re syncing your notes (this may take a few minutes)</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-1">2. Our algorithm will select your first batch of notes</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">
-					3. You&apos;ll receive your first digest {params.digestTiming ?? "soon"}
-				</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">While you wait, you can configure your preferences:</Text>
-				<SingleButton label="Set your digest preferences" href={buildFrontendUrl(params.frontendUrl, "/onboarding/preferences")} />
-				<Text className="text-base leading-7 text-brand-muted m-0 mt-6">Your notes are in good hands.</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0">- The DBB Team</Text>
-			</SequenceEmailShell>
-		),
-		renderText: (params) => `Hello ${params.firstName},
-
-Great news - your ${params.sourceName ?? "notes source"} is now connected to Daily Brain Bits.
-
-What happens next:
-1. We're syncing your notes (this may take a few minutes)
-2. Our algorithm will select your first batch of notes
-3. You'll receive your first digest ${params.digestTiming ?? "soon"}
-
-While you wait, you can configure your preferences:
-${buildFrontendUrl(params.frontendUrl, "/onboarding/preferences")}
-
-Your notes are in good hands.
-
-- The DBB Team
-`,
-	},
-	"onboarding-2": {
-		subject: () => "Your first Brain Bits digest is almost ready",
-		previewText: () => "Here's what to expect",
-		render: (params) => (
-			<SequenceEmailShell previewText="Here's what to expect" firstName={params.firstName}>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">
-					Your first Daily Brain Bits digest is being prepared. Here&apos;s what to expect:
-				</Text>
-				<Text className="text-base leading-7 text-brand-foreground font-semibold m-0 mb-2">What you&apos;ll receive:</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-1">
-					- {params.notesPerDigest ?? 5} notes selected from your {params.sourceName ?? "source"}
-				</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-1">- Chosen based on relevance, age, and review history</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">- Formatted for quick reading and recall</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mb-4">
-					Pro tip: When you receive your digest, don&apos;t just skim it. Take 2 minutes to actually read the notes. That&apos;s how the magic happens
-					- rediscovering your own ideas.
-				</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0">Your first digest will arrive {params.digestTiming ?? "soon"}.</Text>
-				<Text className="text-base leading-7 text-brand-muted m-0 mt-6">- The DBB Team</Text>
-			</SequenceEmailShell>
-		),
-		renderText: (params) => `Hello ${params.firstName},
-
-Your first Daily Brain Bits digest is being prepared. Here's what to expect:
-
-What you'll receive:
-- ${params.notesPerDigest ?? 5} notes selected from your ${params.sourceName ?? "source"}
-- Chosen based on relevance, age, and review history
-- Formatted for quick reading and recall
-
-Pro tip: When you receive your digest, don't just skim it. Take 2 minutes to actually read the notes. That's how the magic happens - rediscovering your own ideas.
-
-Your first digest will arrive ${params.digestTiming ?? "soon"}.
 
 - The DBB Team
 `,

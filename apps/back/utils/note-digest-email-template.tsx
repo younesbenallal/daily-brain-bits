@@ -30,23 +30,52 @@ type DigestEmailProps = {
 	greetingName: string;
 	digestDate: string;
 	viewUrl: string;
+	settingsUrl: string;
 	items: DigestEmailItem[];
+	isFirstDigest: boolean;
+	totalNoteCount: number;
+	sourceLabel: string | null;
+	isPro: boolean;
+	founderEmail: string;
 };
 
 const EXCERPT_MAX_LENGTH = 900;
 
-export function buildDigestEmail(params: { frequency: DigestFrequency; userName?: string | null; frontendUrl: string; digest: DigestSnapshot }): {
+type BuildDigestEmailParams = {
+	frequency: DigestFrequency;
+	userName?: string | null;
+	frontendUrl: string;
+	digest: DigestSnapshot;
+	isFirstDigest?: boolean;
+	totalNoteCount?: number;
+	sourceLabel?: string | null;
+	isPro?: boolean;
+	founderEmail?: string;
+};
+
+export function buildDigestEmail(params: BuildDigestEmailParams): {
 	subject: string;
 	react: React.ReactElement;
 	text: string;
 } {
 	const itemCount = params.digest.items.length;
 	const frequencyLabel = formatFrequencyLabel(params.frequency);
-	const subject = `${frequencyLabel} Brain Bits (${itemCount} note${itemCount === 1 ? "" : "s"})`;
+	const isFirstDigest = params.isFirstDigest ?? false;
+	const subject = isFirstDigest
+		? `Your first Brain Bits are ready! (${itemCount} note${itemCount === 1 ? "" : "s"})`
+		: `${frequencyLabel} Brain Bits (${itemCount} note${itemCount === 1 ? "" : "s"})`;
 	const greetingName = params.userName?.trim() || "there";
 	const digestDate = formatDigestDate(params.digest.createdAt);
-	const viewUrl = `${params.frontendUrl.replace(/\/$/, "")}/dash`;
-	const previewText = buildPreviewText(frequencyLabel, params.digest.items);
+	const baseUrl = params.frontendUrl.replace(/\/$/, "");
+	const viewUrl = `${baseUrl}/dash`;
+	const settingsUrl = `${baseUrl}/settings`;
+	const previewText = isFirstDigest
+		? `Your first Brain Bits: ${params.digest.items[0]?.title ?? "your notes"}`
+		: buildPreviewText(frequencyLabel, params.digest.items);
+	const totalNoteCount = params.totalNoteCount ?? 0;
+	const sourceLabel = params.sourceLabel ?? null;
+	const isPro = params.isPro ?? false;
+	const founderEmail = params.founderEmail ?? "younes@notionist.app";
 
 	const react = (
 		<NoteDigestEmail
@@ -54,12 +83,48 @@ export function buildDigestEmail(params: { frequency: DigestFrequency; userName?
 			greetingName={greetingName}
 			digestDate={digestDate}
 			viewUrl={viewUrl}
+			settingsUrl={settingsUrl}
 			items={params.digest.items}
 			previewText={previewText}
+			isFirstDigest={isFirstDigest}
+			totalNoteCount={totalNoteCount}
+			sourceLabel={sourceLabel}
+			isPro={isPro}
+			founderEmail={founderEmail}
 		/>
 	);
 
-	const textItems = params.digest.items
+	const text = buildDigestTextContent({
+		greetingName,
+		frequencyLabel,
+		itemCount,
+		items: params.digest.items,
+		viewUrl,
+		settingsUrl,
+		isFirstDigest,
+		totalNoteCount,
+		sourceLabel,
+		isPro,
+		founderEmail,
+	});
+
+	return { subject, react, text };
+}
+
+function buildDigestTextContent(params: {
+	greetingName: string;
+	frequencyLabel: string;
+	itemCount: number;
+	items: DigestEmailItem[];
+	viewUrl: string;
+	settingsUrl: string;
+	isFirstDigest: boolean;
+	totalNoteCount: number;
+	sourceLabel: string | null;
+	isPro: boolean;
+	founderEmail: string;
+}): string {
+	const textItems = params.items
 		.map((item) => {
 			const sourceLabel = formatSourceLabel(item);
 			const sourceSuffix = sourceLabel ? ` (${sourceLabel})` : "";
@@ -67,16 +132,46 @@ export function buildDigestEmail(params: { frequency: DigestFrequency; userName?
 		})
 		.join("\n\n");
 
-	const text = `Hello ${greetingName},
+	if (params.isFirstDigest) {
+		const sourceContext = params.sourceLabel ? ` from your ${params.sourceLabel}` : "";
+		const noteCountContext = params.totalNoteCount > 0 ? ` out of ${params.totalNoteCount} synced notes` : "";
 
-Here is your ${frequencyLabel.toLowerCase()} selection of notes (${itemCount} total).
+		let text = `Your first Brain Bits are ready, ${params.greetingName}!
+
+We've surfaced ${params.itemCount} notes${sourceContext}${noteCountContext} using spaced repetition — designed to help you retain what matters.
 
 ${textItems}
 
-View this digest in the app: ${viewUrl}
-`;
+View this digest in the app: ${params.viewUrl}
 
-	return { subject, react, text };
+What happens next:
+- You'll receive your next digest ${params.isPro ? "based on your frequency setting" : "weekly (or upgrade to Pro for daily)"}
+- Star notes you want to see more often, skip ones that aren't worth revisiting
+- Adjust your timing and preferences: ${params.settingsUrl}`;
+
+		if (!params.isPro) {
+			text += `
+
+Want daily digests instead of weekly? Upgrade to Pro for daily frequency, AI quizzes, and multiple sources: ${params.settingsUrl}?tab=billing`;
+		}
+
+		text += `
+
+Questions or feedback? Just reply to this email — I read every message.
+
+— Younes`;
+
+		return text;
+	}
+
+	return `Hello ${params.greetingName},
+
+Here is your ${params.frequencyLabel.toLowerCase()} selection of notes (${params.itemCount} total).
+
+${textItems}
+
+View this digest in the app: ${params.viewUrl}
+`;
 }
 
 export function NoteDigestEmail(props: DigestEmailProps & { previewText: string }) {
@@ -92,14 +187,24 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 					<Section style={emailGradientWrapperStyle}>
 						<Container className="max-w-[600px] mx-auto px-5 py-10">
 							<Text className="text-xs text-brand-muted-on-blue font-ui m-0 mb-3">
-								{props.frequencyLabel} digest · {props.digestDate}
+								{props.isFirstDigest ? "Your first digest" : `${props.frequencyLabel} digest`} · {props.digestDate}
 							</Text>
 							<Heading className="text-[30px] leading-[1.15] font-semibold font-display text-brand-foreground m-0 mb-3">
-								Hello {props.greetingName},
+								{props.isFirstDigest
+									? `Your first Brain Bits are ready, ${props.greetingName}!`
+									: `Hello ${props.greetingName},`}
 							</Heading>
-							<Text className="text-[15px] leading-7 text-brand-muted-on-blue m-0 mb-6">
-								Here is your {props.frequencyLabel.toLowerCase()} selection of notes to revisit today.
-							</Text>
+							{props.isFirstDigest ? (
+								<FirstDigestIntro
+									itemCount={props.items.length}
+									totalNoteCount={props.totalNoteCount}
+									sourceLabel={props.sourceLabel}
+								/>
+							) : (
+								<Text className="text-[15px] leading-7 text-brand-muted-on-blue m-0 mb-6">
+									Here is your {props.frequencyLabel.toLowerCase()} selection of notes to revisit today.
+								</Text>
+							)}
 							<Section className="mb-7">
 								{props.items.map((item) => {
 									const sourceLabel = formatSourceLabel(item);
@@ -131,6 +236,13 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 									View this digest in the app
 								</Link>
 							</Section>
+							{props.isFirstDigest && (
+								<FirstDigestFooter
+									isPro={props.isPro}
+									settingsUrl={props.settingsUrl}
+									founderEmail={props.founderEmail}
+								/>
+							)}
 							<Text className="text-xs text-brand-muted-on-blue font-ui m-0">
 								Daily Brain Bits · Sent to help you retain what matters.
 							</Text>
@@ -139,6 +251,62 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 				</Body>
 			</Tailwind>
 		</Html>
+	);
+}
+
+function FirstDigestIntro(props: { itemCount: number; totalNoteCount: number; sourceLabel: string | null }) {
+	const sourceContext = props.sourceLabel ? ` from your ${props.sourceLabel}` : "";
+	const noteCountContext = props.totalNoteCount > 0 ? ` out of ${props.totalNoteCount} synced notes` : "";
+
+	return (
+		<Section className="mb-6">
+			<Text className="text-[15px] leading-7 text-brand-muted-on-blue m-0 mb-4">
+				We've surfaced <strong>{props.itemCount} notes</strong>{sourceContext}{noteCountContext} using spaced repetition — designed to help you retain what matters.
+			</Text>
+		</Section>
+	);
+}
+
+function FirstDigestFooter(props: { isPro: boolean; settingsUrl: string; founderEmail: string }) {
+	return (
+		<Section className="mb-7">
+			<Section className="bg-brand-card border border-solid border-brand-border rounded-2xl p-5 mb-5" style={{ boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
+				<Text className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-2">
+					What happens next
+				</Text>
+				<Text className="text-[14px] leading-6 text-brand-muted m-0 mb-1">
+					• You'll receive your next digest {props.isPro ? "based on your frequency setting" : "weekly"}
+				</Text>
+				<Text className="text-[14px] leading-6 text-brand-muted m-0 mb-1">
+					• Star notes you want to see more often, skip ones that aren't worth revisiting
+				</Text>
+				<Text className="text-[14px] leading-6 text-brand-muted m-0">
+					• <Link href={props.settingsUrl} className="text-brand-primary underline underline-offset-2">Adjust your timing and preferences</Link>
+				</Text>
+			</Section>
+			{!props.isPro && (
+				<Section className="bg-brand-card border border-solid border-brand-border rounded-2xl p-5 mb-5" style={{ boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
+					<Text className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-2">
+						Want daily digests?
+					</Text>
+					<Text className="text-[14px] leading-6 text-brand-muted m-0 mb-3">
+						Upgrade to Pro for daily frequency, AI quizzes, and multiple sources.
+					</Text>
+					<Link
+						href={`${props.settingsUrl}?tab=billing`}
+						className="text-brand-primary text-[14px] font-semibold underline underline-offset-2"
+					>
+						See Pro features →
+					</Link>
+				</Section>
+			)}
+			<Text className="text-[14px] leading-6 text-brand-muted-on-blue m-0 mt-5">
+				Questions or feedback? Just reply to this email — I read every message.
+			</Text>
+			<Text className="text-[14px] leading-6 text-brand-foreground m-0 mt-2">
+				— Younes
+			</Text>
+		</Section>
 	);
 }
 

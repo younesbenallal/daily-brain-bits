@@ -1,4 +1,4 @@
-import { db, documents, noteDigestItems, noteDigests } from "@daily-brain-bits/db";
+import { db, documents, noteDigestItems, noteDigests, userSettings } from "@daily-brain-bits/db";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
 export type SeedDigestResult =
@@ -16,11 +16,17 @@ export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDige
 		return { created: false, reason: "already_exists" };
 	}
 
+	const settings = await db.query.userSettings.findFirst({
+		where: eq(userSettings.userId, userId),
+		columns: { notesPerDigest: true },
+	});
+	const notesPerDigest = settings?.notesPerDigest ?? 5;
+
 	const seedDocuments = await db.query.documents.findMany({
 		where: and(eq(documents.userId, userId), isNull(documents.deletedAtSource)),
 		columns: { id: true, contentHash: true },
 		orderBy: [desc(documents.lastSyncedAt)],
-		limit: 6,
+		limit: notesPerDigest,
 	});
 
 	if (seedDocuments.length === 0) {
@@ -51,7 +57,7 @@ export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDige
 		seedDocuments.map((doc, index) => ({
 			noteDigestId: digest.id,
 			documentId: doc.id,
-			position: index,
+			position: index + 1,
 			contentHashAtSend: doc.contentHash,
 		})),
 	);

@@ -1,5 +1,5 @@
-import { db, noteDigests, reviewStates, user, userSettings } from "@daily-brain-bits/db";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { db, documents, integrationConnections, noteDigests, reviewStates, user, userSettings } from "@daily-brain-bits/db";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { PLANS } from "@daily-brain-bits/core";
 import { getProUsers } from "../domains/billing/entitlements";
 import { type DigestFrequency, isDigestDueWithTimezone, isSameLocalDay, resolveEffectiveFrequency } from "../domains/digest/schedule";
@@ -135,11 +135,43 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 
 		console.log(`[send-due-digests] Sending digest with ${snapshot.items.length} items to ${candidate.email}`);
 
+		const isFirstDigest = !lastSentAt;
+		const isPro = proUsers.has(candidate.id);
+
+		// For first digest, fetch additional context
+		let totalNoteCount = 0;
+		let primarySourceLabel: string | null = null;
+
+		if (isFirstDigest) {
+			const [noteCountRow] = await db
+				.select({ count: sql<number>`count(${documents.id})`.mapWith(Number) })
+				.from(documents)
+				.where(and(eq(documents.userId, candidate.id), isNull(documents.deletedAtSource)))
+				.limit(1);
+			totalNoteCount = noteCountRow?.count ?? 0;
+
+			const primaryConnection = await db.query.integrationConnections.findFirst({
+				where: and(eq(integrationConnections.userId, candidate.id), eq(integrationConnections.status, "active")),
+				columns: { kind: true, displayName: true },
+				orderBy: [desc(integrationConnections.createdAt)],
+			});
+
+			if (primaryConnection) {
+				const kindLabel = primaryConnection.kind === "obsidian" ? "Obsidian" : "Notion";
+				primarySourceLabel = primaryConnection.displayName ? `${kindLabel} (${primaryConnection.displayName})` : kindLabel;
+			}
+		}
+
 		const email = buildDigestEmail({
 			frequency: effectiveFrequency,
 			userName: candidate.name,
 			frontendUrl: FRONTEND_URL,
 			digest: snapshot,
+			isFirstDigest,
+			totalNoteCount,
+			sourceLabel: primarySourceLabel,
+			isPro,
+			founderEmail: REPLY_TO ?? "younes@notionist.app",
 		});
 
 		const idempotencyKey = process.env.FORCE_EMAIL === "true" ? `note-digest-${digestId}-${Date.now()}` : buildIdempotencyKey(digestId);

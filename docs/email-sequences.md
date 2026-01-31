@@ -181,18 +181,30 @@ If DBB isn't right for you, no hard feelings. You can unsubscribe below.
 **Exit condition**: User upgrades to Pro OR sequence completes
 **Length**: 4 emails over 14 days
 
+### First Digest Customization
+
+The **first digest email** itself (not a separate sequence email) includes welcome messaging:
+- Personalized headline: "Your first Brain Bits are ready, {name}!"
+- Context: Shows total synced notes and source (Notion/Obsidian)
+- Explains spaced repetition briefly
+- "What happens next" section with expectations
+- Soft Pro upgrade mention at the end (for free users)
+- Reply invitation from founder
+
+This replaces the need for separate "your notes are syncing" and "digest is almost ready" emails.
+
 ### Overview
 
 | Email | Timing | Purpose |
 |-------|--------|---------|
-| 1 | Post-first-digest | Aha moment reinforcement |
+| 1 | 2-4 hours post-first-digest | Aha moment reinforcement |
 | 2 | Day 5 | Configure preferences |
 | 3 | Day 9 | Social proof |
 | 4 | Day 14 | Check-in |
 
 ---
 
-### Email 1: How was your first digest?
+### Email 1: Did you spot a forgotten gem?
 
 **Send**: 2-4 hours after first digest is sent
 **Subject**: Did you spot a forgotten gem?
