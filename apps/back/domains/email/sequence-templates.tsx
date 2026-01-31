@@ -39,29 +39,27 @@ function formatLimit(value: number): string {
 	return value === Number.POSITIVE_INFINITY ? "Unlimited" : String(value);
 }
 
-function formatDigestFrequencies(features: { dailyDigest: boolean; weeklyDigest: boolean; monthlyDigest: boolean }): string {
-	const parts: string[] = [];
-	if (features.dailyDigest) {
-		parts.push("Daily");
+function formatDigestInterval(limits: { minDigestIntervalDays: number; maxDigestIntervalDays: number }): string {
+	const min = limits.minDigestIntervalDays;
+	const max = limits.maxDigestIntervalDays;
+	if (min === 1) {
+		return "Daily to monthly";
 	}
-	if (features.weeklyDigest) {
-		parts.push("Weekly");
+	if (min === 3) {
+		return "Every 3 days to monthly";
 	}
-	if (features.monthlyDigest) {
-		parts.push("Monthly");
-	}
-	return parts.join(", ");
+	return `Every ${min}-${max} days`;
 }
 
 function getPlanComparison() {
 	return {
 		free: {
-			frequency: formatDigestFrequencies(PLANS.free.features),
+			frequency: formatDigestInterval(PLANS.free.limits),
 			sources: formatLimit(PLANS.free.limits.maxSources),
 			quizzes: PLANS.free.features.aiQuizzes ? "Yes" : "No",
 		},
 		pro: {
-			frequency: formatDigestFrequencies(PLANS.pro.features),
+			frequency: formatDigestInterval(PLANS.pro.limits),
 			sources: formatLimit(PLANS.pro.limits.maxSources),
 			quizzes: PLANS.pro.features.aiQuizzes ? "Yes" : "No",
 		},

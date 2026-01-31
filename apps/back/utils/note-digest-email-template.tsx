@@ -1,7 +1,7 @@
+import { formatIntervalLabel } from "@daily-brain-bits/core";
 import { Body, Container, Font, Head, Heading, Html, Link, Preview, Section, Tailwind, Text } from "@react-email/components";
-import * as React from "react";
+import type * as React from "react";
 import { emailBodyStyle, emailBrand, emailGoogleFontsUrl, emailGradientWrapperStyle, emailTailwindConfig } from "../domains/email/brand";
-import type { DigestFrequency } from "../domains/digest/schedule";
 
 export type EmailContentBlock =
 	| { type: "heading"; content: string; level: number }
@@ -42,7 +42,8 @@ type DigestEmailProps = {
 const EXCERPT_MAX_LENGTH = 900;
 
 type BuildDigestEmailParams = {
-	frequency: DigestFrequency;
+	/** Days between digests (1 = daily, 7 = weekly, etc.) */
+	intervalDays: number;
 	userName?: string | null;
 	frontendUrl: string;
 	digest: DigestSnapshot;
@@ -59,7 +60,7 @@ export function buildDigestEmail(params: BuildDigestEmailParams): {
 	text: string;
 } {
 	const itemCount = params.digest.items.length;
-	const frequencyLabel = formatFrequencyLabel(params.frequency);
+	const frequencyLabel = formatIntervalLabel(params.intervalDays);
 	const isFirstDigest = params.isFirstDigest ?? false;
 	const subject = isFirstDigest
 		? `Your first Brain Bits are ready! (${itemCount} note${itemCount === 1 ? "" : "s"})`
@@ -179,7 +180,13 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 		<Html lang="en">
 			<Tailwind config={emailTailwindConfig}>
 				<Head>
-					<Font fontFamily="Crimson Pro" fallbackFontFamily="Georgia" webFont={{ url: emailGoogleFontsUrl, format: "woff2" }} fontWeight={600} fontStyle="normal" />
+					<Font
+						fontFamily="Crimson Pro"
+						fallbackFontFamily="Georgia"
+						webFont={{ url: emailGoogleFontsUrl, format: "woff2" }}
+						fontWeight={600}
+						fontStyle="normal"
+					/>
 				</Head>
 				<Preview>{props.previewText}</Preview>
 				<Body className="font-body m-0 text-brand-foreground" style={emailBodyStyle}>
@@ -190,16 +197,10 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 								{props.isFirstDigest ? "Your first digest" : `${props.frequencyLabel} digest`} · {props.digestDate}
 							</Text>
 							<Heading className="text-[30px] leading-[1.15] font-semibold font-display text-brand-foreground m-0 mb-3">
-								{props.isFirstDigest
-									? `Your first Brain Bits are ready, ${props.greetingName}!`
-									: `Hello ${props.greetingName},`}
+								{props.isFirstDigest ? `Your first Brain Bits are ready, ${props.greetingName}!` : `Hello ${props.greetingName},`}
 							</Heading>
 							{props.isFirstDigest ? (
-								<FirstDigestIntro
-									itemCount={props.items.length}
-									totalNoteCount={props.totalNoteCount}
-									sourceLabel={props.sourceLabel}
-								/>
+								<FirstDigestIntro itemCount={props.items.length} totalNoteCount={props.totalNoteCount} sourceLabel={props.sourceLabel} />
 							) : (
 								<Text className="text-[15px] leading-7 text-brand-muted-on-blue m-0 mb-6">
 									Here is your {props.frequencyLabel.toLowerCase()} selection of notes to revisit today.
@@ -214,15 +215,9 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 											className="bg-brand-card border border-solid border-brand-border rounded-3xl p-6 mb-6"
 											style={{ boxShadow: "0 20px 50px rgba(15, 23, 42, 0.12)" }}
 										>
-											<Text className="text-[22px] font-semibold font-display text-brand-foreground m-0 mb-2">
-												{item.title}
-											</Text>
+											<Text className="text-[22px] font-semibold font-display text-brand-foreground m-0 mb-2">{item.title}</Text>
 											{renderEmailContentBlocks(item.blocks, { keyPrefix: String(item.documentId) })}
-											{sourceLabel ? (
-												<Text className="text-xs text-brand-muted font-ui m-0 mt-3">
-													{sourceLabel}
-												</Text>
-											) : null}
+											{sourceLabel ? <Text className="text-xs text-brand-muted font-ui m-0 mt-3">{sourceLabel}</Text> : null}
 										</Section>
 									);
 								})}
@@ -236,16 +231,8 @@ export function NoteDigestEmail(props: DigestEmailProps & { previewText: string 
 									View this digest in the app
 								</Link>
 							</Section>
-							{props.isFirstDigest && (
-								<FirstDigestFooter
-									isPro={props.isPro}
-									settingsUrl={props.settingsUrl}
-									founderEmail={props.founderEmail}
-								/>
-							)}
-							<Text className="text-xs text-brand-muted-on-blue font-ui m-0">
-								Daily Brain Bits · Sent to help you retain what matters.
-							</Text>
+							{props.isFirstDigest && <FirstDigestFooter isPro={props.isPro} settingsUrl={props.settingsUrl} founderEmail={props.founderEmail} />}
+							<Text className="text-xs text-brand-muted-on-blue font-ui m-0">Daily Brain Bits · Sent to help you retain what matters.</Text>
 						</Container>
 					</Section>
 				</Body>
@@ -261,7 +248,9 @@ function FirstDigestIntro(props: { itemCount: number; totalNoteCount: number; so
 	return (
 		<Section className="mb-6">
 			<Text className="text-[15px] leading-7 text-brand-muted-on-blue m-0 mb-4">
-				We've surfaced <strong>{props.itemCount} notes</strong>{sourceContext}{noteCountContext} using spaced repetition — designed to help you retain what matters.
+				We've surfaced <strong>{props.itemCount} notes</strong>
+				{sourceContext}
+				{noteCountContext} using spaced repetition — designed to help you retain what matters.
 			</Text>
 		</Section>
 	);
@@ -270,10 +259,11 @@ function FirstDigestIntro(props: { itemCount: number; totalNoteCount: number; so
 function FirstDigestFooter(props: { isPro: boolean; settingsUrl: string; founderEmail: string }) {
 	return (
 		<Section className="mb-7">
-			<Section className="bg-brand-card border border-solid border-brand-border rounded-2xl p-5 mb-5" style={{ boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
-				<Text className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-2">
-					What happens next
-				</Text>
+			<Section
+				className="bg-brand-card border border-solid border-brand-border rounded-2xl p-5 mb-5"
+				style={{ boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}
+			>
+				<Text className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-2">What happens next</Text>
 				<Text className="text-[14px] leading-6 text-brand-muted m-0 mb-1">
 					• You'll receive your next digest {props.isPro ? "based on your frequency setting" : "weekly"}
 				</Text>
@@ -281,21 +271,22 @@ function FirstDigestFooter(props: { isPro: boolean; settingsUrl: string; founder
 					• Star notes you want to see more often, skip ones that aren't worth revisiting
 				</Text>
 				<Text className="text-[14px] leading-6 text-brand-muted m-0">
-					• <Link href={props.settingsUrl} className="text-brand-primary underline underline-offset-2">Adjust your timing and preferences</Link>
+					•{" "}
+					<Link href={props.settingsUrl} className="text-brand-primary underline underline-offset-2">
+						Adjust your timing and preferences
+					</Link>
 				</Text>
 			</Section>
 			{!props.isPro && (
-				<Section className="bg-brand-card border border-solid border-brand-border rounded-2xl p-5 mb-5" style={{ boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}>
-					<Text className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-2">
-						Want daily digests?
-					</Text>
+				<Section
+					className="bg-brand-card border border-solid border-brand-border rounded-2xl p-5 mb-5"
+					style={{ boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)" }}
+				>
+					<Text className="text-[15px] font-semibold font-display text-brand-foreground m-0 mb-2">Want daily digests?</Text>
 					<Text className="text-[14px] leading-6 text-brand-muted m-0 mb-3">
 						Upgrade to Pro for daily frequency, AI quizzes, and multiple sources.
 					</Text>
-					<Link
-						href={`${props.settingsUrl}?tab=billing`}
-						className="text-brand-primary text-[14px] font-semibold underline underline-offset-2"
-					>
+					<Link href={`${props.settingsUrl}?tab=billing`} className="text-brand-primary text-[14px] font-semibold underline underline-offset-2">
 						See Pro features →
 					</Link>
 				</Section>
@@ -303,9 +294,7 @@ function FirstDigestFooter(props: { isPro: boolean; settingsUrl: string; founder
 			<Text className="text-[14px] leading-6 text-brand-muted-on-blue m-0 mt-5">
 				Questions or feedback? Just reply to this email — I read every message.
 			</Text>
-			<Text className="text-[14px] leading-6 text-brand-foreground m-0 mt-2">
-				— Younes
-			</Text>
+			<Text className="text-[14px] leading-6 text-brand-foreground m-0 mt-2">— Younes</Text>
 		</Section>
 	);
 }
@@ -631,14 +620,4 @@ function formatDigestDate(date: Date): string {
 		day: "numeric",
 		year: "numeric",
 	}).format(date);
-}
-
-function formatFrequencyLabel(frequency: DigestFrequency): string {
-	if (frequency === "weekly") {
-		return "Weekly";
-	}
-	if (frequency === "monthly") {
-		return "Monthly";
-	}
-	return "Daily";
 }

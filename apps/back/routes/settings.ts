@@ -1,3 +1,4 @@
+import { DEFAULT_DIGEST_INTERVAL_DAYS } from "@daily-brain-bits/core";
 import { db, userSettings } from "@daily-brain-bits/db";
 import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
@@ -6,14 +7,13 @@ import { sessionRoute } from "../context";
 import { getBillingMode, getDeploymentMode, getUserEntitlements, isBillingEnabled, countUserConnections, countUserDocuments, getIsProForUser } from "../domains/billing/entitlements";
 import { isValidTimezone } from "../domains/digest/schedule";
 
-const frequencyOptions = ["daily", "weekly", "monthly"] as const;
-
 const timezoneSchema = z.string().refine((tz) => isValidTimezone(tz), {
 	message: "Invalid IANA timezone",
 });
 
 const settingsSchema = z.object({
-	emailFrequency: z.enum(frequencyOptions),
+	/** Days between digest emails (1 = every day, 7 = every week, etc.) */
+	digestIntervalDays: z.number().int().min(1).max(30),
 	notesPerDigest: z.number().int().min(1).max(50),
 	quizEnabled: z.boolean(),
 	timezone: timezoneSchema,
@@ -21,7 +21,7 @@ const settingsSchema = z.object({
 });
 
 const defaultSettings: z.infer<typeof settingsSchema> = {
-	emailFrequency: "daily",
+	digestIntervalDays: DEFAULT_DIGEST_INTERVAL_DAYS,
 	notesPerDigest: 5,
 	quizEnabled: false,
 	timezone: "UTC",
@@ -39,11 +39,10 @@ const capabilitiesSchema = z.object({
 			maxNotes: z.number().nullable(),
 			maxSources: z.number().nullable(),
 			maxNotesPerDigest: z.number(),
+			minDigestIntervalDays: z.number(),
+			maxDigestIntervalDays: z.number(),
 		}),
 		features: z.object({
-			dailyDigest: z.boolean(),
-			weeklyDigest: z.boolean(),
-			monthlyDigest: z.boolean(),
 			aiQuizzes: z.boolean(),
 		}),
 	}),
@@ -70,7 +69,7 @@ const get = sessionRoute
 		const row = await db.query.userSettings.findFirst({
 			where: eq(userSettings.userId, userId),
 			columns: {
-				emailFrequency: true,
+				digestIntervalDays: true,
 				notesPerDigest: true,
 				quizEnabled: true,
 				timezone: true,
@@ -93,12 +92,16 @@ const update = sessionRoute
 		}
 
 		const entitlements = await getUserEntitlements(userId);
-		const maxNotesPerDigest = entitlements.limits.maxNotesPerDigest;
+		const { maxNotesPerDigest, minDigestIntervalDays, maxDigestIntervalDays } = entitlements.limits;
+
+		// Clamp values to user's plan limits
 		const clampedNotesPerDigest = Math.min(input.notesPerDigest, maxNotesPerDigest);
+		const clampedIntervalDays = Math.max(minDigestIntervalDays, Math.min(input.digestIntervalDays, maxDigestIntervalDays));
 
 		const settingsToSave = {
 			...input,
 			notesPerDigest: clampedNotesPerDigest,
+			digestIntervalDays: clampedIntervalDays,
 		};
 
 		const now = new Date();
@@ -151,6 +154,8 @@ const capabilities = sessionRoute
 						maxNotes: serializeLimit(entitlements.limits.maxNotes),
 						maxSources: serializeLimit(entitlements.limits.maxSources),
 						maxNotesPerDigest: entitlements.limits.maxNotesPerDigest,
+						minDigestIntervalDays: entitlements.limits.minDigestIntervalDays,
+						maxDigestIntervalDays: entitlements.limits.maxDigestIntervalDays,
 					},
 				},
 				usage: {
@@ -169,4 +174,3 @@ export const settingsRouter = {
 };
 
 export type UserSettingsInput = z.infer<typeof settingsSchema>;
-export const userSettingsFrequencyOptions = frequencyOptions;

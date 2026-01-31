@@ -180,15 +180,14 @@ export const reviewEvents = pgTable(
 	],
 );
 
-export const digestFrequency = pgEnum("digest_frequency", ["daily", "weekly", "monthly"]);
-
 export const userSettings = pgTable(
 	"user_settings",
 	{
 		userId: text("user_id")
 			.primaryKey()
 			.references(() => user.id, { onDelete: "cascade" }),
-		emailFrequency: digestFrequency("email_frequency").notNull().default("daily"),
+		/** Days between digest emails (1 = daily, 3 = weekly, etc.) */
+		digestIntervalDays: integer("digest_interval_days").notNull().default(3),
 		notesPerDigest: integer("notes_per_digest").notNull().default(5),
 		quizEnabled: boolean("quiz_enabled").notNull().default(false),
 		timezone: text("timezone").notNull().default("UTC"),
@@ -197,7 +196,7 @@ export const userSettings = pgTable(
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		index("user_settings_email_frequency_idx").on(table.emailFrequency),
+		index("user_settings_digest_interval_idx").on(table.digestIntervalDays),
 		index("user_settings_timezone_send_hour_idx").on(table.timezone, table.preferredSendHour),
 	],
 );

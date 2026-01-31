@@ -1,14 +1,12 @@
+import { DEFAULT_DIGEST_INTERVAL_DAYS, PLANS } from "@daily-brain-bits/core";
 import { db, documents, integrationConnections, noteDigests, reviewStates, user, userSettings } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
-import { PLANS } from "@daily-brain-bits/core";
 import { getProUsers } from "../domains/billing/entitlements";
-import { type DigestFrequency, isDigestDueWithTimezone, isSameLocalDay, resolveEffectiveFrequency } from "../domains/digest/schedule";
+import { clampIntervalToLimits, isDigestDueWithTimezone, isSameLocalDay } from "../domains/digest/schedule";
 import { sendResendEmail } from "../domains/email/resend";
 import { env } from "../infra/env";
 import { upsertDigestWithItems } from "../utils/digest-storage";
 import { buildDigestEmail, loadDigestSnapshot } from "../utils/note-digest-email";
-
-const DEFAULT_FREQUENCY: DigestFrequency = "daily";
 
 const DRY_RUN = env.DIGEST_EMAIL_DRY_RUN;
 const FROM_ADDRESS = env.RESEND_FROM;
@@ -39,7 +37,7 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 	});
 	const settingsRows = await db.query.userSettings.findMany({
 		where: targetUserId ? eq(userSettings.userId, targetUserId) : undefined,
-		columns: { userId: true, emailFrequency: true, timezone: true, preferredSendHour: true },
+		columns: { userId: true, digestIntervalDays: true, timezone: true, preferredSendHour: true },
 	});
 	const proUsers = await getProUsers(users.map((userRow) => userRow.id));
 	const sentDigests = await db.query.noteDigests.findMany({
@@ -75,23 +73,21 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 		console.log(`[send-due-digests] Checking user ${candidate.id} (${candidate.email})`);
 
 		const settings = settingsMap.get(candidate.id);
-		const requestedFrequency = settings?.emailFrequency ?? DEFAULT_FREQUENCY;
+		const requestedInterval = settings?.digestIntervalDays ?? DEFAULT_DIGEST_INTERVAL_DAYS;
 		const timezone = settings?.timezone ?? "UTC";
 		const preferredSendHour = settings?.preferredSendHour ?? 8;
-		const features = proUsers.has(candidate.id) ? PLANS.pro.features : PLANS.free.features;
-		const effectiveFrequency = resolveEffectiveFrequency({
-			requested: requestedFrequency,
-			features,
-		});
+		const isPro = proUsers.has(candidate.id);
+		const limits = isPro ? PLANS.pro.limits : PLANS.free.limits;
+		const effectiveIntervalDays = clampIntervalToLimits({ requested: requestedInterval, limits });
 		const lastSentAt = lastSentMap.get(candidate.id) ?? null;
 		const shouldBypassSchedule = skipScheduleForFirstDigest && !lastSentAt;
 
 		if (
-			!isDigestDueWithTimezone({ now, lastSentAt, frequency: effectiveFrequency, userId: candidate.id, timezone, preferredSendHour }) &&
+			!isDigestDueWithTimezone({ now, lastSentAt, intervalDays: effectiveIntervalDays, timezone, preferredSendHour }) &&
 			!shouldBypassSchedule
 		) {
 			console.log(
-				`[send-due-digests] Skipping user ${candidate.id} - not due yet (freq: ${effectiveFrequency}, tz: ${timezone}, hour: ${preferredSendHour}, last sent: ${lastSentAt?.toISOString()})`,
+				`[send-due-digests] Skipping user ${candidate.id} - not due yet (interval: ${effectiveIntervalDays} days, tz: ${timezone}, hour: ${preferredSendHour}, last sent: ${lastSentAt?.toISOString()})`,
 			);
 			continue;
 		}
@@ -136,7 +132,6 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 		console.log(`[send-due-digests] Sending digest with ${snapshot.items.length} items to ${candidate.email}`);
 
 		const isFirstDigest = !lastSentAt;
-		const isPro = proUsers.has(candidate.id);
 
 		// For first digest, fetch additional context
 		let totalNoteCount = 0;
@@ -163,7 +158,7 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 		}
 
 		const email = buildDigestEmail({
-			frequency: effectiveFrequency,
+			intervalDays: effectiveIntervalDays,
 			userName: candidate.name,
 			frontendUrl: FRONTEND_URL,
 			digest: snapshot,
@@ -186,7 +181,7 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 				react: email.react,
 				tags: [
 					{ name: "category", value: "note_digest" },
-					{ name: "frequency", value: effectiveFrequency },
+					{ name: "interval_days", value: String(effectiveIntervalDays) },
 				],
 			},
 			idempotencyKey,

@@ -1,3 +1,4 @@
+import { formatIntervalLabel } from "@daily-brain-bits/core/plans";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
@@ -22,8 +23,7 @@ function OnboardingFinalPage() {
 	const capabilitiesQuery = useQuery(orpc.settings.capabilities.queryOptions());
 	const settings = settingsQuery.data?.settings;
 	const capabilities = capabilitiesQuery.data?.capabilities;
-	const isPro = capabilities?.entitlements?.planId === "pro" || capabilities?.isPro || false;
-	const canUseDaily = capabilities?.entitlements?.features.dailyDigest ?? isPro;
+	const minIntervalDays = capabilities?.entitlements?.limits.minDigestIntervalDays ?? 3;
 	const canProceed =
 		statusData?.noteDigestReady &&
 		isOnboardingStepComplete("loading", {
@@ -36,7 +36,7 @@ function OnboardingFinalPage() {
 		}
 	}, [canProceed, router, statusQuery.isLoading]);
 
-	const effectiveFrequency = settings && !canUseDaily && settings.emailFrequency === "daily" ? "weekly" : (settings?.emailFrequency ?? "weekly");
+	const intervalDays = settings ? Math.max(minIntervalDays, settings.digestIntervalDays) : 7;
 	const timeLabel =
 		settings && settings.timezone
 			? `${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
@@ -44,7 +44,7 @@ function OnboardingFinalPage() {
 					minute: "2-digit",
 				})} (${settings.timezone})`
 			: null;
-	const frequencyLabel = effectiveFrequency === "daily" ? "Daily" : effectiveFrequency === "monthly" ? "Monthly" : "Weekly";
+	const frequencyLabel = formatIntervalLabel(intervalDays);
 	const frequencyCopy = frequencyLabel.toLowerCase();
 	const scheduleLabel = `${frequencyLabel}${timeLabel ? ` at ${timeLabel}` : ""}`;
 

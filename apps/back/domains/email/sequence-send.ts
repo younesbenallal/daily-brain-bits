@@ -2,7 +2,7 @@ import { PLANS } from "@daily-brain-bits/core";
 import { db, emailSends } from "@daily-brain-bits/db";
 import * as React from "react";
 import { env } from "../../infra/env";
-import { resolveEffectiveFrequency, type DigestFrequency } from "../digest/schedule";
+import { clampIntervalToLimits } from "../digest/schedule";
 import { sendResendEmail } from "./resend";
 import { buildSequenceEmail, type SequenceEmailId } from "./sequence-templates";
 import type { EmailSequenceName } from "./sequence-schedule";
@@ -12,7 +12,7 @@ const DEFAULT_SURVEY_PATH = "/feedback";
 const DEFAULT_UPGRADE_PATH = "/settings?tab=billing";
 
 type SequenceSettings = {
-	emailFrequency: DigestFrequency;
+	digestIntervalDays: number;
 	notesPerDigest: number;
 	quizEnabled: boolean;
 };
@@ -26,12 +26,12 @@ export function buildTemplateParams(options: {
 }) {
 	const greetingName = formatFirstName(options.user.name);
 	const sourceName = options.integrationSummary.primaryKind === "notion" ? "Notion" : options.integrationSummary.primaryKind === "obsidian" ? "Obsidian" : undefined;
-	const features = options.isPro ? PLANS.pro.features : PLANS.free.features;
-	const effectiveFrequency = resolveEffectiveFrequency({
-		requested: options.settings.emailFrequency,
-		features,
+	const limits = options.isPro ? PLANS.pro.limits : PLANS.free.limits;
+	const effectiveIntervalDays = clampIntervalToLimits({
+		requested: options.settings.digestIntervalDays,
+		limits,
 	});
-	const digestTiming = formatDigestTiming(effectiveFrequency);
+	const digestTiming = formatDigestTiming(effectiveIntervalDays);
 
 	return {
 		firstName: greetingName,
@@ -48,12 +48,18 @@ export function buildTemplateParams(options: {
 	};
 }
 
-export function formatDigestTiming(frequency: DigestFrequency): string {
-	if (frequency === "daily") {
+export function formatDigestTiming(intervalDays: number): string {
+	if (intervalDays <= 1) {
 		return "tomorrow morning";
 	}
-	if (frequency === "weekly") {
+	if (intervalDays <= 3) {
+		return "in a few days";
+	}
+	if (intervalDays <= 7) {
 		return "later this week";
+	}
+	if (intervalDays <= 14) {
+		return "next week";
 	}
 	return "this month";
 }

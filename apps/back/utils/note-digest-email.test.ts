@@ -21,13 +21,13 @@ describe("note-digest-email", () => {
 		};
 
 		const result = buildDigestEmail({
-			frequency: "daily",
+			intervalDays: 1, // daily
 			userName: "Sam",
 			frontendUrl: "http://localhost:3000",
 			digest,
 		});
 
-		expect(result.subject).toBe("Daily Brain Bits (1 note)");
+		expect(result.subject).toBe("Every day Brain Bits (1 note)");
 		expect(React.isValidElement(result.react)).toBe(true);
 		expect(result.text).toContain("http://localhost:3000/dash");
 	});
@@ -49,7 +49,7 @@ describe("note-digest-email", () => {
 		};
 
 		const result = buildDigestEmail({
-			frequency: "weekly",
+			intervalDays: 7, // weekly
 			userName: null,
 			frontendUrl: "https://app.example.com",
 			digest,
@@ -76,7 +76,7 @@ describe("note-digest-email", () => {
 		};
 
 		const result = buildDigestEmail({
-			frequency: "daily",
+			intervalDays: 1, // daily
 			userName: null,
 			frontendUrl: "http://localhost:3000",
 			digest,

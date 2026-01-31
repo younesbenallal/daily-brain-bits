@@ -1,3 +1,4 @@
+import { DEFAULT_DIGEST_INTERVAL_DAYS } from "@daily-brain-bits/core";
 import {
 	db,
 	integrationConnections,
@@ -7,11 +8,10 @@ import {
 	userSettings,
 } from "@daily-brain-bits/db";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import type { DigestFrequency } from "../digest/schedule";
 import { getProUsers, isBillingEnabled } from "../billing/entitlements";
 
 const DEFAULT_SETTINGS = {
-	emailFrequency: "daily" as DigestFrequency,
+	digestIntervalDays: DEFAULT_DIGEST_INTERVAL_DAYS,
 	notesPerDigest: 5,
 	quizEnabled: false,
 };
@@ -109,7 +109,7 @@ export async function loadUserSettings(userIds: string[]) {
 
 	const rows = await db.query.userSettings.findMany({
 		where: inArray(userSettings.userId, userIds),
-		columns: { userId: true, emailFrequency: true, notesPerDigest: true, quizEnabled: true },
+		columns: { userId: true, digestIntervalDays: true, notesPerDigest: true, quizEnabled: true },
 	});
 
 	return new Map(rows.map((row) => [row.userId, row]));

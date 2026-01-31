@@ -1,14 +1,13 @@
-export type DigestFrequency = "daily" | "weekly" | "monthly";
-
 const DAY_MS = 24 * 60 * 60 * 1000;
-const WEEK_DAYS = 7;
-const MONTH_DAYS = 28;
 
-export function resolveEffectiveFrequency(params: { requested: DigestFrequency; features: { dailyDigest: boolean } }): DigestFrequency {
-	if (params.requested === "daily" && !params.features.dailyDigest) {
-		return "weekly";
-	}
-	return params.requested;
+/**
+ * Clamp digest interval to user's plan limits.
+ */
+export function clampIntervalToLimits(params: {
+	requested: number;
+	limits: { minDigestIntervalDays: number; maxDigestIntervalDays: number };
+}): number {
+	return Math.max(params.limits.minDigestIntervalDays, Math.min(params.requested, params.limits.maxDigestIntervalDays));
 }
 
 /**
@@ -18,21 +17,24 @@ export function resolveEffectiveFrequency(params: { requested: DigestFrequency; 
 export function isDigestDue(params: {
 	now: Date;
 	lastSentAt: Date | null;
-	frequency: DigestFrequency;
-	userId: string;
+	intervalDays: number;
 }): boolean {
-	if (params.lastSentAt && isSameUtcDay(params.now, params.lastSentAt)) {
+	const { now, lastSentAt, intervalDays } = params;
+
+	// Prevent multiple sends on the same day
+	if (lastSentAt && isSameUtcDay(now, lastSentAt)) {
 		return false;
 	}
-	if (!params.lastSentAt) {
-		return isStaggerDay(params.userId, params.frequency, params.now);
+
+	// First digest is always due
+	if (!lastSentAt) {
+		return true;
 	}
-	const elapsedMs = params.now.getTime() - params.lastSentAt.getTime();
-	const requiredMs = getFrequencyIntervalMs(params.frequency);
-	if (elapsedMs < requiredMs) {
-		return false;
-	}
-	return isStaggerDay(params.userId, params.frequency, params.now);
+
+	// Check if enough days have elapsed
+	const elapsedMs = now.getTime() - lastSentAt.getTime();
+	const requiredMs = intervalDays * DAY_MS;
+	return elapsedMs >= requiredMs;
 }
 
 /**
@@ -42,12 +44,11 @@ export function isDigestDue(params: {
 export function isDigestDueWithTimezone(params: {
 	now: Date;
 	lastSentAt: Date | null;
-	frequency: DigestFrequency;
-	userId: string;
+	intervalDays: number;
 	timezone: string;
 	preferredSendHour: number;
 }): boolean {
-	const { now, lastSentAt, frequency, userId, timezone, preferredSendHour } = params;
+	const { now, lastSentAt, intervalDays, timezone, preferredSendHour } = params;
 
 	// Check if we're in the user's preferred send window
 	if (!isInSendWindow({ now, timezone, preferredSendHour })) {
@@ -59,67 +60,22 @@ export function isDigestDueWithTimezone(params: {
 		return false;
 	}
 
-	// For new users, check stagger day
+	// First digest is always due (once in send window)
 	if (!lastSentAt) {
-		return isStaggerDayWithTimezone(userId, frequency, now, timezone);
+		return true;
 	}
 
-	// Check interval has elapsed
+	// Check if enough days have elapsed
 	const elapsedMs = now.getTime() - lastSentAt.getTime();
-	const requiredMs = getFrequencyIntervalMs(frequency);
-	if (elapsedMs < requiredMs) {
-		return false;
-	}
-
-	return isStaggerDayWithTimezone(userId, frequency, now, timezone);
+	const requiredMs = intervalDays * DAY_MS;
+	return elapsedMs >= requiredMs;
 }
 
-export function getFrequencyIntervalMs(frequency: DigestFrequency): number {
-	if (frequency === "weekly") {
-		return 7 * DAY_MS;
-	}
-	if (frequency === "monthly") {
-		return 30 * DAY_MS;
-	}
-	return DAY_MS;
-}
-
-function isStaggerDay(userId: string, frequency: DigestFrequency, now: Date): boolean {
-	if (frequency === "daily") {
-		return true;
-	}
-	if (frequency === "weekly") {
-		return now.getUTCDay() === getWeeklySendDay(userId);
-	}
-	return now.getUTCDate() === getMonthlySendDay(userId);
-}
-
-function isStaggerDayWithTimezone(userId: string, frequency: DigestFrequency, now: Date, timezone: string): boolean {
-	if (frequency === "daily") {
-		return true;
-	}
-	if (frequency === "weekly") {
-		const localDayOfWeek = getDayOfWeekInTimezone(now, timezone);
-		return localDayOfWeek === getWeeklySendDay(userId);
-	}
-	const localDayOfMonth = getDayOfMonthInTimezone(now, timezone);
-	return localDayOfMonth === getMonthlySendDay(userId);
-}
-
-function getWeeklySendDay(userId: string): number {
-	return hashUserId(userId) % WEEK_DAYS;
-}
-
-function getMonthlySendDay(userId: string): number {
-	return (hashUserId(userId) % MONTH_DAYS) + 1;
-}
-
-function hashUserId(value: string): number {
-	let hash = 0;
-	for (let i = 0; i < value.length; i += 1) {
-		hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-	}
-	return hash;
+/**
+ * Convert interval days to milliseconds.
+ */
+export function getIntervalMs(intervalDays: number): number {
+	return intervalDays * DAY_MS;
 }
 
 export function isSameUtcDay(a: Date, b: Date): boolean {
@@ -325,3 +281,4 @@ export function getTimezonesInHourRange(now: Date, startHour: number, endHour: n
 	}
 	return result;
 }
+

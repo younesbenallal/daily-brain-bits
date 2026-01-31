@@ -179,7 +179,7 @@ If DBB isn't right for you, no hard feelings. You can unsubscribe below.
 **Trigger**: First digest sent (after the first integration connects)
 **Goal**: Reinforce the first digest and establish a habit
 **Exit condition**: User upgrades to Pro OR sequence completes
-**Length**: 4 emails over 14 days
+**Length**: 4 emails over 21 days (aligned with ~3 digests for free users on weekly)
 
 ### First Digest Customization
 
@@ -198,9 +198,9 @@ This replaces the need for separate "your notes are syncing" and "digest is almo
 | Email | Timing | Purpose |
 |-------|--------|---------|
 | 1 | 2-4 hours post-first-digest | Aha moment reinforcement |
-| 2 | Day 5 | Configure preferences |
-| 3 | Day 9 | Social proof |
-| 4 | Day 14 | Check-in |
+| 2 | Day 7 (~1 digest for weekly users) | Configure preferences |
+| 3 | Day 14 (~2 digests for weekly users) | Social proof |
+| 4 | Day 21 (~3 digests for weekly users) | Check-in |
 
 ---
 
@@ -238,7 +238,7 @@ We'd love to hear what you think. Just reply to this email.
 
 ### Email 2: Make it yours
 
-**Send**: Day 5
+**Send**: Day 7 (around the time of second digest for weekly users)
 **Subject**: Quick settings to improve your digests
 **Preview**: 2 minutes to better Brain Bits
 
@@ -247,16 +247,16 @@ We'd love to hear what you think. Just reply to this email.
 ```
 Hello {{firstName}},
 
-You've received a few digests now. Here are some ways to make DBB work better for you:
+Now that you've had a taste of your Brain Bits, here are some ways to make DBB work better for you:
 
 **1. Adjust your timing**
 Receive digests when you actually have time to read them. Morning commute? Lunch break? Evening wind-down?
 
 **2. Set your frequency**
 {{#if isPro}}
-Daily, weekly, or monthly — whatever fits your rhythm.
+Choose any interval — daily, every few days, weekly, or less often.
 {{else}}
-Free plan includes weekly or monthly digests. Upgrade to Pro for daily.
+Free plan: every 3-30 days. Upgrade to Pro for daily or every 2 days.
 {{/if}}
 
 **3. Add another source** {{#unless isPro}}(Pro){{/unless}}
@@ -277,7 +277,7 @@ Pro users can connect multiple sources. Worth it if you use both.
 
 ### Email 3: You're not alone
 
-**Send**: Day 9
+**Send**: Day 14 (around the time of third digest for weekly users)
 **Subject**: 847 notes rediscovered this week
 **Preview**: Join the DBB community
 
@@ -307,8 +307,8 @@ Keep reading those digests.
 
 ### Email 4: How's it going?
 
-**Send**: Day 14
-**Subject**: Two weeks in — how's DBB working for you?
+**Send**: Day 21 (after ~3 digests for weekly users)
+**Subject**: Three weeks in — how's DBB working for you?
 **Preview**: Quick check-in
 
 **Body**:
@@ -316,7 +316,7 @@ Keep reading those digests.
 ```
 Hello {{firstName}},
 
-You've been using Daily Brain Bits for two weeks now. How's it going?
+You've been using Daily Brain Bits for three weeks now. How's it going?
 
 **Quick survey** (pick one):
 
@@ -349,7 +349,7 @@ P.S. If you have specific feedback, just reply to this email. We read everything
 - User has received 4+ digests
 - User has opened 3+ digest emails
 - User has visited the dashboard 3+ times
-- User tried to enable a Pro feature (daily frequency, AI quizzes, second source)
+- User tried to enable a Pro feature (daily/every-2-days frequency, AI quizzes, second source)
 
 ### Overview
 
@@ -380,11 +380,11 @@ You're clearly finding value here. I wanted to let you know about Pro — not to
 
 **What Pro adds:**
 
-- **Daily digests** — more frequent surfacing means better retention
+- **Daily or every-2-days digests** — more frequent surfacing means better retention
 - **AI quizzes** — test yourself on your notes to truly remember them
 - **Multiple sources** — connect both Notion and Obsidian
 
-If weekly digests are working for you, stick with Free. No pressure.
+If your current frequency is working for you, stick with Free. No pressure.
 
 But if you want more, Pro is $10/month.
 
@@ -412,7 +412,7 @@ Here's an honest breakdown of Free vs Pro:
 
 | | Free | Pro ($10/mo) |
 |---|---|---|
-| Digest frequency | Weekly or monthly | Daily, weekly, or monthly |
+| Digest frequency | Every 3-30 days | Every 1-30 days (daily!) |
 | Sources | 1 | Unlimited |
 | AI quizzes | No | Yes |
 | Note selection | Same algorithm | Same algorithm |
@@ -420,8 +420,8 @@ Here's an honest breakdown of Free vs Pro:
 
 **The real question**: How often do you want to revisit your notes?
 
-- If weekly is enough → Free works great
-- If you want daily reinforcement → Pro is worth it
+- If every 3+ days is enough → Free works great
+- If you want daily or every-2-days reinforcement → Pro is worth it
 - If you use both Notion and Obsidian → Pro is the only way
 
 [Upgrade to Pro]
@@ -457,7 +457,7 @@ Maya is a UX researcher. She takes hundreds of notes from user interviews, books
 "I used to feel guilty about all the notes I'd forgotten. Now I trust that the important ones will resurface. Last week, a note from 18 months ago directly influenced a design decision."
 
 **The insight:**
-Daily repetition isn't about quantity. It's about trusting the system so you can stop worrying.
+More frequent repetition isn't about quantity. It's about trusting the system so you can stop worrying.
 
 Maya pays $10/month. She says it's the best ROI of any subscription she has.
 
@@ -495,7 +495,7 @@ The question isn't "do I have time?" It's "do I have 2 minutes at a consistent t
 
 **Pro tip**: Set your preferred send time in settings. Get the digest when you actually have a moment.
 
-And if daily feels like too much? You can always switch back to weekly. Pro gives you the choice.
+And if daily feels like too much? You can always choose any interval you like. Pro gives you the flexibility.
 
 [Upgrade to Pro]
 
@@ -522,11 +522,11 @@ This is my last email about upgrading to Pro. After this, I'll stop asking.
 Here's the summary:
 
 **Pro ($10/month) gets you:**
-- Daily digests (vs weekly/monthly)
+- Daily or every-2-days digests
 - AI quizzes to test retention
 - Connect multiple sources
 
-**If that's not for you**, totally fine. Free is designed to be useful on its own. You'll keep getting your weekly digests.
+**If that's not for you**, totally fine. Free is designed to be useful on its own. You'll keep getting your digests at your chosen frequency.
 
 **If you want to try Pro**, now's the time:
 
@@ -627,7 +627,7 @@ CREATE TABLE email_sends (
 
 ### Onboarding Sequence
 - Connected → First digest open rate (target: 70%+)
-- Day 14 retention (still opening digests)
+- Day 21 retention (still opening digests)
 - Settings engagement (changed any setting)
 
 ### Upgrade Sequence

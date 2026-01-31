@@ -34,6 +34,7 @@
 	"devDependencies": {
 		"@daily-brain-bits/auth": "workspace:*",
 		"@daily-brain-bits/back": "workspace:*",
+		"@daily-brain-bits/core": "workspace:*",
 		"@daily-brain-bits/typescript-config": "workspace:*",
 		"@daily-brain-bits/types": "workspace:*",
 		"@orpc/server": "catalog:",

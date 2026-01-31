@@ -27,6 +27,8 @@ export function applySelfHostedOverrides(entitlements: ReturnType<typeof buildUs
 			maxNotes: Number.POSITIVE_INFINITY,
 			maxSources: Number.POSITIVE_INFINITY,
 			maxNotesPerDigest: entitlements.limits.maxNotesPerDigest,
+			minDigestIntervalDays: 1,
+			maxDigestIntervalDays: entitlements.limits.maxDigestIntervalDays,
 		},
 	};
 }

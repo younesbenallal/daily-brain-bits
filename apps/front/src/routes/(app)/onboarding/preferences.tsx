@@ -1,3 +1,4 @@
+import { DEFAULT_DIGEST_INTERVAL_DAYS, formatIntervalLabel } from "@daily-brain-bits/core/plans";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -25,10 +26,24 @@ const FALLBACK_TIMEZONES = [
 	"Australia/Sydney",
 ] as const;
 
+/** Generate interval options for the select */
+function generateIntervalOptions(min: number, max: number) {
+	const options: { value: number; label: string }[] = [];
+	const commonIntervals = [1, 2, 3, 5, 7, 10, 14, 21, 30];
+	for (const days of commonIntervals) {
+		if (days >= min && days <= max) {
+			options.push({ value: days, label: formatIntervalLabel(days) });
+		}
+	}
+	return options;
+}
+
 function PreferencesPage() {
 	const router = useRouter();
 	const { capabilities, entitlements } = useSettingsCapabilities();
 	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
+	const minIntervalDays = entitlements?.limits.minDigestIntervalDays ?? 3;
+	const maxIntervalDays = entitlements?.limits.maxDigestIntervalDays ?? 30;
 	const canUseQuizzes = entitlements?.features.aiQuizzes ?? isPro;
 	const maxNotesPerDigest = entitlements?.limits.maxNotesPerDigest ?? 5;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
@@ -46,6 +61,7 @@ function PreferencesPage() {
 		return timezoneOptions.includes(guessed) ? guessed : timezoneOptions[0];
 	});
 	const [preferredSendHour, setPreferredSendHour] = useState(8);
+	const [digestIntervalDays, setDigestIntervalDays] = useState(() => Math.max(minIntervalDays, DEFAULT_DIGEST_INTERVAL_DAYS));
 	const [notesPerDigest, setNotesPerDigest] = useState(5);
 	const [quizEnabled, setQuizEnabled] = useState(false);
 	const updateMutation = useMutation(orpc.settings.update.mutationOptions());
@@ -58,6 +74,8 @@ function PreferencesPage() {
 		[preferredSendHour, timezone],
 	);
 
+	const intervalOptions = generateIntervalOptions(minIntervalDays, maxIntervalDays);
+
 	return (
 		<OnboardingLayout>
 			<div className="space-y-6">
@@ -69,7 +87,7 @@ function PreferencesPage() {
 				<div className="space-y-4">
 					<div className="space-y-2">
 						<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Timezone</p>
-						<p className="text-sm text-muted-foreground">We’ll use this to schedule your emails.</p>
+						<p className="text-sm text-muted-foreground">We'll use this to schedule your emails.</p>
 						<Select value={timezone} onValueChange={setTimezone}>
 							<SelectTrigger>
 								<SelectValue />
@@ -109,7 +127,23 @@ function PreferencesPage() {
 
 			<div className="space-y-2">
 				<p className="font-ui text-base font-semibold tracking-[0.05em] text-foreground">Frequency</p>
-				<p className="text-sm text-muted-foreground">Free: weekly digest. Pro: daily delivery for faster knowledge compounding.</p>
+				<p className="text-sm text-muted-foreground">
+					{billingEnabled && !isPro
+						? "Free plan: every 3-30 days. Upgrade to Pro for daily delivery."
+						: "How often should we send your digest?"}
+				</p>
+				<Select value={String(digestIntervalDays)} onValueChange={(value) => setDigestIntervalDays(Number(value))}>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{intervalOptions.map((option) => (
+							<SelectItem key={option.value} value={String(option.value)}>
+								{option.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</div>
 
 			<div className="space-y-2">
@@ -167,7 +201,7 @@ function PreferencesPage() {
 								return;
 							}
 							await updateMutation.mutateAsync({
-								emailFrequency: "weekly",
+								digestIntervalDays: Math.max(minIntervalDays, Math.min(digestIntervalDays, maxIntervalDays)),
 								notesPerDigest: isPro ? notesPerDigest : 5,
 								quizEnabled: canUseQuizzes ? quizEnabled : false,
 								timezone,

@@ -1,10 +1,24 @@
+import { formatIntervalLabel } from "@daily-brain-bits/core/plans";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc-client";
 import { cn } from "@/lib/utils";
 import { useSettingsCapabilities } from "./settings-utils";
 import { StatusMessage, type StatusMessageState } from "./status-message";
+
+/** Generate interval options for the select */
+function generateIntervalOptions(min: number, max: number) {
+	const options: { value: number; label: string }[] = [];
+	// Common intervals
+	const commonIntervals = [1, 2, 3, 5, 7, 10, 14, 21, 30];
+	for (const days of commonIntervals) {
+		if (days >= min && days <= max) {
+			options.push({ value: days, label: formatIntervalLabel(days) });
+		}
+	}
+	return options;
+}
 
 export function AppSettings() {
 	const queryClient = useQueryClient();
@@ -13,37 +27,28 @@ export function AppSettings() {
 	const settingsData = settingsQuery.data?.settings;
 	const { entitlements, capabilities } = useSettingsCapabilities();
 	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
-	const canUseDaily = entitlements?.features.dailyDigest ?? isPro;
+	const minIntervalDays = entitlements?.limits.minDigestIntervalDays ?? 3;
+	const maxIntervalDays = entitlements?.limits.maxDigestIntervalDays ?? 30;
 	const canUseQuizzes = entitlements?.features.aiQuizzes ?? isPro;
 	const canChangeNotesPerDigest = isPro;
 	const maxNotesPerDigest = entitlements?.limits.maxNotesPerDigest ?? 5;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
-	const frequencyOptions = useMemo(
-		() =>
-			[
-				{ value: "daily", label: "Daily" },
-				{ value: "weekly", label: "Weekly" },
-				{ value: "monthly", label: "Monthly" },
-			] as const,
-		[],
-	);
-	type EmailFrequency = (typeof frequencyOptions)[number]["value"];
-	const [emailFrequency, setEmailFrequency] = useState<EmailFrequency>("daily");
+
+	const [digestIntervalDays, setDigestIntervalDays] = useState(7);
 	const [notesPerDigest, setNotesPerDigest] = useState(5);
 	const [quizEnabled, setQuizEnabled] = useState(false);
 	const [upgradeStatus, setUpgradeStatus] = useState<StatusMessageState>(null);
 
+	// Clamp interval to allowed range when settings or entitlements change
 	useEffect(() => {
-		if (!settingsData) {
-			return;
-		}
+		if (!settingsData) return;
 
-		const nextFrequency = !canUseDaily && settingsData.emailFrequency === "daily" ? "weekly" : (settingsData.emailFrequency as EmailFrequency);
+		const clampedInterval = Math.max(minIntervalDays, Math.min(settingsData.digestIntervalDays, maxIntervalDays));
 		const nextQuizEnabled = canUseQuizzes ? settingsData.quizEnabled : false;
-		setEmailFrequency(nextFrequency);
+		setDigestIntervalDays(clampedInterval);
 		setNotesPerDigest(settingsData.notesPerDigest);
 		setQuizEnabled(nextQuizEnabled);
-	}, [settingsData, canUseDaily, canUseQuizzes]);
+	}, [settingsData, minIntervalDays, maxIntervalDays, canUseQuizzes]);
 
 	const updateMutation = useMutation(
 		orpc.settings.update.mutationOptions({
@@ -63,17 +68,15 @@ export function AppSettings() {
 		},
 	});
 
-	const baselineFrequency = settingsData
-		? !canUseDaily && settingsData.emailFrequency === "daily"
-			? "weekly"
-			: settingsData.emailFrequency
-		: emailFrequency;
+	const baselineInterval = settingsData ? Math.max(minIntervalDays, Math.min(settingsData.digestIntervalDays, maxIntervalDays)) : digestIntervalDays;
 	const baselineQuizEnabled = settingsData ? (canUseQuizzes ? settingsData.quizEnabled : false) : quizEnabled;
 	const isDirty = Boolean(
-		settingsData && (emailFrequency !== baselineFrequency || notesPerDigest !== settingsData.notesPerDigest || quizEnabled !== baselineQuizEnabled),
+		settingsData && (digestIntervalDays !== baselineInterval || notesPerDigest !== settingsData.notesPerDigest || quizEnabled !== baselineQuizEnabled),
 	);
 	const isBusy = settingsQuery.isLoading || updateMutation.isPending;
-	const forcedDailyToWeekly = Boolean(settingsData && !canUseDaily && settingsData.emailFrequency === "daily");
+	const wasIntervalClamped = Boolean(settingsData && settingsData.digestIntervalDays < minIntervalDays);
+
+	const intervalOptions = generateIntervalOptions(minIntervalDays, maxIntervalDays);
 
 	return (
 		<div className="space-y-6">
@@ -107,28 +110,29 @@ export function AppSettings() {
 				<div className="grid gap-8">
 					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg ">
 						<div>
-							<div className="font-medium">Email Frequency</div>
+							<div className="font-medium">Digest Frequency</div>
 							<div className="text-sm text-muted-foreground">How often should we send you digest emails?</div>
-							{forcedDailyToWeekly ? (
-								<p className="mt-1 text-xs text-muted-foreground">Daily digests are Pro-only. We switched you to weekly.</p>
+							{wasIntervalClamped ? (
+								<p className="mt-1 text-xs text-muted-foreground">
+									Daily/every 2 days is Pro-only. We adjusted to {formatIntervalLabel(minIntervalDays).toLowerCase()}.
+								</p>
+							) : null}
+							{!isPro && minIntervalDays > 1 ? (
+								<p className="mt-1 text-xs text-muted-foreground">Upgrade to Pro for daily or every 2 days delivery.</p>
 							) : null}
 						</div>
 						<select
-							name="email-frequency"
+							name="digest-interval"
 							className="rounded border bg-background px-2 py-1"
-							value={emailFrequency}
+							value={digestIntervalDays}
 							disabled={isBusy}
-							onChange={(event) => setEmailFrequency(event.target.value as EmailFrequency)}
+							onChange={(event) => setDigestIntervalDays(Number(event.target.value))}
 						>
-							{frequencyOptions.map((option) => {
-								const isLocked = option.value === "daily" && !canUseDaily;
-								return (
-									<option key={option.value} value={option.value} disabled={isLocked}>
-										{option.label}
-										{isLocked ? " (Pro)" : ""}
-									</option>
-								);
-							})}
+							{intervalOptions.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
 						</select>
 					</div>
 					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg ">
@@ -188,7 +192,7 @@ export function AppSettings() {
 					disabled={!isDirty || isBusy}
 					onClick={() => {
 						updateMutation.mutate({
-							emailFrequency,
+							digestIntervalDays,
 							notesPerDigest,
 							quizEnabled: canUseQuizzes ? quizEnabled : false,
 							timezone: settingsData?.timezone ?? "UTC",
