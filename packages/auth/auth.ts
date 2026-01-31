@@ -186,7 +186,12 @@ export const auth = betterAuth({
 		account: {
 			create: {
 				after: async (account) => {
-					// allow to create integration when login with notion
+					// Auto-verify email for social OAuth providers (Google, Notion)
+					if (account.providerId === "google" || account.providerId === "notion") {
+						await db.execute(sql`UPDATE "user" SET email_verified = true WHERE id = ${account.userId} AND email_verified = false`);
+					}
+
+					// Create integration connection for Notion
 					if (account.providerId !== "notion") {
 						return;
 					}
@@ -272,6 +277,28 @@ export const auth = betterAuth({
 					google: {
 						clientId: process.env.GOOGLE_CLIENT_ID,
 						clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+						getUserInfo: async (token) => {
+							const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+								headers: { Authorization: `Bearer ${token.accessToken}` },
+							});
+							const profile = (await response.json()) as {
+								id: string;
+								name: string;
+								email: string;
+								picture: string;
+								verified_email: boolean;
+							};
+							return {
+								user: {
+									id: profile.id,
+									name: profile.name,
+									email: profile.email,
+									image: profile.picture,
+									emailVerified: profile.verified_email,
+								},
+								data: profile,
+							};
+						},
 					},
 				}
 			: {}),

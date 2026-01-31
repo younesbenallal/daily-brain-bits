@@ -54,5 +54,5 @@ bun.lockb
 # OS
 .DS_Store
 Thumbs.db
-
+test-full-user-journey.ts
 

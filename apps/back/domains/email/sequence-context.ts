@@ -165,7 +165,7 @@ export async function loadDigestStats(userIds: string[]): Promise<Map<string, Di
 	const firstDigestRows = await db
 		.select({
 			userId: noteDigests.userId,
-			firstDigestSentAt: sql<Date | null>`min(${noteDigests.sentAt})`,
+			firstDigestSentAt: sql<string | null>`min(${noteDigests.sentAt})`,
 		})
 		.from(noteDigests)
 		.where(and(inArray(noteDigests.userId, userIds), eq(noteDigests.status, "sent")))
@@ -173,7 +173,7 @@ export async function loadDigestStats(userIds: string[]): Promise<Map<string, Di
 
 	const digestCountMap = new Map(digestCounts.map((row) => [row.userId, row.digestCount]));
 	const noteCountMap = new Map(noteCounts.map((row) => [row.userId, row.noteCount]));
-	const firstDigestMap = new Map(firstDigestRows.map((row) => [row.userId, row.firstDigestSentAt ?? null]));
+	const firstDigestMap = new Map(firstDigestRows.map((row) => [row.userId, row.firstDigestSentAt ? new Date(row.firstDigestSentAt) : null]));
 
 	const stats = new Map<string, DigestStats>();
 	for (const userId of userIds) {

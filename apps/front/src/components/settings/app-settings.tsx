@@ -36,8 +36,7 @@ export function AppSettings() {
 			return;
 		}
 
-		const nextFrequency =
-			!canUseDaily && settingsData.emailFrequency === "daily" ? "weekly" : (settingsData.emailFrequency as EmailFrequency);
+		const nextFrequency = !canUseDaily && settingsData.emailFrequency === "daily" ? "weekly" : (settingsData.emailFrequency as EmailFrequency);
 		const nextQuizEnabled = canUseQuizzes ? settingsData.quizEnabled : false;
 		setEmailFrequency(nextFrequency);
 		setNotesPerDigest(settingsData.notesPerDigest);
@@ -63,12 +62,13 @@ export function AppSettings() {
 	});
 
 	const baselineFrequency = settingsData
-		? (!canUseDaily && settingsData.emailFrequency === "daily" ? "weekly" : settingsData.emailFrequency)
+		? !canUseDaily && settingsData.emailFrequency === "daily"
+			? "weekly"
+			: settingsData.emailFrequency
 		: emailFrequency;
 	const baselineQuizEnabled = settingsData ? (canUseQuizzes ? settingsData.quizEnabled : false) : quizEnabled;
 	const isDirty = Boolean(
-		settingsData &&
-			(emailFrequency !== baselineFrequency || notesPerDigest !== settingsData.notesPerDigest || quizEnabled !== baselineQuizEnabled),
+		settingsData && (emailFrequency !== baselineFrequency || notesPerDigest !== settingsData.notesPerDigest || quizEnabled !== baselineQuizEnabled),
 	);
 	const isBusy = settingsQuery.isLoading || updateMutation.isPending;
 	const forcedDailyToWeekly = Boolean(settingsData && !canUseDaily && settingsData.emailFrequency === "daily");
@@ -102,9 +102,8 @@ export function AppSettings() {
 			) : null}
 
 			<div className="space-y-4">
-				<h3 className="text-lg font-medium">Preferences</h3>
-				<div className="grid gap-4">
-					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+				<div className="grid gap-8">
+					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg ">
 						<div>
 							<div className="font-medium">Email Frequency</div>
 							<div className="text-sm text-muted-foreground">How often should we send you digest emails?</div>
@@ -112,13 +111,13 @@ export function AppSettings() {
 								<p className="mt-1 text-xs text-muted-foreground">Daily digests are Pro-only. We switched you to weekly.</p>
 							) : null}
 						</div>
-					<select
-						name="email-frequency"
-						className="rounded border bg-background px-2 py-1"
-						value={emailFrequency}
-						disabled={isBusy}
-						onChange={(event) => setEmailFrequency(event.target.value as EmailFrequency)}
-					>
+						<select
+							name="email-frequency"
+							className="rounded border bg-background px-2 py-1"
+							value={emailFrequency}
+							disabled={isBusy}
+							onChange={(event) => setEmailFrequency(event.target.value as EmailFrequency)}
+						>
 							{frequencyOptions.map((option) => {
 								const isLocked = option.value === "daily" && !canUseDaily;
 								return (
@@ -130,21 +129,21 @@ export function AppSettings() {
 							})}
 						</select>
 					</div>
-					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg ">
 						<div>
 							<div className="font-medium">Notes per digest</div>
 							<div className="text-sm text-muted-foreground">How many notes should we include in each email?</div>
 						</div>
-					<input
-						type="number"
-						name="notes-per-digest"
-						min={1}
-						max={50}
-						inputMode="numeric"
-						className="w-20 rounded border bg-background px-2 py-1 text-right"
-						value={notesPerDigest}
-						disabled={isBusy}
-						onChange={(event) => {
+						<input
+							type="number"
+							name="notes-per-digest"
+							min={1}
+							max={50}
+							inputMode="numeric"
+							className="w-20 rounded border bg-background px-2 py-1 text-right"
+							value={notesPerDigest}
+							disabled={isBusy}
+							onChange={(event) => {
 								const nextValue = Number(event.target.value);
 								if (Number.isNaN(nextValue)) {
 									setNotesPerDigest(1);
@@ -154,20 +153,20 @@ export function AppSettings() {
 							}}
 						/>
 					</div>
-					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+					<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg ">
 						<div>
 							<div className="font-medium">Generate quizzes</div>
 							<div className="text-sm text-muted-foreground">Create AI-powered quizzes alongside your notes.</div>
 							{!canUseQuizzes ? <p className="mt-1 text-xs text-muted-foreground">AI quizzes are available on Pro.</p> : null}
 						</div>
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							name="quiz-enabled"
-							checked={quizEnabled}
-							disabled={isBusy || !canUseQuizzes}
-							onChange={(event) => setQuizEnabled(event.target.checked)}
-						/>
+						<label className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								name="quiz-enabled"
+								checked={quizEnabled}
+								disabled={isBusy || !canUseQuizzes}
+								onChange={(event) => setQuizEnabled(event.target.checked)}
+							/>
 							<span>{quizEnabled ? "On" : "Off"}</span>
 						</label>
 					</div>
