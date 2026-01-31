@@ -1,6 +1,5 @@
 import { createPathFilter } from "@daily-brain-bits/integrations-obsidian";
 import type { TFile } from "obsidian";
-import type { PendingQueueItem } from "./types";
 
 export function buildRpcUrl(baseUrl: string): string {
 	const trimmed = baseUrl.replace(/\/$/, "");
@@ -25,10 +24,6 @@ export function toHeaderRecord(headers: HeadersInit | undefined): Record<string,
 		}, {});
 	}
 	return headers as Record<string, string>;
-}
-
-export function toQueueKey(item: PendingQueueItem): string {
-	return `${item.op}:${item.externalId}:${item.path}`;
 }
 
 export function parseGlobPatterns(glob: string): { include: string[]; exclude: string[] } {

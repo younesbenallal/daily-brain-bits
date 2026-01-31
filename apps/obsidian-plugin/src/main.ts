@@ -1,4 +1,5 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, Plugin } from "obsidian";
+import { shouldSyncNow } from "./diff";
 import { DBBSettingTab, normalizeSettings } from "./settings";
 import { mergePluginData } from "./storage";
 import type { LocalIndex } from "./types";
@@ -8,8 +9,7 @@ export default class DailyBrainBitsPlugin extends Plugin {
 	settings = normalizeSettings();
 	index: LocalIndex = {
 		files: {},
-		pendingQueue: [],
-		lastFullScanAt: null,
+		lastSyncAt: null,
 	};
 	syncer!: Syncer;
 
@@ -39,12 +39,17 @@ export default class DailyBrainBitsPlugin extends Plugin {
 			name: "DBB: Show sync status",
 			callback: () => {
 				const status = this.syncer.getStatus();
+				const index = this.syncer.getIndex();
 				const scope = this.syncer.getScopeStatus();
-				const scopeLabel = scope.ready ? (scope.patterns.length > 0 ? `${scope.patterns.length} pattern(s)` : "all (no patterns)") : "loading";
+				const scopeLabel = scope.patterns.length > 0 ? `${scope.patterns.length} pattern(s)` : "all notes";
+				const fileCount = Object.keys(index.files).length;
+				const lastSync = index.lastSyncAt ? new Date(index.lastSyncAt).toLocaleString() : "never";
+
 				const message = [
-					`Last sync: ${status.lastSyncAt ?? "never"}`,
-					`Pending: ${this.index.pendingQueue.length}`,
+					`Last sync: ${lastSync}`,
+					`Synced files: ${fileCount}`,
 					`Scope: ${scopeLabel}`,
+					`Interval: ${this.settings.syncInterval}`,
 					status.lastError ? `Error: ${status.lastError}` : null,
 				]
 					.filter(Boolean)
@@ -53,36 +58,12 @@ export default class DailyBrainBitsPlugin extends Plugin {
 			},
 		});
 
-		this.registerEvent(
-			this.app.vault.on("create", (file) => {
-				if (file instanceof TFile) {
-					this.syncer.onCreate(file);
-				}
-			}),
-		);
-		this.registerEvent(
-			this.app.vault.on("modify", (file) => {
-				if (file instanceof TFile) {
-					this.syncer.onModify(file);
-				}
-			}),
-		);
-		this.registerEvent(
-			this.app.vault.on("delete", (file) => {
-				if (file instanceof TFile) {
-					this.syncer.onDelete(file.path);
-				}
-			}),
-		);
-		this.registerEvent(
-			this.app.vault.on("rename", (file, oldPath) => {
-				if (file instanceof TFile) {
-					this.syncer.onRename(file, oldPath);
-				}
-			}),
-		);
-
-		window.setTimeout(() => void this.syncer.fullSync(), 5_000);
+		// Check if we should sync on startup based on interval
+		this.app.workspace.onLayoutReady(() => {
+			if (shouldSyncNow(this.index.lastSyncAt, this.settings.syncInterval)) {
+				void this.syncer.fullSync();
+			}
+		});
 	}
 
 	async saveSettings() {
@@ -98,8 +79,7 @@ export default class DailyBrainBitsPlugin extends Plugin {
 
 	async resetSyncState() {
 		this.index.files = {};
-		this.index.pendingQueue = [];
-		this.index.lastFullScanAt = null;
+		this.index.lastSyncAt = null;
 		await this.saveData({
 			settings: this.settings,
 			index: this.index,

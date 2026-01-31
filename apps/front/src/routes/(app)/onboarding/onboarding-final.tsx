@@ -36,14 +36,13 @@ function OnboardingFinalPage() {
 		}
 	}, [canProceed, router, statusQuery.isLoading]);
 
-	const effectiveFrequency =
-		settings && !canUseDaily && settings.emailFrequency === "daily" ? "weekly" : (settings?.emailFrequency ?? "weekly");
+	const effectiveFrequency = settings && !canUseDaily && settings.emailFrequency === "daily" ? "weekly" : (settings?.emailFrequency ?? "weekly");
 	const timeLabel =
 		settings && settings.timezone
 			? `${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
 					hour: "numeric",
 					minute: "2-digit",
-			  })} (${settings.timezone})`
+				})} (${settings.timezone})`
 			: null;
 	const frequencyLabel = effectiveFrequency === "daily" ? "Daily" : effectiveFrequency === "monthly" ? "Monthly" : "Weekly";
 	const frequencyCopy = frequencyLabel.toLowerCase();
@@ -76,17 +75,6 @@ function OnboardingFinalPage() {
 				</div>
 
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<Button
-						type="button"
-						variant="outline"
-						disabled={completeMutation.isPending}
-						onClick={async () => {
-							await completeMutation.mutateAsync({});
-							router.navigate({ to: "/settings" });
-						}}
-					>
-						Open settings
-					</Button>
 					<Button
 						type="button"
 						disabled={completeMutation.isPending}

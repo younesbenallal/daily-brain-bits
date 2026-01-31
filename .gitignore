@@ -25,6 +25,12 @@ yarn-error.log*
 debug.log
 .trigger
 
+# AI
+.cursor
+.codex
+.claude
+skills
+
 # Local env files
 .env
 .env*
@@ -49,4 +55,4 @@ bun.lockb
 .DS_Store
 Thumbs.db
 
-skills
+

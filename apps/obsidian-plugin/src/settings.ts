@@ -1,5 +1,6 @@
 import { type App, type Plugin, PluginSettingTab, Setting } from "obsidian";
 import type { Syncer } from "./syncer";
+import type { SyncInterval } from "./types";
 
 export type DBBSettings = {
 	apiBaseUrl: string;
@@ -8,8 +9,8 @@ export type DBBSettings = {
 	deviceId: string;
 	scopeGlob: string;
 	batchSize: number;
-	debounceMs: number;
 	maxBytesPerBatch: number;
+	syncInterval: SyncInterval;
 };
 
 declare const DBB_API_BASE_URL: string;
@@ -21,8 +22,8 @@ export const DEFAULT_SETTINGS: DBBSettings = {
 	deviceId: "",
 	scopeGlob: "",
 	batchSize: 100,
-	debounceMs: 2000,
 	maxBytesPerBatch: 2_000_000,
+	syncInterval: "daily",
 };
 
 function clampNumber(value: number, fallback: number, min: number): number {
@@ -32,14 +33,16 @@ function clampNumber(value: number, fallback: number, min: number): number {
 	return Math.max(min, value);
 }
 
+const VALID_INTERVALS: SyncInterval[] = ["daily", "weekly", "manual"];
+
 export function normalizeSettings(overrides?: Partial<DBBSettings>): DBBSettings {
 	const merged = {
 		...DEFAULT_SETTINGS,
 		...overrides,
 	};
 	const batchSize = clampNumber(merged.batchSize, DEFAULT_SETTINGS.batchSize, 1);
-	const debounceMs = clampNumber(merged.debounceMs, DEFAULT_SETTINGS.debounceMs, 250);
 	const maxBytesPerBatch = clampNumber(merged.maxBytesPerBatch, DEFAULT_SETTINGS.maxBytesPerBatch, 50_000);
+	const syncInterval = VALID_INTERVALS.includes(merged.syncInterval) ? merged.syncInterval : DEFAULT_SETTINGS.syncInterval;
 
 	return {
 		apiBaseUrl: merged.apiBaseUrl,
@@ -48,8 +51,8 @@ export function normalizeSettings(overrides?: Partial<DBBSettings>): DBBSettings
 		deviceId: merged.deviceId,
 		scopeGlob: merged.scopeGlob,
 		batchSize,
-		debounceMs,
 		maxBytesPerBatch,
+		syncInterval,
 	};
 }
 
@@ -195,8 +198,23 @@ export class DBBSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName("Sync behavior").setHeading();
 
 		new Setting(containerEl)
+			.setName("Sync interval")
+			.setDesc("How often to sync your notes. Sync runs when you open Obsidian if the interval has passed.")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption("daily", "Daily")
+					.addOption("weekly", "Weekly")
+					.addOption("manual", "Manual only")
+					.setValue(this.plugin.settings.syncInterval)
+					.onChange(async (value) => {
+						this.plugin.settings.syncInterval = value as SyncInterval;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Sync now")
-			.setDesc("Trigger a full sync with the current scope.")
+			.setDesc("Trigger a sync with the current scope.")
 			.addButton((button) => button.setButtonText("Sync now").onClick(() => void this.plugin.syncer?.fullSync()));
 
 		new Setting(containerEl)
@@ -209,30 +227,18 @@ export class DBBSettingTab extends PluginSettingTab {
 				}),
 			);
 
+		new Setting(containerEl).setName("Advanced").setHeading();
+
 		new Setting(containerEl)
 			.setName("Batch size")
 			.setDesc("Maximum number of items per sync request.")
 			.addText((text) =>
 				text
-					.setPlaceholder("50")
+					.setPlaceholder("100")
 					.setValue(String(this.plugin.settings.batchSize))
 					.onChange(async (value) => {
 						const parsed = Number.parseInt(value, 10);
 						this.plugin.settings.batchSize = Number.isNaN(parsed) ? this.plugin.settings.batchSize : parsed;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName("Debounce (ms)")
-			.setDesc("Wait this long after changes before syncing.")
-			.addText((text) =>
-				text
-					.setPlaceholder("2000")
-					.setValue(String(this.plugin.settings.debounceMs))
-					.onChange(async (value) => {
-						const parsed = Number.parseInt(value, 10);
-						this.plugin.settings.debounceMs = Number.isNaN(parsed) ? this.plugin.settings.debounceMs : parsed;
 						await this.plugin.saveSettings();
 					}),
 			);

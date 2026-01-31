@@ -1,20 +1,18 @@
 import { normalizeForHash, sha256Hex } from "@daily-brain-bits/core";
 import { buildExternalId, type SyncBatchResponse, type SyncItem } from "@daily-brain-bits/integrations-obsidian";
 import { type App, getAllTags, TFile } from "obsidian";
-import type { QueueManager } from "./queue-manager";
+import type { DiffResult, VaultFile } from "./diff";
 import type { RPCClient } from "./rpc-client";
 import type { DBBSettings } from "./settings";
-import { extractAliases, pickFrontmatter, shouldSyncFile, toQueueKey } from "./sync-utils";
-import type { LocalIndex, PendingQueueItem, SyncStatus } from "./types";
+import { extractAliases, pickFrontmatter, shouldSyncFile } from "./sync-utils";
+import type { LocalIndex, SyncStatus } from "./types";
 
 export class SyncOperations {
 	private app: App;
 	private settings: DBBSettings;
 	private index: LocalIndex;
 	private status: SyncStatus;
-	private queueManager: QueueManager;
 	private rpcClient: RPCClient;
-	private saveData: () => Promise<void>;
 	private isSyncing = false;
 
 	constructor(
@@ -22,99 +20,17 @@ export class SyncOperations {
 		settings: DBBSettings,
 		index: LocalIndex,
 		status: SyncStatus,
-		queueManager: QueueManager,
 		rpcClient: RPCClient,
-		saveData: () => Promise<void>,
 	) {
 		this.app = app;
 		this.settings = settings;
 		this.index = index;
 		this.status = status;
-		this.queueManager = queueManager;
 		this.rpcClient = rpcClient;
-		this.saveData = saveData;
 	}
 
 	updateSettings(settings: DBBSettings) {
 		this.settings = settings;
-	}
-
-	async fullSync(pathFilter: (path: string) => boolean) {
-		const files = this.app.vault.getMarkdownFiles();
-		const now = new Date().toISOString();
-
-		for (const file of files) {
-			if (!shouldSyncFile(file, pathFilter)) {
-				continue;
-			}
-			const externalId = buildExternalId(this.settings.vaultId, file.path);
-			const entry = this.index.files[externalId];
-			if (entry?.lastSeenMtime === file.stat.mtime) {
-				continue;
-			}
-			this.queueManager.enqueue({
-				op: "upsert",
-				externalId,
-				path: file.path,
-				lastSeenMtime: file.stat.mtime,
-			});
-		}
-
-		this.index.lastFullScanAt = now;
-		await this.saveData();
-	}
-
-	async flushQueue(pathFilter: (path: string) => boolean) {
-		if (this.isSyncing) {
-			return;
-		}
-		if (this.queueManager.getQueueLength() === 0) {
-			return;
-		}
-		if (!this.settings.apiBaseUrl || !this.settings.vaultId || !this.settings.deviceId) {
-			return;
-		}
-
-		this.isSyncing = true;
-
-		try {
-			const batch = await this.buildBatch(pathFilter);
-			this.queueManager.dropQueueItems(batch.skippedKeys);
-			if (batch.items.length === 0) {
-				this.isSyncing = false;
-				// Signal sync complete when queue is empty
-				await this.signalSyncComplete();
-				return;
-			}
-
-			const response = await this.rpcClient.sendBatch(this.settings.vaultId, this.app.vault.getName(), this.settings.deviceId, batch.items);
-
-			if (!response) {
-				this.status.lastError = this.rpcClient.getLastError() ?? "sync_failed";
-				this.isSyncing = false;
-				return;
-			}
-
-			this.applyBatchResult(batch, response);
-			await this.saveData();
-
-			if (this.queueManager.getQueueLength() > 0) {
-				// Schedule next flush immediately (minimal delay for success)
-				window.setTimeout(() => void this.flushQueue(pathFilter), 50);
-			} else {
-				// Queue is empty, signal sync complete
-				await this.signalSyncComplete();
-			}
-		} finally {
-			this.isSyncing = false;
-		}
-	}
-
-	private async signalSyncComplete() {
-		if (!this.settings.vaultId) {
-			return;
-		}
-		await this.rpcClient.signalSyncComplete(this.settings.vaultId);
 	}
 
 	async connect() {
@@ -139,89 +55,162 @@ export class SyncOperations {
 		this.status.lastError = null;
 	}
 
-	private async buildBatch(pathFilter: (path: string) => boolean): Promise<{
-		items: SyncItem[];
-		queueItems: PendingQueueItem[];
-		itemMap: Map<string, SyncItem>;
-		skippedKeys: Set<string>;
-	}> {
+	async performSync(diff: DiffResult, pathFilter: (path: string) => boolean): Promise<{ accepted: number; rejected: number } | null> {
+		if (this.isSyncing) {
+			return null;
+		}
+
+		this.isSyncing = true;
+		let totalAccepted = 0;
+		let totalRejected = 0;
+
+		try {
+			// Process upserts in batches
+			const upsertBatches = this.chunkArray(diff.toUpsert, this.settings.batchSize);
+
+			for (const batch of upsertBatches) {
+				const result = await this.processUpsertBatch(batch, pathFilter);
+				if (result) {
+					totalAccepted += result.accepted;
+					totalRejected += result.rejected;
+				}
+			}
+
+			// Process deletes in batches
+			const deleteBatches = this.chunkArray(diff.toDelete, this.settings.batchSize);
+
+			for (const batch of deleteBatches) {
+				const result = await this.processDeleteBatch(batch);
+				if (result) {
+					totalAccepted += result.accepted;
+					totalRejected += result.rejected;
+				}
+			}
+
+			// Signal sync complete
+			await this.signalSyncComplete();
+
+			return { accepted: totalAccepted, rejected: totalRejected };
+		} finally {
+			this.isSyncing = false;
+		}
+	}
+
+	private async processUpsertBatch(
+		files: VaultFile[],
+		pathFilter: (path: string) => boolean,
+	): Promise<{ accepted: number; rejected: number } | null> {
 		const items: SyncItem[] = [];
-		const queueItems: PendingQueueItem[] = [];
-		const itemMap = new Map<string, SyncItem>();
-		const skippedKeys = new Set<string>();
+		const itemMap = new Map<string, { item: SyncItem; file: VaultFile }>();
 
-		// Take up to batchSize items from queue for parallel processing
-		const pendingQueue = this.queueManager.getPendingQueue();
-		const candidateItems = pendingQueue.slice(0, this.settings.batchSize);
-
-		// Build all items in parallel
+		// Build items
 		const buildResults = await Promise.all(
-			candidateItems.map(async (queued) => {
-				const built = await this.buildSyncItem(queued, pathFilter);
-				return { queued, built };
+			files.map(async (file) => {
+				const item = await this.buildUpsertItem(file, pathFilter);
+				return { file, item };
 			}),
 		);
 
-		// Apply byte limit and collect results
+		// Apply byte limit
 		let batchBytes = 0;
-		for (const { queued, built } of buildResults) {
-			if (!built) {
-				skippedKeys.add(toQueueKey(queued));
+		for (const { file, item } of buildResults) {
+			if (!item) {
 				continue;
 			}
 
-			const projectedBytes = Buffer.byteLength(JSON.stringify(built), "utf8");
+			const projectedBytes = Buffer.byteLength(JSON.stringify(item), "utf8");
 			const wouldOverflow = items.length > 0 && projectedBytes + batchBytes > this.settings.maxBytesPerBatch;
 
 			if (wouldOverflow) {
-				// Stop adding items but don't skip - they'll be picked up in next batch
 				break;
 			}
 
-			items.push(built);
-			queueItems.push(queued);
-			itemMap.set(built.externalId, built);
+			items.push(item);
+			itemMap.set(item.externalId, { item, file });
 			batchBytes += projectedBytes;
 		}
 
-		return { items, queueItems, itemMap, skippedKeys };
-	}
-
-	private async buildSyncItem(queued: PendingQueueItem, pathFilter: (path: string) => boolean): Promise<SyncItem | null> {
-		if (queued.op === "delete") {
-			return {
-				op: "delete",
-				externalId: queued.externalId,
-				deletedAtSource: new Date().toISOString(),
-				metadata: {
-					path: queued.path,
-				},
-			};
+		if (items.length === 0) {
+			return { accepted: 0, rejected: 0 };
 		}
 
-		const file = this.app.vault.getAbstractFileByPath(queued.path);
+		// Send batch
+		const response = await this.rpcClient.sendBatch(
+			this.settings.vaultId,
+			this.app.vault.getName(),
+			this.settings.deviceId,
+			items,
+		);
+
+		if (!response) {
+			this.status.lastError = this.rpcClient.getLastError() ?? "sync_failed";
+			return null;
+		}
+
+		// Update index for accepted items
+		this.applyUpsertResults(response, itemMap);
+
+		return { accepted: response.accepted, rejected: response.rejected };
+	}
+
+	private async processDeleteBatch(
+		deletes: { externalId: string; path: string }[],
+	): Promise<{ accepted: number; rejected: number } | null> {
+		const items: SyncItem[] = deletes.map((d) => ({
+			op: "delete" as const,
+			externalId: d.externalId,
+			deletedAtSource: new Date().toISOString(),
+			metadata: { path: d.path },
+		}));
+
+		if (items.length === 0) {
+			return { accepted: 0, rejected: 0 };
+		}
+
+		const response = await this.rpcClient.sendBatch(
+			this.settings.vaultId,
+			this.app.vault.getName(),
+			this.settings.deviceId,
+			items,
+		);
+
+		if (!response) {
+			this.status.lastError = this.rpcClient.getLastError() ?? "sync_failed";
+			return null;
+		}
+
+		// Remove accepted deletes from index
+		for (const result of response.itemResults) {
+			if (result.status === "accepted") {
+				delete this.index.files[result.externalId];
+			}
+		}
+
+		return { accepted: response.accepted, rejected: response.rejected };
+	}
+
+	private async buildUpsertItem(vaultFile: VaultFile, pathFilter: (path: string) => boolean): Promise<SyncItem | null> {
+		const file = this.app.vault.getAbstractFileByPath(vaultFile.path);
 		if (!(file instanceof TFile)) {
-			return {
-				op: "delete",
-				externalId: queued.externalId,
-				deletedAtSource: new Date().toISOString(),
-				metadata: {
-					path: queued.path,
-				},
-			};
+			return null;
 		}
 
 		if (!shouldSyncFile(file, pathFilter)) {
 			return null;
 		}
 
+		const externalId = buildExternalId(this.settings.vaultId, file.path);
 		const content = await this.app.vault.cachedRead(file);
 		const contentHash = sha256Hex(normalizeForHash(content));
-		const existing = this.index.files[queued.externalId];
 
+		// Skip if content hasn't changed (mtime changed but content same)
+		const existing = this.index.files[externalId];
 		if (existing && existing.contentHash === contentHash) {
-			existing.lastSeenMtime = file.stat.mtime;
-			await this.saveData();
+			// Update lastSyncedAt to current mtime so we don't reprocess
+			this.index.files[externalId] = {
+				...existing,
+				lastSyncedAt: file.stat.mtime,
+			};
 			return null;
 		}
 
@@ -234,7 +223,7 @@ export class SyncOperations {
 
 		return {
 			op: "upsert",
-			externalId: queued.externalId,
+			externalId,
 			title,
 			contentMarkdown: content,
 			contentHash,
@@ -249,50 +238,43 @@ export class SyncOperations {
 		};
 	}
 
-	private applyBatchResult(
-		batch: {
-			items: SyncItem[];
-			queueItems: PendingQueueItem[];
-			itemMap: Map<string, SyncItem>;
-		},
+	private applyUpsertResults(
 		response: SyncBatchResponse,
+		itemMap: Map<string, { item: SyncItem; file: VaultFile }>,
 	) {
-		const queueKeys = new Set(batch.queueItems.map((item) => toQueueKey(item)));
-		this.queueManager.dropQueueItems(queueKeys);
-
-		const queueByExternalId = new Map(batch.queueItems.map((item) => [item.externalId, item]));
-
 		for (const result of response.itemResults) {
-			const item = batch.itemMap.get(result.externalId);
-			const queued = queueByExternalId.get(result.externalId);
-
-			if (!item || result.status !== "accepted") {
+			if (result.status !== "accepted") {
 				continue;
 			}
 
-			if (item.op === "delete") {
-				delete this.index.files[item.externalId];
+			const entry = itemMap.get(result.externalId);
+			if (!entry || entry.item.op !== "upsert") {
 				continue;
 			}
 
-			const path = item.metadata && typeof item.metadata.path === "string" ? item.metadata.path : queued?.path;
-			if (!path) {
-				continue;
-			}
+			const { item, file } = entry;
+			const path = item.metadata && typeof item.metadata.path === "string" ? item.metadata.path : file.path;
 
 			this.index.files[item.externalId] = {
 				path,
 				contentHash: item.contentHash,
-				lastSyncedAt: new Date().toISOString(),
-				lastSeenMtime: queued?.lastSeenMtime ?? null,
+				lastSyncedAt: file.mtime,
 			};
 		}
+	}
 
-		this.status.lastSyncAt = new Date().toISOString();
-			this.status.lastResult = {
-				accepted: response.accepted,
-				rejected: response.rejected,
-			};
-			this.status.lastError = null;
+	private async signalSyncComplete() {
+		if (!this.settings.vaultId) {
+			return;
+		}
+		await this.rpcClient.signalSyncComplete(this.settings.vaultId);
+	}
+
+	private chunkArray<T>(array: T[], size: number): T[][] {
+		const chunks: T[][] = [];
+		for (let i = 0; i < array.length; i += size) {
+			chunks.push(array.slice(i, i + size));
+		}
+		return chunks;
 	}
 }

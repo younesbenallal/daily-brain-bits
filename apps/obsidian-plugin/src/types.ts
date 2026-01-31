@@ -1,5 +1,7 @@
-export type QueueOp = "upsert" | "delete";
+export type SyncInterval = "daily" | "weekly" | "manual";
 
+// Legacy types - kept for migration, will be removed
+export type QueueOp = "upsert" | "delete";
 export type PendingQueueItem = {
 	op: QueueOp;
 	externalId: string;
@@ -10,14 +12,12 @@ export type PendingQueueItem = {
 export type FileIndexEntry = {
 	path: string;
 	contentHash: string;
-	lastSyncedAt: string | null;
-	lastSeenMtime: number | null;
+	lastSyncedAt: number;
 };
 
 export type LocalIndex = {
 	files: Record<string, FileIndexEntry>;
-	pendingQueue: PendingQueueItem[];
-	lastFullScanAt: string | null;
+	lastSyncAt: number | null;
 };
 
 export type SyncStatus = {
