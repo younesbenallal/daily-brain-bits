@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Deploy to Trigger.dev only when pushing to main
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" = "main" ]; then
+  echo "Deploying to Trigger.dev (prod)..."
+  cd apps/trigger && TRIGGER_PROJECT_REF=proj_jjpdwgwkruthsruyuxtx bunx trigger.dev deploy --env prod --skip-update-check
+fi

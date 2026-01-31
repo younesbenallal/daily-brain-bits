@@ -6,11 +6,11 @@ import { prepareDigestItems } from "../utils/digest-generation";
 import { upsertDigestWithItems } from "../utils/digest-storage";
 
 const DEFAULT_NOTES_PER_DIGEST = 5;
-const now = new Date();
 
 void env;
 
 export async function runGenerateDailyDigests() {
+	const now = new Date();
 	const users = await db.query.user.findMany({
 		columns: { id: true },
 	});
