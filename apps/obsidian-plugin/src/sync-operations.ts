@@ -38,10 +38,6 @@ export class SyncOperations {
 			this.status.lastError = "missing_settings";
 			return;
 		}
-		if (!this.settings.pluginToken) {
-			this.status.lastError = "missing_token";
-			return;
-		}
 
 		const response = await this.rpcClient.connect(this.settings.vaultId, this.app.vault.getName(), this.settings.deviceId);
 

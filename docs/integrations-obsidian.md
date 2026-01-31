@@ -139,6 +139,11 @@ These rules are applied only when `sourceKind === "obsidian"` and use the connec
 - Vault display name is sourced from the Obsidian plugin's `vaultName` and stored as `integration_connections.displayName`.
 - Deep links use `vaultName` and the wiki link target to open notes via `obsidian://open`.
 
+## Security
+
+- **Plugin token**: Stored securely via Obsidian's SecretStorage API (introduced in Obsidian 1.11.4). The token is not saved in `data.json` — instead it uses the OS keychain (Keychain on macOS, Windows Credentials, etc.).
+- Legacy tokens stored in settings are automatically migrated to SecretStorage on plugin load.
+
 
 
 ## Future Work

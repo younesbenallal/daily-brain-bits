@@ -1,10 +1,9 @@
-import { type App, type Plugin, PluginSettingTab, Setting } from "obsidian";
+import { type App, type Plugin, PluginSettingTab, SecretComponent, Setting } from "obsidian";
 import type { Syncer } from "./syncer";
 import type { SyncInterval } from "./types";
 
 export type DBBSettings = {
 	apiBaseUrl: string;
-	pluginToken: string;
 	vaultId: string;
 	deviceId: string;
 	scopeGlob: string;
@@ -17,7 +16,6 @@ declare const DBB_API_BASE_URL: string;
 
 export const DEFAULT_SETTINGS: DBBSettings = {
 	apiBaseUrl: typeof DBB_API_BASE_URL !== "undefined" ? DBB_API_BASE_URL : "http://localhost:3001",
-	pluginToken: "",
 	vaultId: "",
 	deviceId: "",
 	scopeGlob: "",
@@ -46,7 +44,6 @@ export function normalizeSettings(overrides?: Partial<DBBSettings>): DBBSettings
 
 	return {
 		apiBaseUrl: merged.apiBaseUrl,
-		pluginToken: merged.pluginToken,
 		vaultId: merged.vaultId,
 		deviceId: merged.deviceId,
 		scopeGlob: merged.scopeGlob,
@@ -61,6 +58,8 @@ export type SettingsOwner = Plugin & {
 	saveSettings: () => Promise<void>;
 	syncer?: Syncer;
 	resetSyncState: () => Promise<void>;
+	getToken: () => string;
+	setToken: (token: string) => void;
 };
 
 export class DBBSettingTab extends PluginSettingTab {
@@ -89,23 +88,20 @@ export class DBBSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		new Setting(containerEl)
+		const tokenSetting = new Setting(containerEl)
 			.setName("Plugin token")
-			.setDesc("Provided by the Daily Brain Bits backend.")
-			.addText((text) =>
-				text
-					.setPlaceholder("paste token")
-					.setValue(this.plugin.settings.pluginToken)
-					.onChange(async (value) => {
-						const nextToken = value.trim();
-						const prevToken = this.plugin.settings.pluginToken;
-						this.plugin.settings.pluginToken = nextToken;
-						await this.plugin.saveSettings();
-						if (nextToken && nextToken !== prevToken) {
-							await this.plugin.syncer?.refreshConnection();
-						}
-					}),
-			);
+			.setDesc("Provided by the Daily Brain Bits backend. Stored securely via Obsidian's secret storage.");
+
+		new SecretComponent(this.app, tokenSetting.controlEl)
+			.setValue(this.plugin.getToken())
+			.onChange(async (value) => {
+				const nextToken = value.trim();
+				const prevToken = this.plugin.getToken();
+				this.plugin.setToken(nextToken);
+				if (nextToken && nextToken !== prevToken) {
+					await this.plugin.syncer?.refreshConnection();
+				}
+			});
 
 		new Setting(containerEl).setName("Scope").setDesc("Scope only affects what this plugin syncs.").setHeading();
 

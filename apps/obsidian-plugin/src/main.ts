@@ -5,6 +5,8 @@ import { mergePluginData } from "./storage";
 import type { LocalIndex } from "./types";
 import { Syncer } from "./syncer";
 
+const SECRET_KEY = "dbb-plugin-token";
+
 export default class DailyBrainBitsPlugin extends Plugin {
 	settings = normalizeSettings();
 	index: LocalIndex = {
@@ -12,6 +14,7 @@ export default class DailyBrainBitsPlugin extends Plugin {
 		lastSyncAt: null,
 	};
 	syncer!: Syncer;
+	private pluginToken = "";
 
 	async onload() {
 		const data = mergePluginData(await this.loadData());
@@ -19,12 +22,23 @@ export default class DailyBrainBitsPlugin extends Plugin {
 		this.index = data.index;
 		this.ensureIds();
 
+		// Load token from secret storage
+		this.pluginToken = this.app.secretStorage.getSecret(SECRET_KEY) ?? "";
+
+		// Migrate legacy token from settings if exists
+		const rawData = (await this.loadData()) as { settings?: { pluginToken?: string } } | null;
+		if (rawData?.settings?.pluginToken && !this.pluginToken) {
+			this.pluginToken = rawData.settings.pluginToken;
+			this.app.secretStorage.setSecret(SECRET_KEY, this.pluginToken);
+			// Remove from settings by re-saving without pluginToken
+		}
+
 		await this.saveData({
 			settings: this.settings,
 			index: this.index,
 		});
 
-		this.syncer = new Syncer(this.app, this.settings, this.index, () => this.saveData({ settings: this.settings, index: this.index }));
+		this.syncer = new Syncer(this.app, this.settings, this.index, () => this.getToken(), () => this.saveData({ settings: this.settings, index: this.index }));
 
 		this.addSettingTab(new DBBSettingTab(this.app, this));
 
@@ -96,6 +110,18 @@ export default class DailyBrainBitsPlugin extends Plugin {
 		}
 		if (!this.settings.deviceId) {
 			this.settings.deviceId = crypto.randomUUID();
+		}
+	}
+
+	getToken(): string {
+		return this.pluginToken;
+	}
+
+	setToken(token: string): void {
+		this.pluginToken = token;
+		this.app.secretStorage.setSecret(SECRET_KEY, token);
+		if (this.syncer) {
+			this.syncer.updateToken(token);
 		}
 	}
 }

@@ -15,12 +15,14 @@ export class Syncer {
 	private pathFilter: (path: string) => boolean;
 	private rpcClient: RPCClient;
 	private syncOperations: SyncOperations;
+	private getToken: () => string;
 	private saveData: () => Promise<void>;
 
-	constructor(app: App, settings: DBBSettings, index: LocalIndex, saveData: () => Promise<void>) {
+	constructor(app: App, settings: DBBSettings, index: LocalIndex, getToken: () => string, saveData: () => Promise<void>) {
 		this.app = app;
 		this.settings = settings;
 		this.index = index;
+		this.getToken = getToken;
 		this.saveData = saveData;
 		this.status = {
 			lastSyncAt: null,
@@ -29,15 +31,19 @@ export class Syncer {
 		};
 		this.pathFilter = buildScopeFilter(settings.scopeGlob);
 
-		this.rpcClient = new RPCClient(settings.apiBaseUrl, settings.pluginToken);
+		this.rpcClient = new RPCClient(settings.apiBaseUrl, getToken());
 		this.syncOperations = new SyncOperations(app, settings, index, this.status, this.rpcClient);
 	}
 
 	updateSettings(settings: DBBSettings) {
 		this.settings = settings;
 		this.pathFilter = buildScopeFilter(settings.scopeGlob);
-		this.rpcClient.updateSettings(settings.apiBaseUrl, settings.pluginToken);
+		this.rpcClient.updateSettings(settings.apiBaseUrl, this.getToken());
 		this.syncOperations.updateSettings(settings);
+	}
+
+	updateToken(token: string) {
+		this.rpcClient.updateSettings(this.settings.apiBaseUrl, token);
 	}
 
 	getStatus(): SyncStatus {
@@ -58,7 +64,7 @@ export class Syncer {
 
 	async refreshConnection() {
 		this.status.lastError = null;
-		if (!this.settings.apiBaseUrl || !this.settings.vaultId || !this.settings.deviceId || !this.settings.pluginToken) {
+		if (!this.settings.apiBaseUrl || !this.settings.vaultId || !this.settings.deviceId || !this.getToken()) {
 			this.status.lastError = "missing_settings";
 			new Notice("Daily Brain Bits: missing API base URL, Vault ID, Device ID, or API token.");
 			return;
@@ -105,7 +111,7 @@ export class Syncer {
 	async fullSync() {
 		this.status.lastError = null;
 
-		if (!this.settings.apiBaseUrl || !this.settings.vaultId || !this.settings.deviceId || !this.settings.pluginToken) {
+		if (!this.settings.apiBaseUrl || !this.settings.vaultId || !this.settings.deviceId || !this.getToken()) {
 			this.status.lastError = "missing_settings";
 			new Notice("Daily Brain Bits: missing settings. Please configure the plugin.");
 			return;
