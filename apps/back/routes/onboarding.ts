@@ -1,4 +1,4 @@
-import { db, documents, integrationConnections, noteDigests, syncRuns, user } from "@daily-brain-bits/db";
+import { db, documents, integrationConnections, noteDigestItems, noteDigests, syncRuns, user } from "@daily-brain-bits/db";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -63,11 +63,22 @@ const status = sessionRoute
 
 		const digest = await db.query.noteDigests.findFirst({
 			where: eq(noteDigests.userId, userId),
-			columns: { id: true },
+			columns: { id: true, status: true },
 			orderBy: [desc(noteDigests.createdAt)],
 		});
 
-		const noteDigestReady = Boolean(digest?.id);
+		// Check if digest has items (only if digest exists)
+		const hasItems = digest
+			? Boolean(
+					await db.query.noteDigestItems.findFirst({
+						where: eq(noteDigestItems.noteDigestId, digest.id),
+						columns: { id: true },
+					}),
+				)
+			: false;
+
+		// Digest is only "ready" if it exists, is not skipped, and has at least one item
+		const noteDigestReady = Boolean(digest?.id && digest.status !== "skipped" && hasItems);
 
 		const hasDocuments = Boolean(
 			await db.query.documents.findFirst({

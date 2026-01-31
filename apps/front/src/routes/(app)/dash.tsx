@@ -127,6 +127,16 @@ function AppPage() {
 						<p className="mt-2 max-w-[300px] text-[15px] text-muted-foreground">
 							We're syncing your notes. Check back in a few minutes—or wait for it in your inbox.
 						</p>
+						<Button
+							variant="outline"
+							size="sm"
+							className="mt-6 gap-2"
+							disabled={regenerateMutation.isPending}
+							onClick={() => regenerateMutation.mutate({})}
+						>
+							{regenerateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+							{regenerateMutation.isPending ? "Generating..." : "Generate digest now"}
+						</Button>
 					</div>
 				) : (
 					<>

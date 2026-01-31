@@ -118,10 +118,10 @@ function PreviewPage() {
 				)}
 
 				<div className="flex flex-wrap items-center justify-end gap-3">
-					<Button type="button" variant="outline" onClick={() => router.navigate({ to: "/onboarding/preferences" })}>
+					<Button type="button" variant="outline" onClick={() => router.navigate({ to: "/onboarding/preferences" })} disabled={items.length === 0}>
 						Customize delivery
 					</Button>
-					<Button type="button" onClick={() => router.navigate({ to: "/onboarding/onboarding-final" })}>
+					<Button type="button" onClick={() => router.navigate({ to: "/onboarding/onboarding-final" })} disabled={items.length === 0}>
 						Finish setup
 						<span aria-hidden="true">→</span>
 					</Button>

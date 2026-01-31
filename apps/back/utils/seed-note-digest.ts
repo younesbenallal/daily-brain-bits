@@ -8,11 +8,12 @@ export type SeedDigestResult =
 export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDigestResult> {
 	const existing = await db.query.noteDigests.findFirst({
 		where: eq(noteDigests.userId, userId),
-		columns: { id: true },
+		columns: { id: true, status: true },
 		orderBy: [desc(noteDigests.createdAt)],
 	});
 
-	if (existing?.id) {
+	// Allow seeding if no digest exists OR if the existing one was skipped (e.g., cron ran before sync)
+	if (existing?.id && existing.status !== "skipped") {
 		return { created: false, reason: "already_exists" };
 	}
 
@@ -33,29 +34,49 @@ export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDige
 		return { created: false, reason: "no_documents" };
 	}
 
-	console.log("[noteDigest] Creating seed digest with documents", {
-		userId,
-		documentCount: seedDocuments.length,
-	});
-
 	const now = new Date();
-	const [digest] = await db
-		.insert(noteDigests)
-		.values({
-			userId,
-			scheduledFor: now,
-			status: "scheduled",
-		})
-		.returning({ id: noteDigests.id });
+	let digestId: number;
 
-	if (!digest?.id) {
-		console.error("[noteDigest] Failed to create seed digest", { userId });
-		return { created: false, reason: "insert_failed" };
+	// If we have a skipped digest, update it instead of creating a new one
+	if (existing?.id && existing.status === "skipped") {
+		console.log("[noteDigest] Updating skipped digest with documents", {
+			userId,
+			digestId: existing.id,
+			documentCount: seedDocuments.length,
+		});
+
+		await db
+			.update(noteDigests)
+			.set({ status: "scheduled", scheduledFor: now, updatedAt: now })
+			.where(eq(noteDigests.id, existing.id));
+
+		digestId = existing.id;
+	} else {
+		console.log("[noteDigest] Creating seed digest with documents", {
+			userId,
+			documentCount: seedDocuments.length,
+		});
+
+		const [digest] = await db
+			.insert(noteDigests)
+			.values({
+				userId,
+				scheduledFor: now,
+				status: "scheduled",
+			})
+			.returning({ id: noteDigests.id });
+
+		if (!digest?.id) {
+			console.error("[noteDigest] Failed to create seed digest", { userId });
+			return { created: false, reason: "insert_failed" };
+		}
+
+		digestId = digest.id;
 	}
 
 	await db.insert(noteDigestItems).values(
 		seedDocuments.map((doc, index) => ({
-			noteDigestId: digest.id,
+			noteDigestId: digestId,
 			documentId: doc.id,
 			position: index + 1,
 			contentHashAtSend: doc.contentHash,
@@ -64,9 +85,9 @@ export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDige
 
 	console.log("[noteDigest] Seed digest created successfully", {
 		userId,
-		digestId: digest.id,
+		digestId,
 		itemCount: seedDocuments.length,
 	});
 
-	return { created: true, digestId: digest.id, itemCount: seedDocuments.length };
+	return { created: true, digestId, itemCount: seedDocuments.length };
 }
