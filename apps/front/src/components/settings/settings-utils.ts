@@ -24,6 +24,7 @@ export function useSettingsCapabilities() {
 				limits: {
 					maxNotes: capabilities.entitlements.limits.maxNotes ?? Number.POSITIVE_INFINITY,
 					maxSources: capabilities.entitlements.limits.maxSources ?? Number.POSITIVE_INFINITY,
+					maxNotesPerDigest: capabilities.entitlements.limits.maxNotesPerDigest,
 				},
 			}
 		: null;

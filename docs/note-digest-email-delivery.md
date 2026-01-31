@@ -56,10 +56,35 @@
 4. For each due user:
    - Find today's scheduled digest (using **local day** comparison, not UTC).
    - If the digest has no items, mark it as `skipped`.
-5. Render React Email + text email from the stored digest snapshot.
-6. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
-7. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
-8. On failure: mark digest `failed` and store `error_json`.
+5. **Detect first digest**: If the user has no previous `sent` digests (`lastSentAt` is null), this is their first digest.
+6. For first digests, fetch additional context: total document count and primary source label.
+7. Render React Email + text email from the stored digest snapshot, with `isFirstDigest` flag for welcome messaging.
+8. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
+9. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
+10. On failure: mark digest `failed` and store `error_json`.
+
+### First Digest Welcome Messaging
+
+When a user receives their **first digest** (detected via `!lastSentAt`), the email includes special welcome content:
+
+**Subject**: "Your first Brain Bits are ready! (X notes)"
+
+**Content differences from regular digests**:
+- Personalized headline: "Your first Brain Bits are ready, {name}!"
+- Context line: "We've surfaced X notes from your {Notion/Obsidian} out of Y synced notes using spaced repetition"
+- "What happens next" section explaining:
+  - Next digest timing and frequency
+  - How to star/skip notes for better recommendations
+  - Link to settings to adjust preferences
+- Soft Pro upgrade mention (for free users only)
+- Reply invitation from founder
+
+**Parameters passed to `buildDigestEmail()`**:
+- `isFirstDigest: boolean` — detected via `!lastSentAt`
+- `totalNoteCount: number` — total synced documents for the user
+- `sourceLabel: string | null` — primary integration label (e.g., "Obsidian" or "Notion (My Workspace)")
+- `isPro: boolean` — whether user has Pro subscription
+- `founderEmail: string` — reply-to email address
 
 ### Trigger.dev schedule (recommended for production)
 

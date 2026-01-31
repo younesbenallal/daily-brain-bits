@@ -26,6 +26,7 @@ export function applySelfHostedOverrides(entitlements: ReturnType<typeof buildUs
 		limits: {
 			maxNotes: Number.POSITIVE_INFINITY,
 			maxSources: Number.POSITIVE_INFINITY,
+			maxNotesPerDigest: entitlements.limits.maxNotesPerDigest,
 		},
 	};
 }

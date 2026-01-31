@@ -30,6 +30,7 @@ function PreferencesPage() {
 	const { capabilities, entitlements } = useSettingsCapabilities();
 	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
 	const canUseQuizzes = entitlements?.features.aiQuizzes ?? isPro;
+	const maxNotesPerDigest = entitlements?.limits.maxNotesPerDigest ?? 5;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const timezoneOptions = useMemo(() => {
 		if (typeof Intl !== "undefined" && typeof (Intl as any).supportedValuesOf === "function") {
@@ -119,7 +120,7 @@ function PreferencesPage() {
 								type="number"
 								name="notes-per-digest"
 								min={1}
-								max={50}
+								max={maxNotesPerDigest}
 								inputMode="numeric"
 								className="w-24 rounded border bg-background px-2 py-1 text-right"
 								value={notesPerDigest}
@@ -130,7 +131,7 @@ function PreferencesPage() {
 										setNotesPerDigest(5);
 										return;
 									}
-									setNotesPerDigest(Math.min(50, Math.max(1, nextValue)));
+									setNotesPerDigest(Math.min(maxNotesPerDigest, Math.max(1, nextValue)));
 								}}
 							/>
 							{billingEnabled && !isPro ? <span className="text-xs text-muted-foreground">Pro only</span> : null}

@@ -4,6 +4,7 @@ export type PlanId = (typeof PLAN_IDS)[number];
 export type PlanLimits = {
 	maxNotes: number;
 	maxSources: number;
+	maxNotesPerDigest: number;
 };
 
 export type PlanFeatures = {
@@ -24,7 +25,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 	free: {
 		id: "free",
 		name: "Free",
-		limits: { maxNotes: 500, maxSources: 1 },
+		limits: { maxNotes: 500, maxSources: 1, maxNotesPerDigest: 5 },
 		features: {
 			dailyDigest: false,
 			weeklyDigest: true,
@@ -35,7 +36,7 @@ export const PLANS: Record<PlanId, PlanConfig> = {
 	pro: {
 		id: "pro",
 		name: "Pro",
-		limits: { maxNotes: 10_000, maxSources: Number.POSITIVE_INFINITY },
+		limits: { maxNotes: 10_000, maxSources: Number.POSITIVE_INFINITY, maxNotesPerDigest: 50 },
 		features: {
 			dailyDigest: true,
 			weeklyDigest: true,

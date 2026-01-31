@@ -38,6 +38,7 @@ const capabilitiesSchema = z.object({
 		limits: z.object({
 			maxNotes: z.number().nullable(),
 			maxSources: z.number().nullable(),
+			maxNotesPerDigest: z.number(),
 		}),
 		features: z.object({
 			dailyDigest: z.boolean(),
@@ -91,24 +92,33 @@ const update = sessionRoute
 			throw new ORPCError("Unauthorized");
 		}
 
+		const entitlements = await getUserEntitlements(userId);
+		const maxNotesPerDigest = entitlements.limits.maxNotesPerDigest;
+		const clampedNotesPerDigest = Math.min(input.notesPerDigest, maxNotesPerDigest);
+
+		const settingsToSave = {
+			...input,
+			notesPerDigest: clampedNotesPerDigest,
+		};
+
 		const now = new Date();
 
 		await db
 			.insert(userSettings)
 			.values({
 				userId,
-				...input,
+				...settingsToSave,
 				updatedAt: now,
 			})
 			.onConflictDoUpdate({
 				target: userSettings.userId,
 				set: {
-					...input,
+					...settingsToSave,
 					updatedAt: now,
 				},
 			});
 
-		return { settings: input };
+		return { settings: settingsToSave };
 	});
 
 const capabilities = sessionRoute
@@ -140,6 +150,7 @@ const capabilities = sessionRoute
 					limits: {
 						maxNotes: serializeLimit(entitlements.limits.maxNotes),
 						maxSources: serializeLimit(entitlements.limits.maxSources),
+						maxNotesPerDigest: entitlements.limits.maxNotesPerDigest,
 					},
 				},
 				usage: {

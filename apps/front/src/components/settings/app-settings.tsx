@@ -15,6 +15,8 @@ export function AppSettings() {
 	const isPro = entitlements?.planId === "pro" || capabilities?.isPro || false;
 	const canUseDaily = entitlements?.features.dailyDigest ?? isPro;
 	const canUseQuizzes = entitlements?.features.aiQuizzes ?? isPro;
+	const canChangeNotesPerDigest = isPro;
+	const maxNotesPerDigest = entitlements?.limits.maxNotesPerDigest ?? 5;
 	const billingEnabled = capabilities?.billingEnabled ?? true;
 	const frequencyOptions = useMemo(
 		() =>
@@ -133,23 +135,26 @@ export function AppSettings() {
 						<div>
 							<div className="font-medium">Notes per digest</div>
 							<div className="text-sm text-muted-foreground">How many notes should we include in each email?</div>
+							{!canChangeNotesPerDigest ? (
+								<p className="mt-1 text-xs text-muted-foreground">Customizable notes per digest is available on Pro.</p>
+							) : null}
 						</div>
 						<input
 							type="number"
 							name="notes-per-digest"
 							min={1}
-							max={50}
+							max={maxNotesPerDigest}
 							inputMode="numeric"
 							className="w-20 rounded border bg-background px-2 py-1 text-right"
 							value={notesPerDigest}
-							disabled={isBusy}
+							disabled={isBusy || !canChangeNotesPerDigest}
 							onChange={(event) => {
 								const nextValue = Number(event.target.value);
 								if (Number.isNaN(nextValue)) {
 									setNotesPerDigest(1);
 									return;
 								}
-								setNotesPerDigest(Math.min(50, Math.max(1, nextValue)));
+								setNotesPerDigest(Math.min(maxNotesPerDigest, Math.max(1, nextValue)));
 							}}
 						/>
 					</div>

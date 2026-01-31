@@ -4,10 +4,10 @@ This document is the single source of truth for Daily Brain Bits pricing, limits
 
 ## Hosted Plans
 
-| Plan | Price | Notes Limit | Sources | Email Frequency | AI Quizzes |
-|------|-------|-------------|---------|-----------------|------------|
-| Free | $0 | 500 | 1 | Weekly / Monthly | No |
-| Pro | $10/mo | 10,000 | Unlimited | Daily | Yes |
+| Plan | Price | Notes Limit | Sources | Email Frequency | Notes/Digest | AI Quizzes |
+|------|-------|-------------|---------|-----------------|--------------|------------|
+| Free | $0 | 500 | 1 | Weekly / Monthly | 5 (fixed) | No |
+| Pro | $10/mo | 10,000 | Unlimited | Daily | 1-50 | Yes |
 
 ### Plan Details
 
@@ -23,9 +23,9 @@ This document is the single source of truth for Daily Brain Bits pricing, limits
 
 ## Self-Hosted (Open Source)
 
-| Plan | Price | Notes Limit | Sources | Email Frequency | AI Quizzes |
-|------|-------|-------------|---------|-----------------|------------|
-| OSS | $0 | Unlimited | Unlimited | All | Yes (BYO LLM keys) |
+| Plan | Price | Notes Limit | Sources | Email Frequency | Notes/Digest | AI Quizzes |
+|------|-------|-------------|---------|-----------------|--------------|------------|
+| OSS | $0 | Unlimited | Unlimited | All | 1-50 | Yes (BYO LLM keys) |
 
 - No Polar billing integration
 - User provides own infrastructure, email delivery, and LLM API keys
@@ -37,6 +37,7 @@ This document is the single source of truth for Daily Brain Bits pricing, limits
 |-------------|------|-----|-------------|
 | `maxNotes` | 500 | 10,000 | Unlimited |
 | `maxSources` | 1 | Unlimited | Unlimited |
+| `maxNotesPerDigest` | 5 | 50 | 50 |
 | `dailyEmails` | No | Yes | Yes |
 | `weeklyEmails` | Yes | Yes | Yes |
 | `monthlyEmails` | Yes | Yes | Yes |
