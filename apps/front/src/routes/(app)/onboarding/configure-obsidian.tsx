@@ -48,7 +48,7 @@ function ConfigureObsidianPage() {
 				throw new Error(listResult.error.message || "Failed to list API keys.");
 			}
 			const existing = Array.isArray(listResult?.data) ? listResult.data : [];
-			const obsidianKeys = existing.filter((key) => key.prefix === "dbb_obsidian" || key.name === "Obsidian Plugin");
+			const obsidianKeys = existing.filter((key) => key.prefix === "dbb_obsidian_" || key.name === "Obsidian Plugin");
 
 			if (obsidianKeys.length > 0) {
 				await Promise.all(
@@ -63,7 +63,7 @@ function ConfigureObsidianPage() {
 
 			const createResult = await authClient.apiKey.create({
 				name: "Obsidian Plugin",
-				prefix: "dbb_obsidian",
+				prefix: "dbb_obsidian_",
 				metadata: {
 					integration: "obsidian",
 				},

@@ -10,7 +10,7 @@
 		"type-check": "tsc --noEmit --incremental",
 		"test": "bun test",
 		"clean": "rm -rf dist",
-		"package": "bun run build && mkdir -p \"$HOME/Desktop/projects/daily-brain-bits/test dbb/.obsidian/plugins/daily-brain-bits\" && cp manifest.json dist/main.js \"$HOME/Desktop/projects/daily-brain-bits/test dbb/.obsidian/plugins/daily-brain-bits/\"",
+		"package": "bun run build:prod && mkdir -p out/daily-brain-bits && cp manifest.json dist/main.js out/daily-brain-bits/",
 		"deploy": "bun run build && mkdir -p \"$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/YOUNES/.obsidian/plugins/daily-brain-bits\" && cp manifest.json dist/main.js \"$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/YOUNES/.obsidian/plugins/daily-brain-bits/\""
 	},
 	"dependencies": {

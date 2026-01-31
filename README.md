@@ -86,9 +86,11 @@ The Obsidian plugin enables push-based sync from your vault to Daily Brain Bits.
 
    ![Plugin settings](docs/assets/obsidian-settings.jpg)
 
-2. **Enter your API token:**
+2. **Enter your plugin token:**
    - Get your token from the [DBB dashboard](https://dbb.notionist.app/settings)
-   - Paste it in the **API Token** field
+   - Click the **Link** button next to the **Plugin token** field
+   - In the modal, the **ID** is just a label (can be anything, e.g., `dbb-token`)
+   - Paste your token in the **Secret** field and click **Save**
 
 3. **Configure filters** (optional):
    - Use glob patterns to include/exclude notes

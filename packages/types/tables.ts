@@ -5,7 +5,6 @@ import type {
 	integrationScopeItems,
 	integrationScopeType,
 	integrationStatus,
-	userSettings,
 	noteDigestItems,
 	noteDigestStatus,
 	noteDigests,
@@ -16,6 +15,7 @@ import type {
 	syncRunStatus,
 	syncRuns,
 	syncState,
+	userSettings,
 } from "@daily-brain-bits/db";
 
 export type IntegrationKind = (typeof integrationKind.enumValues)[number];
