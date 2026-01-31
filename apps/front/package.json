@@ -17,6 +17,8 @@
 		"@orpc/react-query": "^1.13.1",
 		"@polar-sh/better-auth": "^1.6.4",
 		"@ridemountainpig/svgl-react": "^1.0.14",
+		"@sentry/react": "^10.38.0",
+		"@sentry/vite-plugin": "^4.8.0",
 		"@tanstack/react-query": "^5.60.5",
 		"@tanstack/react-router": "^1.114.3",
 		"@tanstack/router-devtools": "^1.114.3",

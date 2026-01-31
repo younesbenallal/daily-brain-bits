@@ -11,10 +11,12 @@
 	},
 	"dependencies": {
 		"@daily-brain-bits/back": "workspace:*",
+		"@sentry/node": "^10.38.0",
 		"@trigger.dev/sdk": "4.3.3"
 	},
 	"devDependencies": {
 		"@daily-brain-bits/typescript-config": "workspace:*",
+		"@sentry/esbuild-plugin": "^4.8.0",
 		"@trigger.dev/build": "4.3.3",
 		"typescript": "^5.6.0"
 	}

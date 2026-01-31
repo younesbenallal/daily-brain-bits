@@ -1,6 +1,7 @@
 import { auth } from "@daily-brain-bits/auth";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
+import * as Sentry from "@sentry/node";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { digestRouter } from "./routes/digest";
@@ -10,8 +11,17 @@ import { onboardingRouter } from "./routes/onboarding";
 import { handleResendWebhook } from "./routes/resend-webhook";
 import { settingsRouter } from "./routes/settings";
 import { usageRouter } from "./routes/usage";
-import { createApiKeySession } from "./infra/api-key";
+import { createApiKeySession, verifyApiKeyManually } from "./infra/api-key";
 import { env } from "./infra/env";
+
+// Initialize Sentry
+if (env.SENTRY_DSN) {
+	Sentry.init({
+		dsn: env.SENTRY_DSN,
+		environment: env.NODE_ENV,
+		tracesSampleRate: 1.0,
+	});
+}
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,
@@ -44,33 +54,31 @@ const app = new Hono<{ Variables: RequestContext }>()
 		if (session) {
 			c.set("user", session.user);
 			c.set("session", session.session);
+			if (env.SENTRY_DSN) {
+				Sentry.setUser({ id: session.user.id, email: session.user.email });
+			}
 			return next();
 		}
 
 		// If no session, check for API key authentication
+		// Uses manual verification as workaround for Better Auth bug: https://github.com/better-auth/better-auth/issues/6258
 		const apiKeyHeader = c.req.header("x-api-key") || c.req.header("authorization")?.replace("Bearer ", "");
 		if (apiKeyHeader) {
-			try {
-				const verifyResult = await auth.api.verifyApiKey({
-					body: { key: apiKeyHeader },
-				});
+			const verifyResult = await verifyApiKeyManually(apiKeyHeader);
 
-				if (verifyResult.valid && verifyResult.key) {
-					const keyData = verifyResult.key;
-					const { user, session } = createApiKeySession(
-						{
-							id: keyData.id,
-							userId: keyData.userId,
-							expiresAt: keyData.expiresAt ? new Date(keyData.expiresAt) : null,
-						},
-						apiKeyHeader,
-					);
-					c.set("user", user as typeof auth.$Infer.Session.user);
-					c.set("session", session as typeof auth.$Infer.Session.session);
-					return next();
-				}
-			} catch {
-				// API key invalid, continue without authentication
+			if (verifyResult.valid && verifyResult.key) {
+				const keyData = verifyResult.key;
+				const { user, session } = createApiKeySession(
+					{
+						id: keyData.id,
+						userId: keyData.userId,
+						expiresAt: keyData.expiresAt,
+					},
+					apiKeyHeader,
+				);
+				c.set("user", user as typeof auth.$Infer.Session.user);
+				c.set("session", session as typeof auth.$Infer.Session.session);
+				return next();
 			}
 		}
 
@@ -99,6 +107,14 @@ const app = new Hono<{ Variables: RequestContext }>()
 				},
 				"Error in oRPC route handler",
 			);
+
+			// Capture exception with Sentry
+			if (env.SENTRY_DSN) {
+				Sentry.captureException(error, {
+					user: { id: c.get("user")?.id, email: c.get("user")?.email },
+					extra: { path: c.req.raw.url },
+				});
+			}
 
 			// Re-throw the error to let oRPC handle it properly
 			throw error;

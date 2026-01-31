@@ -56,6 +56,7 @@ const schema = z.object({
 	NOTION_API_KEY: optionalString,
 	NOTION_TOKEN: optionalString,
 	NOTION_DATABASE_ID: optionalString,
+	SENTRY_DSN: optionalString,
 });
 
 const result = schema.safeParse(process.env);
