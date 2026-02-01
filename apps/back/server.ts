@@ -49,18 +49,7 @@ const app = new Hono<{ Variables: RequestContext }>()
 	.post("/webhooks/resend", handleResendWebhook)
 	.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
 	.use("*", async (c, next) => {
-		// First try regular session authentication
-		const session = await auth.api.getSession({ headers: c.req.raw.headers });
-		if (session) {
-			c.set("user", session.user);
-			c.set("session", session.session);
-			if (env.SENTRY_DSN) {
-				Sentry.setUser({ id: session.user.id, email: session.user.email });
-			}
-			return next();
-		}
-
-		// If no session, check for API key authentication
+		// Check for API key authentication first (before session)
 		// Uses manual verification as workaround for Better Auth bug: https://github.com/better-auth/better-auth/issues/6258
 		const apiKeyHeader = c.req.header("x-api-key") || c.req.header("authorization")?.replace("Bearer ", "");
 		if (apiKeyHeader) {
@@ -80,6 +69,21 @@ const app = new Hono<{ Variables: RequestContext }>()
 				c.set("session", session as typeof auth.$Infer.Session.session);
 				return next();
 			}
+			// API key provided but invalid - don't fallback to session
+			c.set("user", null);
+			c.set("session", null);
+			return next();
+		}
+
+		// No API key, try regular session authentication
+		const session = await auth.api.getSession({ headers: c.req.raw.headers });
+		if (session) {
+			c.set("user", session.user);
+			c.set("session", session.session);
+			if (env.SENTRY_DSN) {
+				Sentry.setUser({ id: session.user.id, email: session.user.email });
+			}
+			return next();
 		}
 
 		c.set("user", null);

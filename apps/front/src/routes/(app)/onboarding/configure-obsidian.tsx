@@ -127,12 +127,7 @@ function ConfigureObsidianPage() {
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-foreground">Install the plugin</p>
 					<p className="text-sm text-muted-foreground">Open the GitHub repo to follow the plugin install steps.</p>
-					<Button
-						type="button"
-						variant="outline"
-						className="gap-2 bg-white"
-						onClick={() => window.open(pluginInstallUrl, "_blank", "noopener,noreferrer")}
-					>
+					<Button type="button" variant="outline" className="gap-2 " onClick={() => window.open(pluginInstallUrl, "_blank", "noopener,noreferrer")}>
 						Open GitHub install guide
 					</Button>
 				</div>
@@ -144,7 +139,7 @@ function ConfigureObsidianPage() {
 						<Button
 							type="button"
 							variant="outline"
-							className="gap-2 bg-white"
+							className="gap-2 "
 							onClick={() => generateKeyMutation.mutate()}
 							disabled={generateKeyMutation.isPending}
 						>
@@ -156,7 +151,7 @@ function ConfigureObsidianPage() {
 						<div className="flex flex-col gap-2">
 							<Input readOnly value={apiKey} className="font-mono" />
 							<div className="flex items-center gap-2">
-								<Button type="button" variant="outline" className="gap-2 bg-white" onClick={handleCopy}>
+								<Button type="button" variant="outline" className="gap-2 " onClick={handleCopy}>
 									{copyState === "copied" ? <CheckIcon className="h-4 w-4" /> : <CopyIcon className="h-4 w-4" />}
 									{copyState === "copied" ? "Copied" : "Copy token"}
 								</Button>

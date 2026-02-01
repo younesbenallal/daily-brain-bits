@@ -1,4 +1,4 @@
-import { type App, type Plugin, PluginSettingTab, SecretComponent, Setting } from "obsidian";
+import { type App, type Plugin, PluginSettingTab, Setting } from "obsidian";
 import type { Syncer } from "./syncer";
 import type { SyncInterval } from "./types";
 
@@ -88,19 +88,23 @@ export class DBBSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		const tokenSetting = new Setting(containerEl)
+		new Setting(containerEl)
 			.setName("Plugin token")
-			.setDesc("Provided by the Daily Brain Bits backend. Stored securely via Obsidian's secret storage.");
-
-		new SecretComponent(this.app, tokenSetting.controlEl)
-			.setValue(this.plugin.getToken())
-			.onChange(async (value) => {
-				const nextToken = value.trim();
-				const prevToken = this.plugin.getToken();
-				this.plugin.setToken(nextToken);
-				if (nextToken && nextToken !== prevToken) {
-					await this.plugin.syncer?.refreshConnection();
-				}
+			.setDesc("Provided by the Daily Brain Bits dashboard. Stored securely in Obsidian's secret storage.")
+			.addText((text) => {
+				text.setPlaceholder("dbb_obsidian_...")
+					.setValue(this.plugin.getToken())
+					.onChange(async (value) => {
+						const nextToken = value.trim();
+						const prevToken = this.plugin.getToken();
+						this.plugin.setToken(nextToken);
+						if (nextToken && nextToken !== prevToken) {
+							await this.plugin.syncer?.refreshConnection();
+						}
+					});
+				// Style as password field
+				text.inputEl.type = "password";
+				text.inputEl.style.width = "300px";
 			});
 
 		new Setting(containerEl).setName("Scope").setDesc("Scope only affects what this plugin syncs.").setHeading();

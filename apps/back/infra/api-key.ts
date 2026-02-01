@@ -19,11 +19,7 @@ export async function verifyApiKeyManually(key: string): Promise<{
 	const hash = hashApiKey(key);
 
 	const result = await db.query.apikey.findFirst({
-		where: and(
-			eq(apikey.key, hash),
-			eq(apikey.enabled, true),
-			or(isNull(apikey.expiresAt), gt(apikey.expiresAt, new Date())),
-		),
+		where: and(eq(apikey.key, hash), eq(apikey.enabled, true), or(isNull(apikey.expiresAt), gt(apikey.expiresAt, new Date()))),
 		columns: {
 			id: true,
 			userId: true,
