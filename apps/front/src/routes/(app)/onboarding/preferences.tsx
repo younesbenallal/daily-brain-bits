@@ -190,7 +190,7 @@ function PreferencesPage() {
 				</div>
 
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<Button type="button" variant="ghost" onClick={() => router.navigate({ to: "/onboarding/preview" })}>
+					<Button type="button" variant="ghost" onClick={() => router.navigate({ to: "/onboarding/onboarding-final" })}>
 						← Back
 					</Button>
 					<Button

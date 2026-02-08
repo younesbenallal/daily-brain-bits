@@ -37,13 +37,12 @@ function OnboardingFinalPage() {
 	}, [canProceed, router, statusQuery.isLoading]);
 
 	const intervalDays = settings ? Math.max(minIntervalDays, settings.digestIntervalDays) : 7;
-	const timeLabel =
-		settings && settings.timezone
-			? `${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
-					hour: "numeric",
-					minute: "2-digit",
-				})} (${settings.timezone})`
-			: null;
+	const timeLabel = settings?.timezone
+		? `${new Date(0, 0, 0, settings.preferredSendHour).toLocaleTimeString(undefined, {
+				hour: "numeric",
+				minute: "2-digit",
+			})} (${settings.timezone})`
+		: null;
 	const frequencyLabel = formatIntervalLabel(intervalDays);
 	const frequencyCopy = frequencyLabel.toLowerCase();
 	const scheduleLabel = `${frequencyLabel}${timeLabel ? ` at ${timeLabel}` : ""}`;
@@ -61,9 +60,9 @@ function OnboardingFinalPage() {
 		>
 			<div className="space-y-6">
 				<div className="space-y-3">
-					<h1 className="font-display text-3xl text-primary">You’re all set</h1>
+					<h1 className="font-display text-3xl text-primary">You're all set</h1>
 					<p className="text-sm text-muted-foreground">
-						Your notes are connected. Your first digest arrives {frequencyCopy}
+						Your notes are connected and your first digest is on the way. Expect it {frequencyCopy}
 						{timeLabel ? ` at ${timeLabel}` : ""}.
 					</p>
 				</div>
@@ -74,7 +73,10 @@ function OnboardingFinalPage() {
 					<p className="mt-2 text-sm text-muted-foreground">You can change this anytime in Settings.</p>
 				</div>
 
-				<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="flex flex-wrap items-center justify-end gap-3">
+					<Button type="button" variant="outline" onClick={() => router.navigate({ to: "/onboarding/preferences" })}>
+						Customize delivery
+					</Button>
 					<Button
 						type="button"
 						disabled={completeMutation.isPending}
@@ -87,7 +89,6 @@ function OnboardingFinalPage() {
 						<span aria-hidden="true">→</span>
 					</Button>
 				</div>
-				<p className="text-xs text-muted-foreground">Manage your connected sources in Settings → Integrations.</p>
 			</div>
 		</OnboardingLayout>
 	);
