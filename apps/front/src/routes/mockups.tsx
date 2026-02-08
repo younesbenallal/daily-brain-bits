@@ -124,7 +124,7 @@ function MockupRow({
 
 				{/* Component in context */}
 				<div className={`flex items-center justify-center rounded-xl ${bgColor} p-8`}>
-					<div className="translate-x-2 translate-y-2 rotate-1 transform transition-transform hover:rotate-0 hover:translate-x-0 hover:translate-y-0">
+					<div className="translate-x-3 translate-y-3 transform transition-transform hover:translate-x-0 hover:translate-y-0">
 						<Component />
 					</div>
 				</div>
