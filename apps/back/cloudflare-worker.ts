@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/cloudflare";
+
 type HyperdriveBinding = {
 	connectionString: string;
 };
@@ -58,15 +60,22 @@ const writeProcessEnv = (workerEnv: WorkerEnv) => {
 	}
 };
 
-export default {
-	async fetch(request: any, workerEnv: WorkerEnv, executionContext: any) {
-		writeProcessEnv(workerEnv);
+export default Sentry.withSentry(
+	(env: WorkerEnv) => ({
+		dsn: typeof env.SENTRY_DSN === "string" ? env.SENTRY_DSN : undefined,
+		environment: typeof env.NODE_ENV === "string" ? env.NODE_ENV : "production",
+		tracesSampleRate: 1.0,
+	}),
+	{
+		async fetch(request: any, workerEnv: WorkerEnv, executionContext: any) {
+			writeProcessEnv(workerEnv);
 
-		if (!appPromise) {
-			appPromise = import("./server");
-		}
+			if (!appPromise) {
+				appPromise = import("./server");
+			}
 
-		const appModule = await appPromise;
-		return appModule.default.fetch(request, workerEnv, executionContext);
+			const appModule = await appPromise;
+			return appModule.default.fetch(request, workerEnv, executionContext);
+		},
 	},
-};
+);
