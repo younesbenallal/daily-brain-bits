@@ -20,6 +20,7 @@ export async function runGenerateDailyDigests() {
 	const settingsMap = new Map(settingsRows.map((row) => [row.userId, row]));
 
 	console.info("[generate-daily-digests] found %d users", users.length);
+	console.info("[generate-daily-digests] now=%s, nowISO=%s", now.toUTCString(), now.toISOString());
 
 	for (const candidate of users) {
 		const latestDigest = await db.query.noteDigests.findFirst({
@@ -36,6 +37,13 @@ export async function runGenerateDailyDigests() {
 
 		const notesPerDigest = settingsMap.get(candidate.id)?.notesPerDigest ?? DEFAULT_NOTES_PER_DIGEST;
 		const scheduledFor = getStartOfLocalDay(now, timezone);
+		console.info(
+			"[generate-daily-digests] user=%s tz=%s scheduledFor=%s (now=%s)",
+			candidate.id,
+			timezone,
+			scheduledFor.toISOString(),
+			now.toISOString(),
+		);
 		const plan = await prepareDigestItems({
 			userId: candidate.id,
 			notesPerDigest,

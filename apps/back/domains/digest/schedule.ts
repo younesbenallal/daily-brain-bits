@@ -178,6 +178,9 @@ function getDatePart(parts: Intl.DateTimeFormatPart[], type: string): string {
 }
 
 function getTimeZoneOffsetMs(date: Date, timezone: string): number {
+	// Use hourCycle: "h23" to ensure 0-23 hour range.
+	// Using hour12: false can return "24" for midnight in some Node.js/ICU versions,
+	// which causes Date.UTC to interpret it as the next day.
 	const parts = new Intl.DateTimeFormat("en-US", {
 		timeZone: timezone,
 		year: "numeric",
@@ -186,7 +189,7 @@ function getTimeZoneOffsetMs(date: Date, timezone: string): number {
 		hour: "2-digit",
 		minute: "2-digit",
 		second: "2-digit",
-		hour12: false,
+		hourCycle: "h23",
 	}).formatToParts(date);
 
 	const year = Number(getDatePart(parts, "year"));
