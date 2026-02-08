@@ -83,7 +83,8 @@ function ConfigureNotionPage() {
 	const selectedIds = new Set(selectedDatabases.map((item) => item.id));
 
 	const statusLabel = connected ? (statusData?.workspaceName ? `Connected to ${statusData.workspaceName}` : "Connected to Notion") : "Not connected";
-	const canProceed = connected && isOnboardingStepComplete("configureNotion", { connected: true as const, databasesSelected: selectedDatabases.length });
+	const canProceed =
+		connected && isOnboardingStepComplete("configureNotion", { connected: true as const, databasesSelected: selectedDatabases.length });
 	const connectButtonLabel = connected ? "Reconnect Notion" : "Connect Notion";
 
 	return (
@@ -94,16 +95,18 @@ function ConfigureNotionPage() {
 					<div className="flex items-center gap-3">
 						<h1 className="font-display text-3xl text-primary">Connect Notion</h1>
 					</div>
-					<p className="text-sm text-muted-foreground">Pick the databases with notes worth revisiting. We'll surface them in your inbox using spaced repetition.</p>
+					<p className="text-sm text-muted-foreground">
+						Pick the databases with notes worth revisiting. We'll surface them in your inbox using spaced repetition.
+					</p>
 				</div>
 
 				<div className="space-y-3">
-					<Button type="button" variant="outline" className="gap-2 bg-white" onClick={handleConnect}>
+					<Button type="button" variant="outline" onClick={handleConnect}>
 						{connectButtonLabel}
 					</Button>
 					<p className="text-sm text-muted-foreground">{statusQuery.isLoading ? "Checking connection..." : statusLabel}</p>
 					{connected && statusData?.workspaceName ? (
-						<div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-sm text-foreground">
+						<div className="inline-flex items-center gap-2 rounded-full border border-border  px-3 py-1 text-sm text-foreground">
 							{statusData.workspaceIcon ? (
 								statusData.workspaceIcon.startsWith("http") ? (
 									<img src={statusData.workspaceIcon} alt="" className="h-4 w-4 rounded-full object-cover" />
@@ -118,14 +121,10 @@ function ConfigureNotionPage() {
 
 				<div className="space-y-3">
 					<p className="font-ui text-base font-semibold text-foreground">Databases</p>
-				<p className="text-sm text-muted-foreground">Select at least one database. More databases = more variety in your digests.</p>
+					<p className="text-sm text-muted-foreground">Select at least one database. More databases = more variety in your digests.</p>
 
 					<Tags>
-						<TagsTrigger
-							disabled={!connected}
-							placeholder={connected ? "Select databases..." : "Connect Notion to pick databases"}
-							className="bg-white"
-						>
+						<TagsTrigger disabled={!connected} placeholder={connected ? "Select databases..." : "Connect Notion to pick databases"}>
 							{selectedDatabases.map((database) => (
 								<TagsValue key={database.id} onRemove={() => toggleDatabase(database)} className="bg-muted text-foreground hover:bg-muted/80">
 									{database.icon ? (
