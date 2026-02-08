@@ -38,6 +38,25 @@ describe("digest flow integration", () => {
 			expect(shouldSkip).toBe(true);
 		});
 
+		it("should skip when UTC dates differ but local date is the same", () => {
+			// 2026-02-08T04:30:00Z is still Feb 7 in New York
+			const now = new Date("2026-02-08T04:30:00Z");
+			const timezone = "America/New_York";
+			const lastDigestDate = new Date("2026-02-08T00:30:00Z");
+
+			const shouldSkip = schedule.isSameLocalDay(now, lastDigestDate, timezone);
+			expect(shouldSkip).toBe(true);
+		});
+
+		it("should use local midnight based on user timezone for scheduling", () => {
+			// 2026-02-08T04:30:00Z is Feb 7 in New York, so scheduledFor is Feb 7 local midnight
+			const now = new Date("2026-02-08T04:30:00Z");
+			const timezone = "America/New_York";
+
+			const scheduledFor = schedule.getStartOfLocalDay(now, timezone);
+			expect(scheduledFor.toISOString()).toBe("2026-02-07T05:00:00.000Z");
+		});
+
 		it("should respect user timezone for digest date", () => {
 			// 3 AM UTC on Feb 8 = 10 PM Feb 7 in New York
 			const now = new Date("2026-02-08T03:00:00Z");
@@ -136,6 +155,24 @@ describe("digest flow integration", () => {
 			expect(isDue).toBe(true);
 		});
 
+		it("should not be due for first digest when outside send window", () => {
+			const now = new Date("2026-02-08T09:00:00Z");
+			const lastSentAt = null;
+			const intervalDays = 3;
+			const timezone = "UTC";
+			const preferredSendHour = 8;
+
+			const isDue = schedule.isDigestDueWithTimezone({
+				now,
+				lastSentAt,
+				intervalDays,
+				timezone,
+				preferredSendHour,
+			});
+
+			expect(isDue).toBe(false);
+		});
+
 		it("should not send twice on same day", () => {
 			const now = new Date("2026-02-08T08:30:00Z"); // 8:30 AM UTC
 			const lastSentAt = new Date("2026-02-08T08:00:00Z"); // Sent 30 min ago
@@ -219,6 +256,73 @@ describe("digest flow integration", () => {
 			});
 
 			expect(isDue6Days).toBe(false);
+		});
+
+		it("should be due exactly at interval boundary and not before", () => {
+			const timezone = "UTC";
+			const preferredSendHour = 8;
+			const intervalDays = 3;
+			const lastSentAt = new Date("2026-02-05T08:00:00.000Z");
+
+			const justBeforeBoundary = new Date("2026-02-08T07:59:59.999Z");
+			const isDueBeforeBoundary = schedule.isDigestDueWithTimezone({
+				now: justBeforeBoundary,
+				lastSentAt,
+				intervalDays,
+				timezone,
+				preferredSendHour: 7,
+			});
+			expect(isDueBeforeBoundary).toBe(false);
+
+			const atBoundary = new Date("2026-02-08T08:00:00.000Z");
+			const isDueAtBoundary = schedule.isDigestDueWithTimezone({
+				now: atBoundary,
+				lastSentAt,
+				intervalDays,
+				timezone,
+				preferredSendHour,
+			});
+			expect(isDueAtBoundary).toBe(true);
+		});
+
+		it("should enforce send window for half-hour offset timezones", () => {
+			// 02:30 UTC is 08:00 IST
+			const nowInWindow = new Date("2026-02-08T02:30:00Z");
+			const timezone = "Asia/Kolkata";
+			const preferredSendHour = 8;
+
+			const inWindow = schedule.isInSendWindow({
+				now: nowInWindow,
+				timezone,
+				preferredSendHour,
+			});
+			expect(inWindow).toBe(true);
+
+			const nowOutsideWindow = new Date("2026-02-08T03:30:00Z"); // 09:00 IST
+			const outsideWindow = schedule.isInSendWindow({
+				now: nowOutsideWindow,
+				timezone,
+				preferredSendHour,
+			});
+			expect(outsideWindow).toBe(false);
+		});
+
+		it("should not send twice on the same local day across UTC day boundary", () => {
+			// Last send was 11:00 PM Feb 7 in New York (04:00 UTC Feb 8)
+			const lastSentAt = new Date("2026-02-08T04:00:00Z");
+			// Now is 8:00 AM Feb 7 in New York (13:00 UTC Feb 8)
+			const now = new Date("2026-02-08T13:00:00Z");
+			const timezone = "America/New_York";
+
+			const isDue = schedule.isDigestDueWithTimezone({
+				now,
+				lastSentAt,
+				intervalDays: 1,
+				timezone,
+				preferredSendHour: 8,
+			});
+
+			expect(isDue).toBe(false);
 		});
 	});
 
