@@ -18,11 +18,5 @@
 	"vars": {
 		"NODE_ENV": "production",
 		"DEPLOYMENT_MODE": "cloud"
-	},
-	"hyperdrive": [
-		{
-			"binding": "HYPERDRIVE_REALTIME",
-			"id": "REPLACE_WITH_HYPERDRIVE_REALTIME_ID"
-		}
-	]
+	}
 }

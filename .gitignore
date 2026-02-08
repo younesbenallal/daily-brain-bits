@@ -38,6 +38,7 @@ skills
 # Vercel
 .vercel
 .tanstack
+.wrangler
 # Turbo
 .turbo
 
