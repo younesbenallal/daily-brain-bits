@@ -7,6 +7,9 @@
 		"dev": "vite",
 		"build": "bunx @tanstack/router-cli generate && tsc && vite build",
 		"preview": "vite preview",
+		"cf:deploy": "bun run build && bunx wrangler deploy --config wrangler.jsonc",
+		"cf:deploy:dry-run": "bun run build && bunx wrangler deploy --dry-run --config wrangler.jsonc",
+		"cf:dev": "bun run build && bunx wrangler dev --config wrangler.jsonc",
 		"type-check": "tsc --noEmit --incremental",
 		"test": "bun test",
 		"clean": "rm -rf dist .next"

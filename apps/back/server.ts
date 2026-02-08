@@ -1,7 +1,6 @@
 import { auth } from "@daily-brain-bits/auth";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import * as Sentry from "@sentry/node";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { digestRouter } from "./routes/digest";
@@ -14,14 +13,10 @@ import { usageRouter } from "./routes/usage";
 import { createApiKeySession, verifyApiKeyManually } from "./infra/api-key";
 import { env } from "./infra/env";
 
-// Initialize Sentry
-if (env.SENTRY_DSN) {
-	Sentry.init({
-		dsn: env.SENTRY_DSN,
-		environment: env.NODE_ENV,
-		tracesSampleRate: 1.0,
-	});
-}
+const sentry = {
+	setUser: (_user: { id?: string; email?: string } | null) => {},
+	captureException: (_error: unknown, _context?: Record<string, unknown>) => {},
+};
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,
@@ -76,15 +71,15 @@ const app = new Hono<{ Variables: RequestContext }>()
 		}
 
 		// No API key, try regular session authentication
-		const session = await auth.api.getSession({ headers: c.req.raw.headers });
-		if (session) {
-			c.set("user", session.user);
-			c.set("session", session.session);
-			if (env.SENTRY_DSN) {
-				Sentry.setUser({ id: session.user.id, email: session.user.email });
+			const session = await auth.api.getSession({ headers: c.req.raw.headers });
+			if (session) {
+				c.set("user", session.user);
+				c.set("session", session.session);
+				if (env.SENTRY_DSN) {
+					sentry.setUser({ id: session.user.id, email: session.user.email });
+				}
+				return next();
 			}
-			return next();
-		}
 
 		c.set("user", null);
 		c.set("session", null);
@@ -114,7 +109,7 @@ const app = new Hono<{ Variables: RequestContext }>()
 
 			// Capture exception with Sentry
 			if (env.SENTRY_DSN) {
-				Sentry.captureException(error, {
+				sentry.captureException(error, {
 					user: { id: c.get("user")?.id, email: c.get("user")?.email },
 					extra: { path: c.req.raw.url },
 				});

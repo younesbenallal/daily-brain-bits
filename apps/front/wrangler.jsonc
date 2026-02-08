@@ -1,0 +1,18 @@
+{
+	"name": "daily-brain-bits-front",
+	"main": "cloudflare-worker.ts",
+	"compatibility_date": "2026-02-08",
+	"observability": {
+		"enabled": true
+	},
+	"routes": [
+		{
+			"pattern": "dbb.notionist.app",
+			"custom_domain": true
+		}
+	],
+	"assets": {
+		"directory": "dist",
+		"binding": "ASSETS"
+	}
+}

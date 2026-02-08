@@ -1,0 +1,36 @@
+{
+	"name": "daily-brain-bits-api",
+	"main": "cloudflare-worker.ts",
+	"compatibility_date": "2026-02-08",
+	"compatibility_flags": ["nodejs_compat_v2"],
+	"placement": {
+		"mode": "smart"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"routes": [
+		{
+			"pattern": "dbb-back.notionist.app",
+			"custom_domain": true
+		}
+	],
+	"vars": {
+		"NODE_ENV": "production",
+		"DEPLOYMENT_MODE": "cloud"
+	},
+	"env": {
+		"hyperdrive": {
+			"hyperdrive": [
+				{
+					"binding": "HYPERDRIVE_REALTIME",
+					"id": "REPLACE_WITH_HYPERDRIVE_REALTIME_ID"
+				},
+				{
+					"binding": "HYPERDRIVE_CACHED",
+					"id": "REPLACE_WITH_HYPERDRIVE_CACHED_ID"
+				}
+			]
+		}
+	}
+}

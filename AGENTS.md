@@ -57,3 +57,4 @@ all located in the `docs` folder.
 - `analytics-posthog.md` — PostHog analytics setup and event catalog.
 - `trigger-jobs.md` — Trigger.dev job architecture and configuration.
 - `self-hosting.md` — Docker Compose self-hosting guide (DB + app + Trigger.dev).
+- `cloudflare-migration.md` — Vercel to Cloudflare migration for front/back with Hyperdrive to VPS Postgres.
