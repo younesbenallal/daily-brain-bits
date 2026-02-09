@@ -14,7 +14,7 @@ export function OnboardingLayout({ children, footer, showSettingsMenu = true }: 
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-linear-to-b from-[hsl(var(--sky-top))] to-[hsl(var(--sky-bottom))] text-foreground">
 			{showSettingsMenu ? (
-				<header className="absolute right-6 top-6 z-30">
+				<header className="absolute right-6 top-6 z-30 ">
 					<DropdownMenu>
 						<DropdownMenuTrigger>
 							<Button variant="ghost" size="icon-lg" className="text-white/70 hover:text-white">
