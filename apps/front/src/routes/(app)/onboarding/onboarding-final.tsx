@@ -51,8 +51,8 @@ function OnboardingFinalPage() {
 		<OnboardingLayout
 			footer={
 				<>
-					<span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-						<span className="h-2 w-2 rounded-full bg-white" />
+					<span className="inline-flex size-6 items-center justify-center rounded-full bg-white/20">
+						<span className="h-2 w-2 rounded-full " />
 					</span>
 					<span className="text-base font-medium">Syncing done</span>
 				</>
