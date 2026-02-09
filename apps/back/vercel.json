@@ -3,7 +3,6 @@
   "bunVersion": "1.x",
   "installCommand": "cd ../.. && bun install --frozen-lockfile",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/api/$1" }
+    { "source": "/(.*)", "destination": "/api/index?path=$1" }
   ]
 }
