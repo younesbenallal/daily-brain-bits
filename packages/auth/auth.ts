@@ -6,6 +6,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { apiKey } from "better-auth/plugins";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { createPolarPlugin } from "./polar";
+import { createBetterAuthLogger } from "./better-auth-logger";
 
 const polarPlugin = createPolarPlugin();
 const billingEnabled = process.env.DEPLOYMENT_MODE !== "self-hosted";
@@ -140,6 +141,7 @@ async function triggerSequenceRun(params: { userId: string; sequenceName: "welco
 }
 
 export const auth = betterAuth({
+	logger: createBetterAuthLogger(),
 	database: drizzleAdapter(db, {
 		provider: "pg", // or "mysql", "sqlite"
 	}),

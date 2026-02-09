@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { resolveDeleteDecision, resolveUpsertDecision } from "./ingest";
+import { resolveDeleteDecision, resolveUpsertDecision } from "./sync-decisions";
 
 describe("resolveUpsertDecision", () => {
 	const baseUpsert = {

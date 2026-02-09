@@ -13,6 +13,7 @@ import { settingsRouter } from "./routes/settings";
 import { usageRouter } from "./routes/usage";
 import { createApiKeySession, verifyApiKeyManually } from "./infra/api-key";
 import { env } from "./infra/env";
+import { getDatabaseUrlSummary, getErrorSummary } from "./infra/log-utils";
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,
@@ -67,7 +68,23 @@ const app = new Hono<{ Variables: RequestContext }>()
 		}
 
 		// No API key, try regular session authentication
-		const session = await auth.api.getSession({ headers: c.req.raw.headers });
+		let session: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+		try {
+			session = await auth.api.getSession({ headers: c.req.raw.headers });
+		} catch (error) {
+			// Better Auth DB failures currently happen *before* our later error middleware,
+			// so we log a safe, high-signal summary here.
+			console.error("[auth] getSession failed", {
+				path: c.req.raw.url,
+				method: c.req.raw.method,
+				hasCookieHeader: Boolean(c.req.header("cookie")),
+				hasAuthorizationHeader: Boolean(c.req.header("authorization")),
+				origin: c.req.header("origin") ?? null,
+				db: getDatabaseUrlSummary(process.env.DATABASE_URL),
+				error: getErrorSummary(error),
+			});
+			throw error;
+		}
 		if (session) {
 			c.set("user", session.user);
 			c.set("session", session.session);

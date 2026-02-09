@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
+import { getDatabaseUrlSummary } from "./infra/log-utils";
 
 type HyperdriveBinding = {
 	connectionString: string;
@@ -43,6 +44,7 @@ const envKeys = [
 ] as const;
 
 let appPromise: Promise<any> | undefined;
+let didLogDbConfig = false;
 
 const writeProcessEnv = (workerEnv: WorkerEnv) => {
 	for (const key of envKeys) {
@@ -69,6 +71,24 @@ export default Sentry.withSentry(
 	{
 		async fetch(request: any, workerEnv: WorkerEnv, executionContext: any) {
 			writeProcessEnv(workerEnv);
+
+			if (!didLogDbConfig) {
+				didLogDbConfig = true;
+				// Log once per cold start to make it obvious what DB wiring is active on Workers.
+				const summary = getDatabaseUrlSummary(process.env.DATABASE_URL);
+				const hasHyperdriveBinding = Boolean(workerEnv.HYPERDRIVE_REALTIME || workerEnv.HYPERDRIVE_CACHED);
+
+				// Intentionally do not log the raw URL (it contains credentials).
+				console.log("[db] worker db config", {
+					hasHyperdriveBinding,
+					summary,
+				});
+				if (!hasHyperdriveBinding) {
+					console.warn(
+						"[db] no Hyperdrive binding found (expected HYPERDRIVE_REALTIME/HYPERDRIVE_CACHED). Using DATABASE_URL from vars/secrets instead.",
+					);
+				}
+			}
 
 			if (!appPromise) {
 				appPromise = import("./server");
