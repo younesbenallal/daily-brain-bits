@@ -1,7 +1,7 @@
 import { auth } from "@daily-brain-bits/auth";
 import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
-import * as Sentry from "@sentry/cloudflare";
+import * as Sentry from "@sentry/node";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { digestRouter } from "./routes/digest";
@@ -14,6 +14,14 @@ import { usageRouter } from "./routes/usage";
 import { createApiKeySession, verifyApiKeyManually } from "./infra/api-key";
 import { env } from "./infra/env";
 import { getDatabaseUrlSummary, getErrorSummary } from "./infra/log-utils";
+
+if (env.SENTRY_DSN) {
+	Sentry.init({
+		dsn: env.SENTRY_DSN,
+		environment: env.NODE_ENV,
+		tracesSampleRate: 1.0,
+	});
+}
 
 export const ORPCRouter = {
 	obsidian: obsidianRoutes.obsidianRouter,

@@ -1,4 +1,6 @@
-const tokenLike = /\b[A-Za-z0-9_-]{20,}\b/g;
+// Heuristic: redact long tokens that look like secrets (mixed-case + digits).
+// Avoid redacting constants like INTERNAL_SERVER_ERROR.
+const tokenLike = /\b(?=[A-Za-z0-9_-]{20,}\b)(?=.*[a-z])(?=.*\d)[A-Za-z0-9_-]+\b/g;
 
 export function redactSecretsInText(input: string) {
 	// Common Better Auth DB log pattern includes a token as `params: <token>`.
@@ -50,6 +52,34 @@ export function getDatabaseUrlSummary(databaseUrl: string | undefined) {
 }
 
 export function getErrorSummary(error: unknown) {
+	const summarizeCause = (cause: unknown) => {
+		// Avoid deep / cyclic structures.
+		if (!cause) {
+			return undefined;
+		}
+		if (cause instanceof Error) {
+			const anyCause = cause as unknown as Record<string, unknown>;
+			const pick = (key: string) => (typeof anyCause[key] === "string" ? anyCause[key] : undefined);
+			return {
+				name: cause.name,
+				message: redactSecretsInText(cause.message),
+				code: pick("code"),
+				severity: pick("severity"),
+				detail: pick("detail"),
+				hint: pick("hint"),
+				where: pick("where"),
+				schema: pick("schema"),
+				table: pick("table"),
+				column: pick("column"),
+				constraint: pick("constraint"),
+			};
+		}
+		return {
+			kind: typeof cause,
+			value: redactSecretsInText(String(cause)),
+		};
+	};
+
 	if (!(error instanceof Error)) {
 		return {
 			kind: typeof error,
@@ -73,5 +103,6 @@ export function getErrorSummary(error: unknown) {
 		table: pick("table"),
 		column: pick("column"),
 		constraint: pick("constraint"),
+		cause: summarizeCause((anyErr as { cause?: unknown }).cause),
 	};
 }

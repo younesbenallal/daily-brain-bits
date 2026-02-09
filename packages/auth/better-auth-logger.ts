@@ -1,6 +1,8 @@
 import type { Logger } from "better-auth";
 
-const tokenLike = /\b[A-Za-z0-9_-]{20,}\b/g;
+// Heuristic: redact long tokens that look like secrets (mixed-case + digits).
+// Avoid redacting constants like INTERNAL_SERVER_ERROR.
+const tokenLike = /\b(?=[A-Za-z0-9_-]{20,}\b)(?=.*[a-z])(?=.*\d)[A-Za-z0-9_-]+\b/g;
 
 function redactSecretsInText(input: string) {
 	// Common Better Auth DB log pattern includes a token as `params: <token>`.
@@ -55,4 +57,3 @@ export function createBetterAuthLogger(): Logger {
 		},
 	};
 }
-

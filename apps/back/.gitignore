@@ -24,3 +24,4 @@ index.js.map
 *.njsproj
 *.sln
 *.sw?
+.vercel
