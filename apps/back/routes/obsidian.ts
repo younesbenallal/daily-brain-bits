@@ -13,8 +13,9 @@ import { z } from "zod";
 import { authenticatedRoute } from "../context";
 import { runSyncPipeline } from "../integrations/sync-pipeline";
 import { captureBackendEvent } from "../infra/posthog-client";
-import { activateOnboardingSequence } from "../infra/trigger-client";
+import { activateOnboardingSequence, triggerDigestSend } from "../infra/trigger-client";
 import { checkSourceLimitForConnection } from "../utils/plan-enforcement";
+import { createSeedDigestIfNeeded } from "../utils/seed-note-digest";
 
 function buildObsidianConfig(options: { vaultId: string; deviceIds?: string[]; settings?: Record<string, unknown> }) {
 	return obsidianConnectionConfigSchema.parse({
@@ -450,6 +451,12 @@ const syncComplete = authenticatedRoute
 				userId,
 				connectionId: connection.id,
 			});
+
+			const seedResult = await createSeedDigestIfNeeded(userId);
+			if (seedResult.created) {
+				await triggerDigestSend({ userId, reason: "seed_digest_ready" });
+			}
+
 			return { success: true, syncRunId: null };
 		}
 
@@ -461,6 +468,11 @@ const syncComplete = authenticatedRoute
 				finishedAt: now,
 			})
 			.where(eq(syncRuns.id, runningRun.id));
+
+		const seedResult = await createSeedDigestIfNeeded(userId);
+		if (seedResult.created) {
+			await triggerDigestSend({ userId, reason: "seed_digest_ready" });
+		}
 
 		console.log("[obsidian.sync.complete] ok", {
 			userId,

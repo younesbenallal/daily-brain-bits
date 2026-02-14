@@ -19,8 +19,8 @@ This document describes the current onboarding flow in the frontend (`apps/front
    - Obsidian: install plugin, generate token, and wait for first sync.
 4. `/onboarding/onboarding-loading`
    - “Syncing” UI (still uses the existing lightweight tour/timers).
-   - Polls `/rpc/onboarding.status` and triggers seed digest once documents exist.
-   - Seed digest creation is deferred while any active sync run is still `running` to avoid generating a partial first digest.
+   - Polls `/rpc/onboarding.status`.
+   - Backend creates the seed digest after integration sync completion and only when no active sync run is still `running`.
 5. `/onboarding/preview`
    - Shows the first digest preview in-app (uses `digest.today`).
 6. `/onboarding/preferences` (optional)

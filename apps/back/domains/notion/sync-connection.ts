@@ -3,6 +3,8 @@ import { createNotionClient, createNotionSyncAdapter } from "@daily-brain-bits/i
 import { and, eq } from "drizzle-orm";
 import { runSyncPipeline } from "../../integrations/sync-pipeline";
 import { captureBackendEvent } from "../../infra/posthog-client";
+import { triggerDigestSend } from "../../infra/trigger-client";
+import { createSeedDigestIfNeeded } from "../../utils/seed-note-digest";
 
 type NotionConnectionTokens = {
 	accessToken: string;
@@ -126,16 +128,21 @@ export async function syncNotionConnection(params: SyncNotionConnectionParams): 
 			}
 		}
 
-		if (syncRunId) {
-			await db
-				.update(syncRuns)
-				.set({
-					status: "success",
-					statsJson: { accepted: totalDocumentsImported, rejected: 0, databasesSynced: databaseIds.length },
-					finishedAt: new Date(),
-				})
-				.where(eq(syncRuns.id, syncRunId));
-		}
+			if (syncRunId) {
+				await db
+					.update(syncRuns)
+					.set({
+						status: "success",
+						statsJson: { accepted: totalDocumentsImported, rejected: 0, databasesSynced: databaseIds.length },
+						finishedAt: new Date(),
+					})
+					.where(eq(syncRuns.id, syncRunId));
+			}
+
+			const seedResult = await createSeedDigestIfNeeded(userId);
+			if (seedResult.created) {
+				await triggerDigestSend({ userId, reason: "seed_digest_ready" });
+			}
 
 		console.log("[notion.sync] Notion sync completed", {
 			userId,

@@ -110,8 +110,6 @@ function ConfigureObsidianPage() {
 			lastSeenAt: statusData.lastSeenAt,
 		});
 
-	const seedDigestMutation = useMutation(orpc.onboarding.seedDigest.mutationOptions());
-
 	const pluginInstallUrl = "https://github.com/younesbenallal/daily-brain-bits?tab=readme-ov-file#obsidian-plugin-setup";
 	return (
 		<OnboardingLayout>
@@ -178,7 +176,6 @@ function ConfigureObsidianPage() {
 						type="button"
 						disabled={!canProceed}
 						onClick={() => {
-							seedDigestMutation.mutate({}, { onError: (error) => console.error("Failed to start onboarding seed digest:", error) });
 							router.navigate({ to: "/onboarding/onboarding-loading" });
 						}}
 					>
