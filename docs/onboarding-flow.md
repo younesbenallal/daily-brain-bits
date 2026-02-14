@@ -20,6 +20,7 @@ This document describes the current onboarding flow in the frontend (`apps/front
 4. `/onboarding/onboarding-loading`
    - “Syncing” UI (still uses the existing lightweight tour/timers).
    - Polls `/rpc/onboarding.status` and triggers seed digest once documents exist.
+   - Seed digest creation is deferred while any active sync run is still `running` to avoid generating a partial first digest.
 5. `/onboarding/preview`
    - Shows the first digest preview in-app (uses `digest.today`).
 6. `/onboarding/preferences` (optional)
@@ -40,4 +41,3 @@ Notion onboarding requires at least one selected database before continuing. Thi
 ## Stuck-state recovery
 
 If the onboarding “loading” step doesn’t observe any synced documents, the UI surfaces a troubleshooting block that sends the user back to source setup.
-

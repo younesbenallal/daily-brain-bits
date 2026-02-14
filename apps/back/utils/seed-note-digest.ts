@@ -1,11 +1,28 @@
-import { db, documents, noteDigestItems, noteDigests, userSettings } from "@daily-brain-bits/db";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { db, documents, integrationConnections, noteDigestItems, noteDigests, syncRuns, userSettings } from "@daily-brain-bits/db";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 export type SeedDigestResult =
 	| { created: true; digestId: number; itemCount: number }
-	| { created: false; reason: "already_exists" | "no_documents" | "insert_failed" };
+	| { created: false; reason: "already_exists" | "no_documents" | "insert_failed" | "sync_in_progress" };
 
 export async function createSeedDigestIfNeeded(userId: string): Promise<SeedDigestResult> {
+	const activeConnections = await db.query.integrationConnections.findMany({
+		where: and(eq(integrationConnections.userId, userId), eq(integrationConnections.status, "active")),
+		columns: { id: true },
+	});
+	const activeConnectionIds = activeConnections.map((connection) => connection.id);
+
+	if (activeConnectionIds.length > 0) {
+		const runningSync = await db.query.syncRuns.findFirst({
+			where: and(inArray(syncRuns.connectionId, activeConnectionIds), eq(syncRuns.status, "running")),
+			columns: { id: true },
+		});
+
+		if (runningSync) {
+			return { created: false, reason: "sync_in_progress" };
+		}
+	}
+
 	const existing = await db.query.noteDigests.findFirst({
 		where: eq(noteDigests.userId, userId),
 		columns: { id: true, status: true },
