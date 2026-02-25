@@ -240,7 +240,7 @@ export const createPolarPlugin = () => {
 	if (process.env.POLAR_PRO_PRODUCT_ID) {
 		products.push({
 			productId: process.env.POLAR_PRO_PRODUCT_ID,
-			slug: "Pro plan",
+			slug: "pro",
 		});
 	}
 

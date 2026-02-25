@@ -34,7 +34,7 @@ export function BillingSettings() {
 	const hasOrders = orders.length > 0;
 
 	const checkoutMutation = useMutation({
-		mutationFn: async () => authClient.checkout({ slug: "Pro plan" }),
+		mutationFn: async () => authClient.checkout({ slug: "pro" }),
 		onError: (error) => {
 			setBillingStatus({
 				tone: "error",
