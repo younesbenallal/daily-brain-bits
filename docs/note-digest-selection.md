@@ -34,7 +34,10 @@
    - Take all overdue/due-soon first.
    - Add up to `maxNewFraction` of new items.
    - Fill with scheduled items, then remaining new items if needed.
-5. Assign `position` and return selected items + skipped list.
+5. Optional seeded tie-break:
+   - When `randomSeed` is provided, ties on score/due/priority are broken by a deterministic seed-based rank.
+   - This adds day-to-day variation while keeping reproducible outputs for a given seed.
+6. Assign `position` and return selected items + skipped list.
 
 ## Data Model / DB
 
@@ -44,6 +47,8 @@
   - Suspended items never appear in a batch.
   - Deprioritized items are skipped until `deprioritizedUntil`.
   - Batch size is capped; new items are capped by `maxNewFraction` unless needed to fill.
+  - Without `randomSeed`, final tie-break remains `documentId` ascending.
+  - With `randomSeed`, tie-break order is deterministic for the same seed input.
 
 ## External Constraints
 
