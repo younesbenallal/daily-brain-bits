@@ -48,6 +48,7 @@ export async function runGenerateDailyDigests() {
 			userId: candidate.id,
 			notesPerDigest,
 			now,
+			randomSeed: `${candidate.id}:${scheduledFor.toISOString()}`,
 		});
 
 		if (!plan.hasDocuments || plan.itemCount === 0) {

@@ -13,6 +13,7 @@ export type NoteDigestConfig = {
 	dueSoonDays?: number;
 	minSendIntervalDays?: number;
 	maxNewFraction?: number;
+	randomSeed?: string | number;
 };
 
 export type NoteDigestItem = {
@@ -86,7 +87,8 @@ export function generateNoteDigest(candidates: ReviewCandidate[], config: NoteDi
 		return { items: [], skipped };
 	}
 
-	const ordered = scored.slice().sort(compareCandidates);
+	const tieBreakerRank = config.randomSeed === undefined ? null : buildSeededTieBreakerRank(scored, config.randomSeed);
+	const ordered = scored.slice().sort((a, b) => compareCandidates(a, b, tieBreakerRank));
 	const due = ordered.filter((item) => item.reason === "overdue" || item.reason === "due_soon");
 	const fresh = ordered.filter((item) => item.reason === "new");
 	const scheduled = ordered.filter((item) => item.reason === "scheduled");
@@ -158,7 +160,7 @@ function scoreByDueDate(nextDueAt: Date | null, now: Date, dueSoonCutoff: number
 	return { baseScore: 20 - Math.min(daysUntil, 30), reason: "scheduled" as const };
 }
 
-function compareCandidates(a: ScoredCandidate, b: ScoredCandidate) {
+function compareCandidates(a: ScoredCandidate, b: ScoredCandidate, tieBreakerRank: Map<number, number> | null) {
 	if (a.score !== b.score) {
 		return b.score - a.score;
 	}
@@ -173,7 +175,42 @@ function compareCandidates(a: ScoredCandidate, b: ScoredCandidate) {
 		return b.priorityWeight - a.priorityWeight;
 	}
 
+	if (tieBreakerRank) {
+		const aRank = tieBreakerRank.get(a.documentId) ?? Number.MAX_SAFE_INTEGER;
+		const bRank = tieBreakerRank.get(b.documentId) ?? Number.MAX_SAFE_INTEGER;
+		if (aRank !== bRank) {
+			return aRank - bRank;
+		}
+	}
+
 	return a.documentId - b.documentId;
+}
+
+function buildSeededTieBreakerRank(items: ScoredCandidate[], seedInput: string | number) {
+	const seed = typeof seedInput === "number" ? String(Math.floor(seedInput)) : seedInput;
+	const ids = Array.from(new Set(items.map((item) => item.documentId)));
+	const ranked = ids
+		.map((id) => ({
+			id,
+			hash: hashString(`${seed}:${id}`),
+		}))
+		.sort((a, b) => {
+			if (a.hash !== b.hash) {
+				return a.hash - b.hash;
+			}
+			return a.id - b.id;
+		});
+
+	return new Map(ranked.map((entry, index) => [entry.id, index]));
+}
+
+function hashString(input: string) {
+	let hash = 2166136261;
+	for (let i = 0; i < input.length; i += 1) {
+		hash ^= input.charCodeAt(i);
+		hash = Math.imul(hash, 16777619);
+	}
+	return hash >>> 0;
 }
 
 function clampNumber(value: number, min: number, max: number) {

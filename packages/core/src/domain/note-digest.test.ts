@@ -107,6 +107,36 @@ describe("generateNoteDigest", () => {
 		expect(result.items.map((item) => item.documentId)).toEqual([1, 2]);
 	});
 
+	it("keeps seeded tie-break deterministic for equal-score items", () => {
+		const candidates: ReviewCandidate[] = Array.from({ length: 8 }, (_, index) =>
+			baseCandidate({
+				documentId: index + 1,
+				nextDueAt: new Date("2024-01-11T00:00:00.000Z"),
+				priorityWeight: 1,
+			}),
+		);
+
+		const first = generateNoteDigest(candidates, { batchSize: 5, now: NOW, randomSeed: "user-a:2024-01-10" });
+		const second = generateNoteDigest(candidates, { batchSize: 5, now: NOW, randomSeed: "user-a:2024-01-10" });
+
+		expect(first.items.map((item) => item.documentId)).toEqual(second.items.map((item) => item.documentId));
+	});
+
+	it("changes tie-break ordering with a different seed", () => {
+		const candidates: ReviewCandidate[] = Array.from({ length: 8 }, (_, index) =>
+			baseCandidate({
+				documentId: index + 1,
+				nextDueAt: new Date("2024-01-11T00:00:00.000Z"),
+				priorityWeight: 1,
+			}),
+		);
+
+		const first = generateNoteDigest(candidates, { batchSize: 5, now: NOW, randomSeed: "user-a:2024-01-10" });
+		const second = generateNoteDigest(candidates, { batchSize: 5, now: NOW, randomSeed: "user-a:2024-01-11" });
+
+		expect(first.items.map((item) => item.documentId)).not.toEqual(second.items.map((item) => item.documentId));
+	});
+
 	it("returns empty batch when size is zero", () => {
 		const candidates: ReviewCandidate[] = [baseCandidate({ documentId: 1 })];
 		const result = generateNoteDigest(candidates, { batchSize: 0, now: NOW });

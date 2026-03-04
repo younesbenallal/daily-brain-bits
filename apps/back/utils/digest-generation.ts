@@ -19,6 +19,7 @@ export async function prepareDigestItems(params: {
 	userId: string;
 	notesPerDigest: number;
 	now?: Date;
+	randomSeed?: string | number;
 }): Promise<DigestPlanResult> {
 	const now = params.now ?? new Date();
 	const documentRows = await db.query.documents.findMany({
@@ -58,6 +59,7 @@ export async function prepareDigestItems(params: {
 	const plan = generateNoteDigest(candidates, {
 		batchSize: params.notesPerDigest,
 		now,
+		randomSeed: params.randomSeed,
 	});
 
 	const contentHashMap = new Map(documentRows.map((doc) => [doc.id, doc.contentHash]));
