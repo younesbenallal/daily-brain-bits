@@ -4,7 +4,7 @@
 
 - Generates daily digests for every user and sends emails via Resend on the user's cadence.
 - Supports **timezone-aware scheduling** with per-user preferred send times.
-- Uses an idempotent send job that writes delivery metadata to `note_digests` and updates `review_states.last_sent_at`.
+- Uses an idempotent send job that writes delivery metadata to `note_digests` and updates `review_states` scheduling fields (`last_sent_at`, `next_due_at`, `interval_days`).
 - Runs via **Trigger.dev schedule** (hourly) or manual script execution.
 
 ## Scope
@@ -54,14 +54,15 @@
    - Compare against their `preferredSendHour` (default: 8 = 8am local time).
 3. Resolve the effective frequency (free users are coerced to weekly) and stagger weekly/monthly sends by user hash.
 4. For each due user:
-   - Find today's scheduled digest (using **local day** comparison, not UTC).
+   - Find the most recent pending digest whose `scheduled_for` is not in the future.
    - If the digest has no items, mark it as `skipped`.
 5. **Detect first digest**: If the user has no previous `sent` digests (`lastSentAt` is null), this is their first digest.
 6. For first digests, fetch additional context: total document count and primary source label.
 7. Render React Email + text email from the stored digest snapshot, with `isFirstDigest` flag for welcome messaging.
 8. Send via Resend with `idempotencyKey = note-digest-<digestId>`.
-9. On success: mark digest `sent`, store Resend metadata, and update `review_states.last_sent_at`.
-10. On failure: mark digest `failed` and store `error_json`.
+9. On success: mark digest `sent`, store Resend metadata, and update `review_states` scheduling fields.
+10. After success, mark older still-`scheduled` digests as `skipped` with a superseded reason.
+11. On failure: mark digest `failed` and store `error_json`.
 
 ### First Digest Welcome Messaging
 
@@ -110,15 +111,17 @@ When a user receives their **first digest** (detected via `!lastSentAt`), the em
 2. Trigger.dev schedule runs every hour at `:00`.
 3. For each invocation, we calculate which users have their local time matching their preferred hour.
 4. Users receive digests in the **morning of their local time**, not a fixed UTC time.
+5. Due checks use local calendar day differences (not strict elapsed milliseconds), so minute-level runtime drift does not skip expected daily sends.
 
 ### Key functions in `domains/digest/schedule.ts`
 
 | Function | Purpose |
 |----------|---------|
-| `isDigestDueWithTimezone()` | Full due check with timezone support. |
+| `isDigestDueWithTimezone()` | Full due check with timezone support and local-day interval enforcement. |
 | `isInSendWindow()` | Check if current hour matches user's preferred hour. |
 | `getHourInTimezone()` | Get current hour (0-23) in a timezone. |
 | `isSameLocalDay()` | Compare dates in user's local timezone. |
+| `getElapsedLocalDays()` | Compute calendar day differences in a timezone. |
 | `isValidTimezone()` | Validate IANA timezone string. |
 
 ### DST handling
@@ -130,7 +133,7 @@ The `Intl.DateTimeFormat` API handles Daylight Saving Time automatically. If a u
 - Tables/entities:
   - `note_digests` (status, scheduled_for, sent_at, payload_json, error_json)
   - `note_digest_items` (digest-to-document join, ordered by position)
-  - `review_states` (per-document review history; `last_sent_at` updated on send)
+  - `review_states` (per-document review history; `last_sent_at`, `next_due_at`, and `interval_days` updated on send)
   - `user_settings` (email preferences including timezone and send time)
 - User settings fields:
   - `timezone` (text, default: "UTC") — IANA timezone string
@@ -142,6 +145,7 @@ The `Intl.DateTimeFormat` API handles Daylight Saving Time automatically. If a u
 - Invariants:
   - A `sent` digest should have `sent_at` and preserved `note_digest_items`.
   - `review_states.last_sent_at` reflects the most recent delivered digest.
+  - Sent digest items receive a future `review_states.next_due_at` to reduce immediate reselection loops.
 
 ## External Constraints
 

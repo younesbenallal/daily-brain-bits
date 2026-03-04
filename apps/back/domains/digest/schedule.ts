@@ -65,10 +65,10 @@ export function isDigestDueWithTimezone(params: {
 		return true;
 	}
 
-	// Check if enough days have elapsed
-	const elapsedMs = now.getTime() - lastSentAt.getTime();
-	const requiredMs = intervalDays * DAY_MS;
-	return elapsedMs >= requiredMs;
+	// Use local calendar days instead of strict elapsed milliseconds.
+	// This keeps "daily at 8am" behavior stable even when one run is delayed by minutes.
+	const elapsedLocalDays = getElapsedLocalDays(now, lastSentAt, timezone);
+	return elapsedLocalDays >= intervalDays;
 }
 
 /**
@@ -120,6 +120,15 @@ export function getDateInTimezone(date: Date, timezone: string): string {
 		day: "2-digit",
 	});
 	return formatter.format(date);
+}
+
+export function getElapsedLocalDays(now: Date, lastSentAt: Date, timezone: string): number {
+	const currentLocalDate = getDatePartsInTimezone(now, timezone);
+	const lastLocalDate = getDatePartsInTimezone(lastSentAt, timezone);
+
+	const currentOrdinal = Date.UTC(currentLocalDate.year, currentLocalDate.month - 1, currentLocalDate.day) / DAY_MS;
+	const lastOrdinal = Date.UTC(lastLocalDate.year, lastLocalDate.month - 1, lastLocalDate.day) / DAY_MS;
+	return currentOrdinal - lastOrdinal;
 }
 
 export function getStartOfLocalDay(date: Date, timezone: string): Date {
@@ -175,6 +184,21 @@ export function isValidTimezone(tz: string): boolean {
 
 function getDatePart(parts: Intl.DateTimeFormatPart[], type: string): string {
 	return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+function getDatePartsInTimezone(date: Date, timezone: string) {
+	const parts = new Intl.DateTimeFormat("en-CA", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	}).formatToParts(date);
+
+	return {
+		year: Number(getDatePart(parts, "year")),
+		month: Number(getDatePart(parts, "month")),
+		day: Number(getDatePart(parts, "day")),
+	};
 }
 
 function getTimeZoneOffsetMs(date: Date, timezone: string): number {
@@ -284,4 +308,3 @@ export function getTimezonesInHourRange(now: Date, startHour: number, endHour: n
 	}
 	return result;
 }
-

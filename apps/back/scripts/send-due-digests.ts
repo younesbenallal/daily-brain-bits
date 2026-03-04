@@ -1,8 +1,8 @@
 import { DEFAULT_DIGEST_INTERVAL_DAYS, PLANS } from "@daily-brain-bits/core";
 import { db, documents, integrationConnections, noteDigests, reviewStates, user, userSettings } from "@daily-brain-bits/db";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { getProUsers } from "../domains/billing/entitlements";
-import { clampIntervalToLimits, isDigestDueWithTimezone, isSameLocalDay } from "../domains/digest/schedule";
+import { clampIntervalToLimits, isDigestDueWithTimezone } from "../domains/digest/schedule";
 import { sendResendEmail } from "../domains/email/resend";
 import { env } from "../infra/env";
 import { upsertDigestWithItems } from "../utils/digest-storage";
@@ -12,6 +12,9 @@ const DRY_RUN = env.DIGEST_EMAIL_DRY_RUN;
 const FROM_ADDRESS = env.RESEND_FROM;
 const REPLY_TO = env.RESEND_REPLY_TO;
 const FRONTEND_URL = env.FRONTEND_URL;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MIN_NEXT_DUE_INTERVAL_DAYS = 4;
+const MAX_NEXT_DUE_INTERVAL_DAYS = 30;
 
 function buildIdempotencyKey(digestId: number): string {
 	return `note-digest-${digestId}`;
@@ -93,19 +96,17 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 		}
 
 		const pendingDigest = await db.query.noteDigests.findFirst({
-			where: and(eq(noteDigests.userId, candidate.id), inArray(noteDigests.status, ["scheduled", "failed"])),
+			where: and(
+				eq(noteDigests.userId, candidate.id),
+				inArray(noteDigests.status, ["scheduled", "failed"]),
+				lte(noteDigests.scheduledFor, now),
+			),
 			columns: { id: true, scheduledFor: true, createdAt: true },
-			orderBy: [desc(noteDigests.createdAt)],
+			orderBy: [desc(noteDigests.scheduledFor), desc(noteDigests.createdAt)],
 		});
 
 		if (!pendingDigest?.id) {
 			console.log(`[send-due-digests] Skipping user ${candidate.id} - no pending digest found`);
-			continue;
-		}
-
-		const digestDate = pendingDigest.scheduledFor ?? pendingDigest.createdAt;
-		if (!digestDate || !isSameLocalDay(now, digestDate, timezone)) {
-			console.log(`[send-due-digests] Skipping user ${candidate.id} - digest not for today in ${timezone} (scheduled: ${digestDate?.toISOString()})`);
 			continue;
 		}
 
@@ -204,21 +205,35 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 		}
 
 		console.log(`[send-due-digests] Updating review states for ${snapshot.items.length} items...`);
+		const digestDocumentIds = snapshot.items.map((item) => item.documentId);
+		const existingReviewStates = await db.query.reviewStates.findMany({
+			where: and(eq(reviewStates.userId, candidate.id), inArray(reviewStates.documentId, digestDocumentIds)),
+			columns: { documentId: true, status: true, intervalDays: true, easeFactor: true, repetitions: true },
+		});
+		const existingReviewStateMap = new Map(existingReviewStates.map((state) => [state.documentId, state]));
+
 		await db
 			.insert(reviewStates)
 			.values(
 				snapshot.items.map((item) => ({
+					...buildReviewStateUpdate({
+						now,
+						effectiveIntervalDays,
+						existingState: existingReviewStateMap.get(item.documentId),
+					}),
 					documentId: item.documentId,
 					userId: candidate.id,
-					status: "new" as const,
-					lastSentAt: now,
-					updatedAt: now,
 				})),
 			)
 			.onConflictDoUpdate({
 				target: [reviewStates.documentId],
 				set: {
-					lastSentAt: now,
+					status: sql`excluded.status`,
+					lastSentAt: sql`excluded.last_sent_at`,
+					nextDueAt: sql`excluded.next_due_at`,
+					intervalDays: sql`excluded.interval_days`,
+					easeFactor: sql`excluded.ease_factor`,
+					repetitions: sql`excluded.repetitions`,
 					updatedAt: now,
 				},
 			});
@@ -239,10 +254,64 @@ export async function runSendDueDigests(options: RunSendDueDigestsOptions = {}) 
 			errorJson: null,
 		});
 
+		if (pendingDigest.scheduledFor) {
+			await db
+				.update(noteDigests)
+				.set({
+					status: "skipped",
+					payloadJson: {
+						reason: "superseded_by_newer_pending_digest",
+						supersededByDigestId: digestId,
+						supersededAt: now.toISOString(),
+					},
+					updatedAt: now,
+				})
+				.where(
+					and(
+						eq(noteDigests.userId, candidate.id),
+						eq(noteDigests.status, "scheduled"),
+						lt(noteDigests.scheduledFor, pendingDigest.scheduledFor),
+					),
+				);
+		}
+
 		console.log(`[send-due-digests] Successfully processed digest for user ${candidate.id}`);
 	}
 
 	console.log("[send-due-digests] Digest email process completed");
+}
+
+function buildReviewStateUpdate(params: {
+	now: Date;
+	effectiveIntervalDays: number;
+	existingState:
+		| {
+				status: "new" | "reviewing" | "suspended";
+				intervalDays: number | null;
+				easeFactor: number | null;
+				repetitions: number | null;
+		  }
+		| undefined;
+}) {
+	const { now, effectiveIntervalDays, existingState } = params;
+	const intervalDays = Math.min(
+		MAX_NEXT_DUE_INTERVAL_DAYS,
+		Math.max(existingState?.intervalDays ?? 0, effectiveIntervalDays, MIN_NEXT_DUE_INTERVAL_DAYS),
+	);
+
+	return {
+		status: existingState?.status ?? ("new" as const),
+		lastSentAt: now,
+		nextDueAt: addDays(now, intervalDays),
+		intervalDays,
+		easeFactor: existingState?.easeFactor ?? 2.5,
+		repetitions: existingState?.repetitions ?? 0,
+		updatedAt: now,
+	};
+}
+
+function addDays(date: Date, days: number) {
+	return new Date(date.getTime() + days * DAY_MS);
 }
 
 if (import.meta.main) {

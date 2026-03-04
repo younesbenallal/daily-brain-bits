@@ -1,10 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import {
 	clampIntervalToLimits,
+	getElapsedLocalDays,
 	getDateInTimezone,
 	getIntervalMs,
 	getStartOfLocalDay,
 	isDigestDue,
+	isDigestDueWithTimezone,
 	isSameLocalDay,
 } from "../domains/digest/schedule";
 
@@ -63,6 +65,18 @@ describe("digest-schedule", () => {
 		expect(getIntervalMs(1)).toBe(dayMs);
 		expect(getIntervalMs(7)).toBe(7 * dayMs);
 		expect(getIntervalMs(30)).toBe(30 * dayMs);
+	});
+
+	it("considers local calendar day boundaries in timezone-aware due checks", () => {
+		const isDue = isDigestDueWithTimezone({
+			now: new Date("2026-03-03T08:00:00.000Z"),
+			lastSentAt: new Date("2026-03-02T08:03:42.169Z"),
+			intervalDays: 1,
+			timezone: "UTC",
+			preferredSendHour: 8,
+		});
+
+		expect(isDue).toBe(true);
 	});
 
 	it("prevents same-day sends", () => {
@@ -164,5 +178,21 @@ describe("getDateInTimezone", () => {
 	it("returns next day for late UTC times in eastern timezones", () => {
 		// Feb 7 23:30 UTC = Feb 8 00:30 in Paris
 		expect(getDateInTimezone(new Date("2026-02-07T23:30:00Z"), "Europe/Paris")).toBe("2026-02-08");
+	});
+});
+
+describe("getElapsedLocalDays", () => {
+	it("returns the number of local calendar days between timestamps", () => {
+		const elapsed = getElapsedLocalDays(new Date("2026-03-03T08:00:00Z"), new Date("2026-03-02T23:59:00Z"), "UTC");
+		expect(elapsed).toBe(1);
+	});
+
+	it("handles timezone boundaries consistently", () => {
+		const elapsed = getElapsedLocalDays(
+			new Date("2026-03-03T13:00:00Z"), // 08:00 in New York
+			new Date("2026-03-02T04:30:00Z"), // 23:30 previous local day in New York
+			"America/New_York",
+		);
+		expect(elapsed).toBe(2);
 	});
 });

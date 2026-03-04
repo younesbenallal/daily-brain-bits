@@ -258,7 +258,7 @@ describe("digest flow integration", () => {
 			expect(isDue6Days).toBe(false);
 		});
 
-		it("should be due exactly at interval boundary and not before", () => {
+		it("should be due on the required local calendar day even before exact elapsed milliseconds", () => {
 			const timezone = "UTC";
 			const preferredSendHour = 8;
 			const intervalDays = 3;
@@ -272,7 +272,7 @@ describe("digest flow integration", () => {
 				timezone,
 				preferredSendHour: 7,
 			});
-			expect(isDueBeforeBoundary).toBe(false);
+			expect(isDueBeforeBoundary).toBe(true);
 
 			const atBoundary = new Date("2026-02-08T08:00:00.000Z");
 			const isDueAtBoundary = schedule.isDigestDueWithTimezone({
@@ -307,10 +307,10 @@ describe("digest flow integration", () => {
 			expect(outsideWindow).toBe(false);
 		});
 
-		it("should not send twice on the same local day across UTC day boundary", () => {
+		it("should send on the next local day even when UTC date matches", () => {
 			// Last send was 11:00 PM Feb 7 in New York (04:00 UTC Feb 8)
 			const lastSentAt = new Date("2026-02-08T04:00:00Z");
-			// Now is 8:00 AM Feb 7 in New York (13:00 UTC Feb 8)
+			// Now is 8:00 AM Feb 8 in New York (13:00 UTC Feb 8)
 			const now = new Date("2026-02-08T13:00:00Z");
 			const timezone = "America/New_York";
 
@@ -322,7 +322,7 @@ describe("digest flow integration", () => {
 				preferredSendHour: 8,
 			});
 
-			expect(isDue).toBe(false);
+			expect(isDue).toBe(true);
 		});
 	});
 
