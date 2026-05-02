@@ -3,7 +3,7 @@
 ## Summary
 
 - Selects a note digest batch of documents based on review state signals.
-- Balances due items with controlled introduction of new items.
+- Prioritizes unseen notes so users explore their library before repeats dominate.
 
 ## Scope
 
@@ -31,9 +31,10 @@
    - Apply a cooldown penalty if `lastSentAt` is within `minSendIntervalDays`.
 3. Sort by score (tie-breakers: earlier due date, higher priority, lower document id).
 4. Fill batch:
-   - Take all overdue/due-soon first.
-   - Add up to `maxNewFraction` of new items.
-   - Fill with scheduled items, then remaining new items if needed.
+   - If any unseen notes exist (`lastSentAt = null`), build an exploration-first batch.
+   - Include already-sent notes early only when the user explicitly boosted them with “more like this” (`priorityWeight > 1`).
+   - Fill remaining slots with unseen notes, then regular already-sent notes only if the unseen pool is exhausted.
+   - Once every available note has been seen, fall back to the due-order flow: overdue/due-soon first, then up to `maxNewFraction` new items, then scheduled items.
 5. Optional seeded tie-break:
    - When `randomSeed` is provided, ties on score/due/priority are broken by a deterministic seed-based rank.
    - This adds day-to-day variation while keeping reproducible outputs for a given seed.
@@ -46,7 +47,10 @@
 - Invariants:
   - Suspended items never appear in a batch.
   - Deprioritized items are skipped until `deprioritizedUntil`.
-  - Batch size is capped; new items are capped by `maxNewFraction` unless needed to fill.
+  - Batch size is capped.
+  - Unseen notes are preferred over already-sent notes while any unseen notes exist.
+  - Already-sent notes can bypass exploration priority when the user boosted them with “more like this”.
+  - `maxNewFraction` only limits new items after every candidate has already been seen.
   - Without `randomSeed`, final tie-break remains `documentId` ascending.
   - With `randomSeed`, tie-break order is deterministic for the same seed input.
 

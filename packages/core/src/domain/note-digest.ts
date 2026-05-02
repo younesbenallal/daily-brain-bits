@@ -89,11 +89,37 @@ export function generateNoteDigest(candidates: ReviewCandidate[], config: NoteDi
 
 	const tieBreakerRank = config.randomSeed === undefined ? null : buildSeededTieBreakerRank(scored, config.randomSeed);
 	const ordered = scored.slice().sort((a, b) => compareCandidates(a, b, tieBreakerRank));
-	const due = ordered.filter((item) => item.reason === "overdue" || item.reason === "due_soon");
-	const fresh = ordered.filter((item) => item.reason === "new");
-	const scheduled = ordered.filter((item) => item.reason === "scheduled");
-	const maxNew = Math.max(0, Math.floor(batchSize * maxNewFraction));
+	const unseen = ordered.filter((item) => !item.lastSentAt);
+	const boostedSeen = ordered.filter((item) => item.lastSentAt && item.priorityWeight > 1);
+	const regularSeen = ordered.filter((item) => item.lastSentAt && item.priorityWeight <= 1);
+	const selected = unseen.length > 0 ? selectExplorationFirst({ batchSize, boostedSeen, regularSeen, unseen }) : selectByDueOrder(ordered, batchSize, maxNewFraction);
 
+	const items = selected.slice(0, batchSize).map((item, index) => ({
+		...item,
+		position: index + 1,
+	}));
+
+	return { items, skipped };
+}
+
+function selectExplorationFirst(params: {
+	batchSize: number;
+	boostedSeen: ScoredCandidate[];
+	regularSeen: ScoredCandidate[];
+	unseen: ScoredCandidate[];
+}) {
+	const selected: ScoredCandidate[] = [];
+	takeInto(selected, params.boostedSeen, params.batchSize);
+	takeInto(selected, params.unseen, params.batchSize);
+	takeInto(selected, params.regularSeen, params.batchSize);
+	return selected;
+}
+
+function selectByDueOrder(items: ScoredCandidate[], batchSize: number, maxNewFraction: number) {
+	const due = items.filter((item) => item.reason === "overdue" || item.reason === "due_soon");
+	const fresh = items.filter((item) => item.reason === "new");
+	const scheduled = items.filter((item) => item.reason === "scheduled");
+	const maxNew = Math.max(0, Math.floor(batchSize * maxNewFraction));
 	const selected: ScoredCandidate[] = [];
 	let newCount = 0;
 
@@ -130,12 +156,16 @@ export function generateNoteDigest(candidates: ReviewCandidate[], config: NoteDi
 		takeFrom(fresh.filter((item) => !selected.includes(item)));
 	}
 
-	const items = selected.slice(0, batchSize).map((item, index) => ({
-		...item,
-		position: index + 1,
-	}));
+	return selected;
+}
 
-	return { items, skipped };
+function takeInto(selected: ScoredCandidate[], items: ScoredCandidate[], batchSize: number) {
+	for (const item of items) {
+		if (selected.length >= batchSize) {
+			return;
+		}
+		selected.push(item);
+	}
 }
 
 function scoreByDueDate(nextDueAt: Date | null, now: Date, dueSoonCutoff: number) {

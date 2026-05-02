@@ -43,21 +43,68 @@ describe("generateNoteDigest", () => {
 		expect(result.items.map((item) => item.reason)).toEqual(["overdue", "due_soon"]);
 	});
 
-	it("caps new items when scheduled content is available", () => {
+	it("prioritizes unseen items over already-sent scheduled content", () => {
 		const candidates: ReviewCandidate[] = [
 			baseCandidate({ documentId: 1, nextDueAt: new Date("2024-01-09T00:00:00.000Z") }),
 			baseCandidate({ documentId: 2, nextDueAt: null }),
 			baseCandidate({ documentId: 3, nextDueAt: null }),
 			baseCandidate({ documentId: 4, nextDueAt: null }),
-			baseCandidate({ documentId: 5, nextDueAt: new Date("2024-02-01T00:00:00.000Z") }),
-			baseCandidate({ documentId: 6, nextDueAt: new Date("2024-02-05T00:00:00.000Z") }),
+			baseCandidate({
+				documentId: 5,
+				nextDueAt: new Date("2024-02-01T00:00:00.000Z"),
+				lastSentAt: new Date("2024-01-01T00:00:00.000Z"),
+			}),
+			baseCandidate({
+				documentId: 6,
+				nextDueAt: new Date("2024-02-05T00:00:00.000Z"),
+				lastSentAt: new Date("2024-01-01T00:00:00.000Z"),
+			}),
 		];
 
 		const result = generateNoteDigest(candidates, { batchSize: 4, now: NOW, maxNewFraction: 0.25 });
 
 		const ids = result.items.map((item) => item.documentId);
-		expect(ids).toEqual([1, 2, 5, 6]);
+		expect(ids).toEqual([1, 2, 3, 4]);
+		expect(result.items.filter((item) => item.reason === "new").length).toBe(3);
+	});
+
+	it("still caps new items after every note has been seen", () => {
+		const candidates: ReviewCandidate[] = [
+			baseCandidate({ documentId: 1, nextDueAt: new Date("2024-01-09T00:00:00.000Z"), lastSentAt: new Date("2024-01-01T00:00:00.000Z") }),
+			baseCandidate({ documentId: 2, nextDueAt: null, lastSentAt: new Date("2024-01-01T00:00:00.000Z") }),
+			baseCandidate({ documentId: 3, nextDueAt: null, lastSentAt: new Date("2024-01-01T00:00:00.000Z") }),
+			baseCandidate({ documentId: 4, nextDueAt: null, lastSentAt: new Date("2024-01-01T00:00:00.000Z") }),
+			baseCandidate({ documentId: 5, nextDueAt: new Date("2024-02-01T00:00:00.000Z"), lastSentAt: new Date("2024-01-01T00:00:00.000Z") }),
+			baseCandidate({ documentId: 6, nextDueAt: new Date("2024-02-05T00:00:00.000Z"), lastSentAt: new Date("2024-01-01T00:00:00.000Z") }),
+		];
+
+		const result = generateNoteDigest(candidates, { batchSize: 4, now: NOW, maxNewFraction: 0.25 });
+
+		expect(result.items.map((item) => item.documentId)).toEqual([1, 2, 5, 6]);
 		expect(result.items.filter((item) => item.reason === "new").length).toBe(1);
+	});
+
+	it("allows boosted seen items before all notes have been seen", () => {
+		const candidates: ReviewCandidate[] = [
+			baseCandidate({ documentId: 1, nextDueAt: null }),
+			baseCandidate({ documentId: 2, nextDueAt: null }),
+			baseCandidate({
+				documentId: 3,
+				nextDueAt: new Date("2024-01-12T00:00:00.000Z"),
+				lastSentAt: new Date("2024-01-01T00:00:00.000Z"),
+				priorityWeight: 1.5,
+			}),
+			baseCandidate({
+				documentId: 4,
+				nextDueAt: new Date("2024-01-09T00:00:00.000Z"),
+				lastSentAt: new Date("2024-01-01T00:00:00.000Z"),
+				priorityWeight: 1,
+			}),
+		];
+
+		const result = generateNoteDigest(candidates, { batchSize: 3, now: NOW });
+
+		expect(result.items.map((item) => item.documentId)).toEqual([3, 1, 2]);
 	});
 
 	it("fills with new content when scheduled items are exhausted", () => {
